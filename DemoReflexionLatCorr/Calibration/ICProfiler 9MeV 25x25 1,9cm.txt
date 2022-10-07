@@ -1,0 +1,165 @@
+Filename		P:\Projets\CRIC\Physique_Medicale\Films\Calibration lot 01 - 2019-02-18\Calib 24h\Électrons\ICProfiler 9MeV 25x25 1,9cm.prm	
+TimeStamp		2/18/2019 13:01:23	
+Description		SSD 98.75. No buildup	
+Institution			
+Software Version		3.4.3.16209	
+Machine Setup:
+Room		Salle 2	
+Machine Type		Elekta	
+Machine Model		VersaHD	
+Machine Serial Number			
+Beam Type		Electron	
+Energy		9	
+Wedge Angle	deg	0	
+Wedge Type	deg	None	
+Gantry Angle	deg	0	
+Collimator Angle	deg	0	
+Collimator Left	cm	0	
+Collimator Right	cm	0	
+Collimator Top	cm	0	
+Collimator Bottom	cm	0	
+Rate	MU/min	600	
+Dose	MU	100	
+Field Size	MU	0 x 0	
+Collector Setup:
+Orientation		Y Axis	
+Tray Mount		No	
+SSD	cm	98,800	
+Alignment	cm	Light Field	
+Buildup	cm	0,900	
+Buildup Type	cm	WaterEquiv	
+Calibration File	cm	C:\SNC\Profiler\Factors\231299002\Slot-3 - 9 MeV - 2019-02-18.cal	
+Collector Config:
+Collector Model		IC PROFILER	
+Collector Serial		231299002	
+Collector Revision		K	
+Firmware Version	ms	2.5.6	
+Measurement Mode	ms	Pulsed	
+Nominal Gain	ms	4	
+Collection Interval	ms	125	
+General Analysis
+CAX Dose		0	
+Photon Wedge Angle		0	
+Analysis Config		Custom	
+Flatness type		Ratio	
+Symmetry Type		CAX Point Diff.(sym)	
+Energy Calibration			
+Energy Analysis		Intercept	
+Penumbra Top		80	
+Penumbra Bottom		20	
+Flatness Field Percent		80	
+Symmetry Field Percent		80	
+Base Intensity Point		MAX	
+Intensity Field Percentage		50	
+X Axis Analysis
+Field Size	cm	26,1954	
+Beam Center	cm	-0,0245761	
+Light/Rad Coinc. Bottom	cm	3,24227	
+Light/Rad Coinc. Top	cm	3,19311	
+Penumbra Bottom	cm	1,14438	
+Penumbra Top	cm	1,15002	
+Flatness Result	perc	102,552	
+Symmetry Result	perc	-0,235757	
+Electron Energy	Ep0		
+Electron Energy	D80		
+Y Axis Analysis
+Field Size	cm	26,1999	
+Beam Center	cm	0,0196213	
+Light/Rad Coinc. Bottom	cm	3,20035	
+Light/Rad Coinc. Top	cm	3,23959	
+Penumbra Bottom	cm	1,10186	
+Penumbra Top	cm	1,10127	
+Flatness Result	perc	101,672	
+Symmetry Result	perc	0,325042	
+Electron Energy	Ep0		
+Electron Energy	D80		
+Positive Diagonal Analysis
+Field Size	cm	36,1846	
+Beam Center	cm	-0,0135763	
+Light/Rad Coinc. Bottom	cm	4,13344	
+Light/Rad Coinc. Top	cm	4,10629	
+Penumbra Bottom	cm	1,56524	
+Penumbra Top	cm	1,61102	
+Flatness Result	perc	103,58	
+Symmetry Result	perc	-0,285011	
+Electron Energy	Ep0		
+Electron Energy	D80		
+Negative Diagonal Analysis
+Field Size	cm	36,2063	
+Beam Center	cm	-0,0145178	
+Light/Rad Coinc. Bottom	cm	4,14523	
+Light/Rad Coinc. Top	cm	4,1162	
+Penumbra Bottom	cm	1,58278	
+Penumbra Top	cm	1,56613	
+Flatness Result	perc	103,739	
+Symmetry Result	perc	-0,46621	
+Electron Energy	Ep0		
+Electron Energy	D80		
+Measured Data:	Total Dose-Normalized (%)
+Pulses:		4260
+TimerTics	(1 uSec)	21500686
+	
+Detector ID	Positive Diagonal Position(cm)	Set 1
+	-22,63	0,40177564	
+	-21,92	0,49355511	
+	-21,21	0,68006541	
+	-20,51	1,08728213	
+	-19,80	3,43601061	
+	-19,09	14,05947369	
+	-18,38	45,44031891	
+	-17,68	73,15035805	
+	-16,97	85,71107752	
+	-16,26	91,60175453	
+	-15,56	95,06774194	
+	-14,85	97,18682105	
+	-14,14	98,82841877	
+	-13,43	100,12643931	
+	-12,73	100,76688122	
+	-12,02	101,02504858	
+	-11,31	100,91085615	
+	-10,61	100,83921811	
+	-9,90	100,94444529	
+	-9,19	100,77044858	
+	-8,49	100,64269948	
+	-7,78	100,15326432	
+	-7,07	100,04240788	
+	-6,36	100,23314959	
+	-5,66	100,04974885	
+	-4,95	99,97730962	
+	-4,24	99,76057695	
+	-3,54	99,86132251	
+	-2,83	99,84946099	
+	-2,12	99,78958004	
+	-1,41	99,85244168	
+	0,00	100,00000000	
+	1,41	99,73718182	
+	2,12	99,59249338	
+	2,83	99,63844752	
+	3,54	99,57472034	
+	4,24	99,62166617	
+	4,95	99,83145650	
+	5,66	99,90632063	
+	6,36	100,01803998	
+	7,07	99,95422230	
+	7,78	100,17597853	
+	8,49	100,53745127	
+	9,19	100,71232449	
+	9,90	100,80592742	
+	10,61	100,74367922	
+	11,31	100,76810804	
+	12,02	100,92922695	
+	12,73	100,60915043	
+	13,43	99,89951176	
+	14,14	98,64968618	
+	14,85	96,86765663	
+	15,56	94,45333592	
+	16,26	90,69105068	
+	16,97	84,66310787	
+	17,68	71,98057462	
+	18,38	44,16066047	
+	19,09	13,50644538	
+	19,80	3,06965039	
+	20,51	1,17240940	
+	21,21	0,64866111	
+	21,92	0,54050540	
+	22,63	0,39861383	

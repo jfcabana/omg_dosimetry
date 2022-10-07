@@ -1,45 +1,58 @@
-**Edit a file, create a new file, and clone from Bitbucket in under 2 minutes**
+# Optimized Multichannel Gafchromic Dosimetry (OMG Dosimetry)
 
-When you're done, you can delete the content in this README and update the file with details for others getting started with your repository.
+With OMG Dosimetry, you can easily perform film calibration, film-to-dose conversion, and dose analysis.
 
-*We recommend that you open this README in another tab as you perform the tasks below. You can [watch our video](https://youtu.be/0ocf7u76WSo) for a full demo of all the steps in this tutorial. Open the video in a new tab to avoid leaving Bitbucket.*
+It is built as an expansion to Pylinac (https://pylinac.readthedocs.io/en/latest/index.html).
+Demonstration files are provided for each module to get you started quickly. 
+Code is heavily commented so you can follow along and andapt it for your personnal usage.
 
----
 
-## Edit a file
+## Gafchromic calibration module
 
-You’ll start by editing this README file to learn how to edit a file in Bitbucket.
+The calibration module computes multichannel calibration curves from scanned films. 
 
-1. Click **Source** on the left side.
-2. Click the README.md link from the list of files.
-3. Click the **Edit** button.
-4. Delete the following text: *Delete this line to make a change to the README from Bitbucket.*
-5. After making your change, click **Commit** and then **Commit** again in the dialog. The commit page will open and you’ll see the change you just made.
-6. Go back to the **Source** page.
+Scanned films are automatically detected and selected, or ROIs can be drawn manually.
 
----
+The lateral scanner response effect (inhomogeneous response of the scanner along the detector array) is accounted for by creating separate calibration curves for each pixel along the array.
+This requires exposing long film strips and scanning them perpendicular to the scan direction (see demonstration files). 
+To account for non-flat beam profiles, the output from an ICProfiler acquired at the same time as film exposure can be given as input to correct for beam shape.
+Alternatively, the lateral scanner response correction can be turned off, then a single calibration curve is computed for all pixels.
 
-## Create a file
+### Features
 
-Next, you’ll add a new file to this repository.
+- Automatically loads multiple images in a folder, average multiple copies of same image and stack different scans together.
+- Automatically detect film strips position and size, and define ROIs inside these film strips.
+- Daily output correction
+- Beam profile correction
+- Lateral scanner response correction
+- Save/Load LUt files
+- Publish PDF report
 
-1. Click the **New file** button at the top of the **Source** page.
-2. Give the file a filename of **contributors.txt**.
-3. Enter your name in the empty file space.
-4. Click **Commit** and then **Commit** again in the dialog.
-5. Go back to the **Source** page.
 
-Before you move on, go ahead and explore the repository. You've already seen the **Source** page, but check out the **Commits**, **Branches**, and **Settings** pages.
+## Film-to-dose module
 
----
+The film-to-dose module performs optimized multichannel conversion from scanned gafchromic films to absolute dose.
+It uses the optimized multichannel method from Mayer *et al* (https://doi.org/10.1118/1.3694100) and calibration curves obtained with the calibration module.
 
-## Clone a repository
+### Features
 
-Use these steps to clone from SourceTree, our client for using the repository command-line free. Cloning allows you to work on your files locally. If you don't yet have SourceTree, [download and install first](https://www.sourcetreeapp.com/). If you prefer to clone from the command line, see [Clone a repository](https://confluence.atlassian.com/x/4whODQ).
+- Multiple scans of same film are loaded and averaged automatically
+- Automatic film detection and crop
+- Multichannel optimized conversion to absolute dose (reduced film inhomogeneities/artefacts)
+- Lateral scanner response is accounted for if this feature was turned on during calibration
+- Calibration curves interpolation performed by fitting either a rational function or spline curve
+- Output individual channels dose (R/G/B), as well as optimized dose, mean channel dose and average dose
+- Output metrics for evaluation of dose conversion quality: disturbance map, residual error, consistency map
+- Publish PDF report
 
-1. You’ll see the clone button under the **Source** heading. Click that button.
-2. Now click **Check out in SourceTree**. You may need to create a SourceTree account or log in.
-3. When you see the **Clone New** dialog in SourceTree, update the destination path and name if you’d like to and then click **Clone**.
-4. Open the directory you just created to see your repository’s files.
 
-Now that you're more familiar with your Bitbucket repository, go ahead and add a new file locally. You can [push your change back to Bitbucket with SourceTree](https://confluence.atlassian.com/x/iqyBMg), or you can [add, commit,](https://confluence.atlassian.com/x/8QhODQ) and [push from the command line](https://confluence.atlassian.com/x/NQ0zDQ).
+## Dose analysis module
+
+The dose analysis module performs in-depth comparison from film dose to reference dose image from treatment planning system.
+
+### Features
+
+- Perform registration by identifying fiducial markers to set isocenter
+- Interactive display of analysis results (gamma map, relative error, dose profiles)
+- Gammap analysis: display gamma map, pass rate, histogram, pass rate vs dose bar graph, pass rate vs distance to agreement (fixed dose to agreement), pass rate vs dose to agreement (fixed distance to agreement)
+- Publish PDF report
