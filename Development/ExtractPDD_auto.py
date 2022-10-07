@@ -12,17 +12,18 @@ from scipy.signal import medfilt
 
 #%% Set paths
 
-baseDir = 'P:\\Projets\\CRIC\\Physique_Medicale\\Films\\2019-11-12 Calibration C9 XD\\Verif position scan PDD\\'
+baseDir = 'P:\\Projets\\CRIC\\Physique_Medicale\\Films\\2020-12-14 Calibration C10 SRS\\Valid 4h\\'
 
 path_in = baseDir + 'DoseFilm\\'
 path_out = baseDir + 'Rendements\\'
 
+files = os.listdir(path_in)
 if not os.path.exists(path_out):
     os.makedirs(path_out)
 
-files = os.listdir(path_in)
-
-film_filt = 15
+film_filt = 0  # Taille du kernel (px) de filtre médian
+width = 2       # number of pixels on each side of center to get average profile
+crop = 0        # ??
 
 for file in files:
     fileBase, fileext = os.path.splitext(file)   
@@ -37,8 +38,7 @@ for file in files:
         film.film_dose.array = medfilt(film.film_dose.array,  kernel_size=(film_filt, film_filt))
     film.film_dose.crop_edges(threshold=10)
 
-    width = 9  # number of pixels on each side of center to get average profile
-    crop = 0
+
     
     x0 = int(film.film_dose.shape[1] / 2)
     y0 = int(film.film_dose.shape[0] / 2)

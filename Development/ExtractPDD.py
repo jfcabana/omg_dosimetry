@@ -11,34 +11,35 @@ import csv
 
 #%% Set paths
 
-baseDir = 'P:\\Projets\\CRIC\\Physique_Medicale\\Films\\2019-11-12 Calibration C9 XD\\PDD 18hr\\'
+#baseDir = 'P:\\Projets\\CRIC\\Physique_Medicale\\Films\\2020-12-14 Calibration C10 SRS\\Valid 4h\\'
+baseDir = 'P:\\Projets\\CRIC\\Physique_Medicale\\SRS\\Mesures\\Comparaison détecteurs\\Films\\Rescan PDD\\Scan 300ppp\\'
 
-path_in = baseDir + 'DoseFilm\\'
-path_out = baseDir + 'Rendements\\'
+path_in = baseDir + 'Dose_spline\\'
+path_out = baseDir + 'MCC\\'
 
 if not os.path.exists(path_out):
     os.makedirs(path_out)
 
 #files = os.listdir(path_in)
 
-fileBase = 'Valid_C9-XD_18hr_trans_vitre_PDD_calib_18hr_0-22Gy_doseOpt'
+fileBase = 'C10-SRS_PDD_refl_300ppp_5-2_spline_g'
 fileIn = path_in + fileBase + '.tif'
 fileOut = path_out + fileBase + '.mcc'
 
-film = analysis.DoseAnalysis(film_dose=fileIn, ref_dose_factor=None)
+film = analysis.DoseAnalysis(film_dose=fileIn, flipLR=True, ref_dose=None, rot90=0, ref_dose_factor=None)
 
 #Sélectionner les marqueurs sur l'image en double cliquant.
-film.register(threshold=0)
+film.register(threshold=10)
 
 #%%
 
-width = 9  # number of pixels on each side of center to get average profile
+width = 5  # number of pixels on each side of center to get average profile
 crop = 0
 
-#x0 = int(film.film_dose.shape[1] / 2)
-#y0 = int(film.film_dose.shape[0] / 2)
-x0 = film.x0
-y0 = film.y0
+x0 = int(film.film_dose.shape[1] / 2)
+y0 = int(film.film_dose.shape[0] / 2)
+#x0 = film.x0
+#y0 = film.y0
 
 x1 = film.markers[0][0]
 y1 = film.markers[0][1]
@@ -56,8 +57,9 @@ inline_pos = (np.asarray(range(len(inline_prof))) - int(len(inline_prof)/2)) / f
 crossline_prof = np.median(film.film_dose.array[:, x0-width:x0+width], axis=1)
 crossline_pos = (np.asarray(range(len(crossline_prof))) - int(len(crossline_prof)/2)) / film.film_dose.dpmm
 
-profile = crossline_prof
-position = (np.asarray(range(len(profile)))) / film.film_dose.dpmm
+profile = inline_prof
+#position = (np.asarray(range(len(profile)))) / film.film_dose.dpmm + 100
+position = inline_pos + 100
 
 plt.figure()
 plt.plot(position, profile)
@@ -97,13 +99,13 @@ with open(fileOut, 'w',  newline='') as csvfile:
     csvwriter.writerow(['','','SCAN_OFFAXIS_CROSSPLANE=0.00'])
     csvwriter.writerow(['','','SCAN_ANGLE=0.00'])
     csvwriter.writerow(['','','INCLINATION_ANGLE=0.00'])
-    csvwriter.writerow(['','','DETECTOR_NAME=Film-C9-XD'])
+    csvwriter.writerow(['','','DETECTOR_NAME=Film-C10'])
     csvwriter.writerow(['','','BEGIN_DATA'])
 
-    for i in range(0, len(inline_prof)):
-         if inline_prof[i] == 0:
+    for i in range(0, len(profile)):
+         if profile[i] == 0:
              continue
-         csvwriter.writerow(['','','', inline_pos[i], inline_prof[i]])
+         csvwriter.writerow(['','','', position[i], profile[i]])
 
     csvwriter.writerow(['','','END_DATA'])
     csvwriter.writerow(['','END_SCAN  1'])
