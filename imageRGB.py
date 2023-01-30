@@ -496,6 +496,27 @@ class BaseImage:
         if 'right' in edges:
             self.array = np.pad(self.array, ((0,0),(0,pixels)), 'constant', constant_values=value)
             
+    def pad_rgb(self, pixels=15, value=0, edges=('top', 'bottom', 'left', 'right')):
+        """Add pixels on edge of the image in-place.
+
+        Parameters
+        ----------
+        pixels : int
+            Number of pixels to add.
+        edges : tuple
+            Which edges to remove from. Can be any combination of the four edges.
+        """
+        if pixels < 0:
+            raise ValueError("Pixels to remove must be a positive number")
+        if 'top' in edges:
+            self.array = np.pad(self.array, ((pixels,0),(0,0),(0,0)), 'constant', constant_values=value)
+        if 'bottom' in edges:
+            self.array = np.pad(self.array, ((0,pixels),(0,0),(0,0)), 'constant', constant_values=value)
+        if 'left' in edges:
+            self.array = np.pad(self.array, ((0,0),(pixels,0),(0,0)), 'constant', constant_values=value)
+        if 'right' in edges:
+            self.array = np.pad(self.array, ((0,0),(0,pixels),(0,0)), 'constant', constant_values=value)
+            
     def flipud(self):
         """ Flip the image array upside down in-place. Wrapper for np.flipud()"""
         self.array = np.flipud(self.array)
@@ -1146,7 +1167,7 @@ def stack_images(img_list, axis=1):
 
     # check that all images are the same siz
     for img in img_list:
-        if img.shape != first_img.shape:
+        if img.shape[0] != first_img.shape[0]:
             raise ValueError("Images were not the same shape")
     new_array = np.concatenate(tuple(img.array for img in img_list), axis)
     first_img.array = new_array

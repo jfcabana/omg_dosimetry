@@ -157,7 +157,8 @@ class LUT:
                  roi_size='auto',
                  roi_crop=2.0,
                  info=None,
-                 baseline=None
+                 baseline=None,
+                 crop_top_bottom=None
                 ):
         
         if path is None:
@@ -179,6 +180,7 @@ class LUT:
         self.roi_size = roi_size
         self.roi_crop = roi_crop
         self.info = info
+        self.crop_top_bottom = crop_top_bottom
         
         self.baseline = baseline
         if baseline is not None:
@@ -193,6 +195,11 @@ class LUT:
         self.lut = []
         self.profile = None  
         self.load_images(path, filt)    # load and process images folder
+        
+        if crop_top_bottom is not None:
+            self.img.crop(pixels=crop_top_bottom, edges=('top','bottom'))
+            self.img.pad_rgb(pixels=crop_top_bottom, value=1, edges=('top','bottom'))
+            
         self.get_longi_profile()        # get the longitudinal profile at the center of scanner
         self.compute_latpos()           # compute absolute position (mm) of pixels in the y direciton, with 0 at scanner center
 
