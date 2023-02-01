@@ -775,9 +775,6 @@ class BaseImage:
         dpi = self.dpi
         im = pImage.fromarray(self.array)
         im.save(outfile, dpi=(dpi,dpi))
-#        img1 = self.array
-#        img1.meta.resolution = (dpi,dpi)
-#        imageio.imwrite(file_out, img1)
 
     def move_pixel_to_center(self, x0, y0):
         left = x0

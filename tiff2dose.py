@@ -22,6 +22,7 @@ Requirements:
     Tested with pylinac 2.0.0, which is compatible with python 3.5.
     
 Written by Jean-Francois Cabana, copyright 2018
+version 2023-02-01
 """
 
 import os
@@ -32,53 +33,29 @@ from scipy.signal import medfilt
 import matplotlib.pyplot as plt
 from scipy.optimize import curve_fit
 import pickle
-
 from pylinac.core import pdf
 import io
 from reportlab.lib.units import cm
-
 from matplotlib.widgets  import RectangleSelector
 
 class Gaf:
     """Base class for gafchromic films.
     """
 
-    def __init__(self, path='', lut_file='', img_filt=0, lut_filt=35, fit_type='rational', k=3, ext=3, s=None, info=None, crop_edges=0, clip=None, rot90=0, baseline=None, scale0=False, scaleDose=False):   
+    def __init__(self, path='', lut_file='', img_filt=0, lut_filt=35, fit_type='rational', k=3, ext=3, s=None, info=None, crop_edges=0, clip=None, rot90=0):   
         
         if info is None:
-            info = dict(author = '', unit = '', film_lot = '', scanner_id = '',
-                        date_exposed = '', date_scanned = '', wait_time = '', notes = '')
-        
-        # Store settings
-        
+            info = dict(author = '', unit = '', film_lot = '', scanner_id = '', date_exposed = '', date_scanned = '', wait_time = '', notes = '')
         self.path = path
         self.lut_file = lut_file
         self.img_filt = img_filt
         self.lut_filt = lut_filt
         self.fit_type = fit_type
         self.info = info
-        self.lut = calibration.load_lut(lut_file)
-        
-#        self.baseline = baseline
-#        if self.baseline is not None:
-#            if os.path.isdir(baseline):
-#                images = imageRGB.load_folder(baseline)     
-#                img = imageRGB.stack_images(images, axis=1)
-#            elif os.path.isfile(baseline):
-#                img = imageRGB.load(baseline)
-#            self.base = img
-        
+        self.lut = calibration.load_lut(lut_file)       
         self.load_files(path)
         self.clip = clip
-
-        if rot90:
-            self.img.array = np.rot90(self.img.array, k=rot90)
-            
-        if scale0:
-            print('Select ROI of unexposed film')
-            self.apply_factor_from_roi()
-        
-        # Perform the conversion
+        if rot90: self.img.array = np.rot90(self.img.array, k=rot90)   
         self.convert2dose(img_filt=img_filt, lut_filt=lut_filt, fit_type=fit_type, k=k, ext=ext, s=s)
         
         if crop_edges:
@@ -93,8 +70,7 @@ class Gaf:
             self.dose_rg.crop_edges(threshold=crop_edges)
             self.dose_consistency.crop_edges(threshold=crop_edges)
 
-    def load_files(self, path):
-        
+    def load_files(self, path):   
         if os.path.isdir(path):
             folder = path
             files = os.listdir(folder)
@@ -107,8 +83,7 @@ class Gaf:
             files = os.listdir(folder)
             
         file_list = []
-        filebase, fileext = os.path.splitext(filename)
-        
+        filebase, fileext = os.path.splitext(filename)   
         if filebase[-3:-1] == '00':
             for file in files:
                 name, fileext = os.path.splitext(file)
@@ -116,10 +91,8 @@ class Gaf:
                     file_list.append(os.path.join(folder,name + fileext))
                     
         # If path is a list, we assume they are multiple copies of the same film
-        if len(file_list) > 0:
-            self.img = imageRGB.load_multiples(file_list)     
-        else:
-            self.img = imageRGB.load(path)
+        if len(file_list) > 0: self.img = imageRGB.load_multiples(file_list)     
+        else: self.img = imageRGB.load(path)
 
     def convert2dose(self, img_filt=0, lut_filt=35, fit_type='rational', k=3, ext=3, s=0):        
         """ Performs the conversion to dose.
@@ -130,7 +103,6 @@ class Gaf:
         ysize = img.shape[0]
         xsize = img.shape[1]
 
-        
         # Check that image and LUT sizes match (if lateral correction is used)
         if lut.lateral_correction:
             if ysize != lut.npixel:
@@ -147,8 +119,7 @@ class Gaf:
                 for i in range (0,len(lut.doses)):  #loop over all doses
                     for j in range (2,6):           #loop over all channels (mean,R,G,B)
                         lut.lut[j,i,:] = medfilt(lut.lut[j,i,:], kernel_size=(lut_filt))
-            else:
-                pass
+            else: pass
         
         # Initialize arrays
         dose_m = np.zeros((ysize, xsize))
@@ -184,22 +155,12 @@ class Gaf:
                 Dr, Ar = lut.get_dose_and_derivative_from_spline(xdata[3,:], ydata, row[:,0], k=k, ext=ext, s=s)
                 Dg, Ag = lut.get_dose_and_derivative_from_spline(xdata[4,:], ydata, row[:,1], k=k, ext=ext, s=s)
                 Db, Ab = lut.get_dose_and_derivative_from_spline(xdata[5,:], ydata, row[:,2], k=k, ext=ext, s=s)
-                    
-            
-#            if lut.lateral_correction:
-#                p_lut = lut.lut[1:6,:,i]  
-#            else:
-#                p_lut = lut.lut[1:6,:]  
-#                
-#            # Get doses  
-#            Dm,Dr,Dg,Db,Ar,Ag,Ab = GetDoses(row, p_lut)
             
             # Remove unphysical values
             Dm[Dm < 0] = 0
             Dr[Dr < 0] = 0
             Dg[Dg < 0] = 0
             Db[Db < 0] = 0
-            
             Dave = (Dr + Dg + Db) / 3
             
             # Store single channel doses
@@ -230,8 +191,6 @@ class Gaf:
                       ( Dg + Ag*delta[i,:] - dose_opt[i,:] )**2 + 
                       ( Db + Ab*delta[i,:] - dose_opt[i,:] )**2 )**0.5
              
-        
-        
         if self.clip is not None:
             dose_m[dose_m > self.clip] = self.clip
             dose_r[dose_r > self.clip] = self.clip
@@ -239,7 +198,6 @@ class Gaf:
             dose_b[dose_b > self.clip] = self.clip
             dose_opt[dose_opt > self.clip] = self.clip
             dose_ave[dose_ave > self.clip] = self.clip
-        
         
         self.dose_m = imageRGB.load(dose_m, dpi=self.img.dpi) 
         self.dose_r = imageRGB.load(dose_r, dpi=self.img.dpi)   
@@ -370,8 +328,7 @@ class Gaf:
         self.cid = self.fig.canvas.mpl_connect('key_press_event', self.apply_factor_from_roi_press_enter)
         
         self.wait = True
-        while self.wait:
-            plt.pause(5)
+        while self.wait: plt.pause(5)
         return
         
     def apply_factor_from_roi_press_enter(self, event):
@@ -408,28 +365,6 @@ def rational_func(x, a, b, c):
 
 def drational_func(x, a, b, c):
     return -b/(x-a)**2
-
-def GetDoses(row, p_lut):
-    row_m = np.mean(row, axis=-1)
-    row_r = row[:,0]
-    row_g = row[:,1]
-    row_b = row[:,2]
-
-    popt_m, pcov_m = curve_fit(rational_func, p_lut[1,:], p_lut[0,:], p0=[0.1, 200, 500], maxfev=1500)
-    popt_r, pcov_m = curve_fit(rational_func, p_lut[2,:], p_lut[0,:], p0=[0.1, 200, 500], maxfev=1500)
-    popt_g, pcov_m = curve_fit(rational_func, p_lut[3,:], p_lut[0,:], p0=[0.1, 200, 500], maxfev=1500)
-    popt_b, pcov_m = curve_fit(rational_func, p_lut[4,:], p_lut[0,:], p0=[0.1, 200, 500], maxfev=1500)
-    
-    Dm = rational_func(row_m, *popt_m)
-    Dr = rational_func(row_r, *popt_r)
-    Dg = rational_func(row_g, *popt_g)
-    Db = rational_func(row_b, *popt_b)
-    
-    Ar = drational_func(row_r, *popt_r)
-    Ag = drational_func(row_g, *popt_g)
-    Ab = drational_func(row_b, *popt_b)
-    
-    return Dm,Dr,Dg,Db,Ar,Ag,Ab
 
 def save_dose(dose, filename):
     dose.filename = filename

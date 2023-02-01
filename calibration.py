@@ -795,7 +795,7 @@ class LUT:
 ########################### End class LUT ############################## 
 
 
-def get_profile(file):
+def get_profiler(file):
     """ Load an ICProfler txt file and return the profile over the diagonal
         for the maximum field size. If films were not exposed over the beam
         diagonal, this should be changed here.
@@ -809,6 +809,22 @@ def get_profile(file):
     for i in range(len(content[line+1:])):
         profile[i,0] = float(content[i+line+1][1].replace(',','.')) * 10 # Change from cm to mm  and change sign to correspond to img orientation.
         profile[i,1] = float(content[i+line+1][2].replace(',','.'))      
+    return profile
+
+def get_profile(file):
+    """ Load tab seperated txt file containing the position and relative profile value.
+        First column should be a position, given in mm.
+        Second column is the measured profile relative value [%], normalised to 100 in the center.
+        Position is relative to scanner center, starting negative from pixel 0.
+    """
+    with open(file, 'r') as f:
+      reader = csv.reader(f,delimiter='\t')
+      content = list(reader)    
+    profile = np.empty((len(content[:]), 2))  
+    for i in range(len(content[:])):
+        profile[i,0] = float(content[i][0].replace(',','.'))
+        profile[i,1] = float(content[i][1].replace(',','.')) 
+    profile = profile[profile[:, 0].argsort()]
     return profile
         
 def load_lut_array(filename):

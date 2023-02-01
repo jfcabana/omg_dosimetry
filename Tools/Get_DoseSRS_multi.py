@@ -15,7 +15,7 @@ import numpy as np
 #from System.Threading import Thread, ThreadStart
 #from System.Windows import *
 
-path = "P:\\Projets\\CRIC\\Physique_Medicale\\Films\\QA Patients\\0phy_SRS_multi\\A1A_Multi_2cm"
+path = "P:\\Projets\\CRIC\\Physique_Medicale\\Films\\QA Patients\\0phy_SRS_multi\\Old\\A1A_Multi_2cm"
 
 file_pkl = os.path.join(path, "Analyse_CC.pkl")
 with open(file_pkl, 'rb') as f:
