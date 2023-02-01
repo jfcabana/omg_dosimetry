@@ -14,7 +14,7 @@ info = dict(author = 'JFC',
 # Set paths
 # ** Atention, si un nom de répertoire commence avec un chiffre, mettre un double \ devant **
 path = "P:\\Projets\\CRIC\\Physique_Medicale\\Films\\Calibrations\\2023-01-23 C14 XD\\18h\\Valid"
-path = "P:\\Projets\\CRIC\\Physique_Medicale\\Films\\QA Patients\\0phy_SRS_multi\\Norm"
+path = "P:\\Projets\\CRIC\\Physique_Medicale\\Films\\QA Patients\\0phy_SRS_multi\\Test"
 path_in = path + '\\Scan'
 lut_file = "P:\\Projets\\CRIC\\Physique_Medicale\\Films\\Calibrations\\C14_calib_18h_trans_300ppp_0-9Gy.pkl"
 fit_type = 'rational'
@@ -38,4 +38,4 @@ for file in files:
     gaf1 = tiff2dose.Gaf(path=img_file, lut_file=lut_file, fit_type=fit_type, info=info, clip = clip, rot90=rot90)
     gaf1.dose_opt.save(os.path.join(path_out, filebase[:-4] + ext + '_opt.tif')) 
     report_doseFilm = os.path.join(path_out, filebase[:-4] + ext + '.pdf')
-    gaf1.publish_pdf(filename=report_doseFilm, open_file=False)
+    gaf1.publish_pdf(filename=report_doseFilm, open_file=True)
