@@ -34,6 +34,7 @@ Written by Jean-Francois Cabana, copyright 2018
 """
 
 from pylinac.core.profile import SingleProfile, MultiProfile
+from pylinac import profile
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.widgets  import RectangleSelector
@@ -47,8 +48,9 @@ import io
 from reportlab.lib.units import cm
 from scipy.optimize import curve_fit
 from random import randint
-
 from scipy.interpolate import UnivariateSpline
+from pathlib import Path
+import webbrowser
 
 class LUT:
     """ Class for performing gafchromic calibration.
@@ -241,7 +243,8 @@ class LUT:
         sect = np.mean(self.img.array[int(self.img.center.y)-size:int(self.img.center.y)+size,:,:], axis=-1)
         row = np.mean(sect, axis=0)
         bined = np.where(row > max(row) * thresh, 0, 1)    # binarize the profile for improved detectability of peaks
-        prof = MultiProfile(bined)
+        # prof = MultiProfile(bined)
+        prof = profile.find_peaks(bined)
         self.longitudinal_profile = prof
         
     def compute_latpos(self):
@@ -258,8 +261,11 @@ class LUT:
         """
         
         # Find peaks in the profile. You might need to adjust the values below.
-        x = self.longitudinal_profile.find_fwxm_peaks(x=50, threshold=0.3, min_distance=0.02)
-        xpos = [int(i) for i in x]
+        # x = self.longitudinal_profile.find_fwxm_peaks(x=50, threshold=0.3, min_distance=0.02)
+        # x = self.longitudinal_profile.find_fwxm_peaks(threshold=0.3, min_distance=0.02)
+        # xpos = [int(i) for i in x[0]]
+        xpos = self.longitudinal_profile[0]
+        data_longi = self.longitudinal_profile[1]
         n = len(xpos)
         
         # Detect vertical (y) films position and length
@@ -270,17 +276,22 @@ class LUT:
             prof = SingleProfile(col)
             prof.invert()
             prof.filter(size=3)
-            y = prof.fwxm_center(x=50)
-            l = prof.fwxm(x=50)
+            data = prof.fwxm_data(x=50)
+            y = data["center index (rounded)"]
+            l = data["width (rounded)"]
+            # y = prof.fwxm_center(x=50)
+            # l = prof.fwxm(x=50)
             ypos.append(y)
             length.append(l)
             
         # Define ROIs by cropping the film strips...
         if self.roi_size == 'auto':
-            longi_profiles = self.longitudinal_profile.subdivide()
+            # longi_profiles = self.longitudinal_profile.subdivide()
             width = []
-            for p in longi_profiles:
-                w = p.fwxm(x=50)
+            # for p in longi_profiles:
+            for i in range(0,n):
+                # w = p.fwxm(x=50)
+                w = data_longi["right_bases"][i] - data_longi["left_bases"][i]
                 width.append(w)
             crop = self.roi_crop * self.img.dpmm
             self.roi_width = (np.floor(np.asarray(width) - crop*2)).astype('int')
@@ -727,14 +738,21 @@ class LUT:
         """
         if filename is None:
             filename = os.path.join(self.path, 'Report.pdf')
-        canvas = pdf.create_pylinac_page_template(filename, analysis_title='Film Calibration Report')
+        title = 'Film Calibration Report'
+        # canvas = pdf.create_pylinac_page_template(filename, analysis_title='Film Calibration Report')
+        canvas = pdf.PylinacCanvas(filename, page_title=title, logo=Path(__file__).parent / 'OMG_Logo.png')
+        
+        # data = io.BytesIO()
+        # self.save_analyzed_image(data)
+        # img = pdf.create_stream_image(data)
+        # canvas.drawImage(img, 3 * cm, 3.5 * cm, width=15 * cm, height=15 * cm, preserveAspectRatio=True)
         
         data = io.BytesIO()
         self.save_analyzed_image(data)
-        img = pdf.create_stream_image(data)
-        canvas.drawImage(img, 3 * cm, 3.5 * cm, width=15 * cm, height=15 * cm, preserveAspectRatio=True)
+        canvas.add_image(image_data=data, location=(3, 3.5), dimensions=(15, 15))
         
-        pdf.draw_text(canvas, x=1 * cm, y=25.5 * cm, text='Film infos:', fontsize=10)
+        # pdf.draw_text(canvas, x=1 * cm, y=25.5 * cm, text='Film infos:', fontsize=10)
+        canvas.add_text(text='Film infos:', location=(1, 25.5), font_size=10)
         text = ['Author: {}'.format(self.info['author']),
                 'Unit: {}'.format(self.info['unit']),
                 'Film lot: {}'.format(self.info['film_lot']),
@@ -743,9 +761,11 @@ class LUT:
                 'Date scanned: {}'.format(self.info['date_scanned']),
                 'Wait time: {}'.format(self.info['wait_time']),
                ]
-        pdf.draw_text(canvas, x=1 * cm, y=25 * cm, text=text, fontsize=8)
+        # pdf.draw_text(canvas, x=1 * cm, y=25 * cm, text=text, fontsize=8)
+        canvas.add_text(text=text, location=(1, 25), font_size=8)
 
-        pdf.draw_text(canvas, x=1 * cm, y=21.5 * cm, text='Calibration options:', fontsize=10)
+        # pdf.draw_text(canvas, x=1 * cm, y=21.5 * cm, text='Calibration options:', fontsize=10)
+        canvas.add_text(text='Calibration options:', location=(1, 21.5), font_size=10)
         text = ['Images path: {}'.format(self.path),
                 'Nominal doses: ' + np.array2string(self.doses, precision=1, separator=', ', floatmode='fixed', max_line_width=150),
                 'Output factor: {}'.format(self.output),
@@ -753,12 +773,20 @@ class LUT:
                 'Beam profile correction applied: {}'.format(self.beam_profile),
                 'Median filter kernel size: {}'.format(self.filt)
                ]       
-        pdf.draw_text(canvas, x=1 * cm, y=21 * cm, text=text, fontsize=8)
+        # pdf.draw_text(canvas, x=1 * cm, y=21 * cm, text=text, fontsize=8)
+        canvas.add_text(text=text, location=(1, 21), font_size=8)
+        
+        # if self.info['notes'] != '':
+        #     pdf.draw_text(canvas, x=1 * cm, y=2.5 * cm, fontsize=10, text="Notes:")
+        #     pdf.draw_text(canvas, x=1 * cm, y=2 * cm, fontsize=8, text=self.info['notes'])
+        # pdf.finish(canvas, open_file=open_file, filename=filename)
         
         if self.info['notes'] != '':
-            pdf.draw_text(canvas, x=1 * cm, y=2.5 * cm, fontsize=10, text="Notes:")
-            pdf.draw_text(canvas, x=1 * cm, y=2 * cm, fontsize=8, text=self.info['notes'])
-        pdf.finish(canvas, open_file=open_file, filename=filename)
+            canvas.add_text(text='Notes:', location=(1, 2.5), font_size=10)
+            canvas.add_text(text=self.info['notes'], location=(1, 2), font_size=8)
+        canvas.finish()
+        if open_file:
+            webbrowser.open(filename)
         
         
         ####### Below are the functions used for fitting and interpolating data #######

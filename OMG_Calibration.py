@@ -14,9 +14,10 @@ info = dict(author = 'JFC',
            )
 
 # Set images folder. define parameters and compute LUT
-path = 'P:\\Projets\\CRIC\\Physique_Medicale\\Films\\Calibrations\\2023-01-23 C14 XD\\48h\\Calib'
+path = 'P:\\Projets\\CRIC\\Physique_Medicale\\Films\\Calibrations\\2023-01-23 C14 XD\\18h\\Test'
 path_in = path + '\\Scan'
-outname = 'C14_calib_48h_trans_300ppp_0-30Gy_LatCorr_BeamCorr'
+# outname = 'C14_calib_48h_trans_300ppp_0-30Gy_LatCorr_BeamCorr'
+outname = 'test'
 
 lateral_correction = True
 beam_profile = None
