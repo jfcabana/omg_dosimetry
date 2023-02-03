@@ -8,18 +8,18 @@ and calibration curves obtained with the calibration module.
 
 Features:
     - Multiple scans of same film are loaded and averaged automatically
-    - Automatic film detection and crop
+    - Automatic film detection and cropping
     - Multichannel optimized conversion to absolute dose (reduced film inhomogeneities/artefacts)
     - Lateral scanner response is accounted for if this feature was turned on during calibration
     - Calibration curves interpolation performed by fitting either a rational function or spline curve
     - Output individual channels dose (R/G/B), as well as optimized dose, mean channel dose and average dose
     - Output metrics for evaluation of dose conversion quality:
-     disturbance map, residual error, consistency map
+         disturbance map, residual error, consistency map
     - Publish PDF report
     
 Requirements:
     This module is built as an extension to pylinac package.
-    Tested with pylinac 2.0.0, which is compatible with python 3.5.
+    Tested with pylinac 3.7.2, which is compatible with python 3.7+.
     
 Written by Jean-Francois Cabana, copyright 2018
 version 2023-02-01
@@ -31,13 +31,12 @@ import numpy as np
 import imageRGB
 from scipy.signal import medfilt
 import matplotlib.pyplot as plt
-from scipy.optimize import curve_fit
 import pickle
 from pylinac.core import pdf
 import io
-from reportlab.lib.units import cm
 from matplotlib.widgets  import RectangleSelector
 import webbrowser
+from pathlib import Path
 
 class Gaf:
     """Base class for gafchromic films.
@@ -134,8 +133,7 @@ class Gaf:
     
         # Convert image to dose one line at a time
         for i in range(0,ysize):
-            row = img.array[i,:,:]
-            
+            row = img.array[i,:,:]          
             if lut.lateral_correction:
                 p_lut = lut.lut[:,:,i]
                 xdata = p_lut[:,:]
@@ -149,8 +147,7 @@ class Gaf:
                 Dm, Am = lut.get_dose_and_derivative_from_fit(xdata[2,:], ydata, np.mean(row, axis=-1))
                 Dr, Ar = lut.get_dose_and_derivative_from_fit(xdata[3,:], ydata, row[:,0])
                 Dg, Ag = lut.get_dose_and_derivative_from_fit(xdata[4,:], ydata, row[:,1])
-                Db, Ab = lut.get_dose_and_derivative_from_fit(xdata[5,:], ydata, row[:,2])
-                    
+                Db, Ab = lut.get_dose_and_derivative_from_fit(xdata[5,:], ydata, row[:,2])               
             elif fit_type == 'spline':
                 Dm, Am = lut.get_dose_and_derivative_from_spline(xdata[2,:], ydata, np.mean(row, axis=-1), k=k, ext=ext, s=s)
                 Dr, Ar = lut.get_dose_and_derivative_from_spline(xdata[3,:], ydata, row[:,0], k=k, ext=ext, s=s)
@@ -264,15 +261,11 @@ class Gaf:
             filename = os.path.join(self.path, 'Report.pdf')
         title='Film-to-Dose Report'
         # canvas = pdf.create_pylinac_page_template(filename, analysis_title=title)
-        canvas = pdf.PylinacCanvas(filename, page_title=title)
+        canvas = pdf.PylinacCanvas(filename, page_title=title, logo=Path(__file__).parent / 'OMG_Logo.png')
         
         data = io.BytesIO()
         self.save_analyzed_image(data)
-        # img = pdf.create_stream_image(data)
-        # canvas.drawImage(img, 0.5 * cm, 2 * cm, width=20 * cm, height=20 * cm, preserveAspectRatio=True)
         canvas.add_image(image_data=data, location=(0.5, 2), dimensions=(20, 20))
-        
-        # pdf.draw_text(canvas, x=1 * cm, y=25.5 * cm, text='Film infos:', fontsize=12)
         canvas.add_text(text='Film infos:', location=(1, 25.5), font_size=12)
         text = ['Author: {}'.format(self.info['author']),
                 'Unit: {}'.format(self.info['unit']),
@@ -282,10 +275,7 @@ class Gaf:
                 'Date scanned: {}'.format(self.info['date_scanned']),
                 'Wait time: {}'.format(self.info['wait_time']),
                ]
-        # pdf.draw_text(canvas, x=1 * cm, y=25 * cm, text=text, fontsize=10)
         canvas.add_text(text=text, location=(1, 25), font_size=10)
-
-        # pdf.draw_text(canvas, x=1 * cm, y=21.5 * cm, text='Conversion options:', fontsize=12)
         canvas.add_text(text='Conversion options:', location=(1, 21.5), font_size=12)
         text = ['Film file: {}'.format(os.path.basename(self.path)),
                 'LUT file: {}'.format(os.path.basename(self.lut_file)),
@@ -293,83 +283,14 @@ class Gaf:
                 'LUT filter kernel: {}'.format(self.lut_filt),
                 'LUT fit: {}'.format(self.fit_type),
                ]    
-        # pdf.draw_text(canvas, x=1 * cm, y=21 * cm, text=text, fontsize=10)
         canvas.add_text(text=text, location=(1, 21), font_size=10)
         
         if self.info['notes'] != '':
-            # pdf.draw_text(canvas, x=1 * cm, y=2.5 * cm, fontsize=14, text="Notes:")
             canvas.add_text(text='Notes:', location=(1, 2.5), font_size=14)
-            # pdf.draw_text(canvas, x=1 * cm, y=2 * cm, text=self.info['notes'])
             canvas.add_text(text=self.info['notes'], location=(1, 2), font_size=14)
-        # pdf.finish(canvas, open_file=open_file, filename=filename)    
         canvas.finish()
         if open_file:
             webbrowser.open(filename)
-    
-        
-    # def publish_pdf(
-    #     self,
-    #     filename: str,
-    #     notes: Optional[Union[str, List[str]]] = None,
-    #     open_file: bool = False,
-    #     metadata: Optional[dict] = None,
-    #     logo: Optional[Union[Path, str]] = None
-    # ):
-    #     """Publish (print) a PDF containing the analysis, images, and quantitative results.
-
-    #     Parameters
-    #     ----------
-    #     filename : (str, file-like object}
-    #         The file to write the results to.
-    #     notes : str, list of strings
-    #         Text; if str, prints single line.
-    #         If list of strings, each list item is printed on its own line.
-    #     open_file : bool
-    #         Whether to open the file using the default program after creation.
-    #     metadata : dict
-    #         Extra data to be passed and shown in the PDF. The key and value will be shown with a colon.
-    #         E.g. passing {'Author': 'James', 'Unit': 'TrueBeam'} would result in text in the PDF like:
-    #         --------------
-    #         Author: James
-    #         Unit: TrueBeam
-    #         --------------
-    #     logo: Path, str
-    #         A custom logo to use in the PDF report. If nothing is passed, the default pylinac logo is used.
-    #     """
-    #     if not self._is_analyzed:
-    #         raise ValueError("The set is not analyzed. Use .analyze() first.")
-    #     plt.ioff()
-    #     title = "Winston-Lutz Analysis"
-    #     canvas = pdf.PylinacCanvas(filename, page_title=title, metadata=metadata, logo=logo)
-    #     text = self.results(as_list=True)
-    #     canvas.add_text(text=text, location=(7, 25.5))
-    #     # draw summary image on 1st page
-    #     data = io.BytesIO()
-    #     self.save_summary(data, fig_size=(8, 8))
-    #     canvas.add_image(image_data=data, location=(2, 3), dimensions=(16, 16))
-    #     if notes is not None:
-    #         canvas.add_text(text="Notes:", location=(1, 4.5), font_size=14)
-    #         canvas.add_text(text=notes, location=(1, 4))
-    #     # add more pages showing individual axis images
-    #     for ax in (
-    #         Axis.GANTRY,
-    #         Axis.COLLIMATOR,
-    #         Axis.COUCH,
-    #         Axis.GB_COMBO,
-    #         Axis.GBP_COMBO,
-    #     ):
-    #         if self._contains_axis_images(ax):
-    #             canvas.add_new_page()
-    #             data = io.BytesIO()
-    #             self.save_images(data, axis=ax)
-    #             canvas.add_image(data, location=(2, 7), dimensions=(18, 18))
-
-    #     canvas.finish()
-
-    #     if open_file:
-    #         webbrowser.open(filename)
-    
-    
     
     def apply_factor_from_roi(self, norm_dose = None):
         """ Define an ROI on an unexposed film to correct for scanner response. """
