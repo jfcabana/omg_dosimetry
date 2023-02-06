@@ -344,8 +344,9 @@ class LUT:
             ax = plt.gca()
             x1, y1 = int(eclick.xdata), int(eclick.ydata)
             x2, y2 = int(erelease.xdata), int(erelease.ydata)
-            rect = plt.Rectangle( (min(x1,x2),min(y1,y2)), np.abs(x1-x2), np.abs(y1-y2), Fill=False )
-            ax.add_patch(rect)
+            rect = plt.Rectangle( (min(x1,x2),min(y1,y2)), np.abs(x1-x2), np.abs(y1-y2), fill=True )
+            ax.add_patch(rect) 
+            plt.gcf().canvas.draw_idle()
             
             self.roi_xmin.append(min(x1,x2))
             self.roi_xmax.append(max(x1,x2))
@@ -356,8 +357,7 @@ class LUT:
             self.roi_width.append(int(np.abs(x1-x2)))
             self.roi_length.append(int(np.abs(y1-y2)))
         
-        self.rs = RectangleSelector(ax, select_box, drawtype='box', useblit=False, button=[1], 
-                                    minspanx=5, minspany=5, spancoords='pixels', interactive=True)
+        self.rs = RectangleSelector(ax, select_box, useblit=True, button=[1], minspanx=5, minspany=5, spancoords='pixels', interactive=True)
         
         plt.gcf().canvas.mpl_connect('key_press_event', self.press_enter)
         
@@ -497,7 +497,7 @@ class LUT:
         self.img.plot(ax=ax)  
 
         for i in range(self.nfilm):
-            p = plt.Rectangle( (self.roi_xmin[i],self.roi_ymin[i]), self.roi_width[i], self.roi_length[i], fill=False, color='r' ) 
+            p = plt.Rectangle( (self.roi_xmin[i],self.roi_ymin[i]), self.roi_width[i], self.roi_length[i], color='r', fill=False ) 
             ax.add_patch(p)
             c = plt.Circle((self.roi_xpos[i],self.roi_ypos[i]), 20, color='r', fill=False)
             ax.add_patch(c)
