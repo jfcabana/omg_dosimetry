@@ -49,3 +49,6 @@ Thumbs.db
 *.wmv
 
 temp.py
+OMG_Tiff2Analysis_QApatients_SRS_multi.py
+*.ini
+QA/OMG_Tiff2Analysis_QApatients_SRS_multi.py

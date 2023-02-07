@@ -119,15 +119,15 @@ class DoseAnalysis():
             ax = plt.gca()
             x1, y1 = int(eclick.xdata), int(eclick.ydata)
             x2, y2 = int(erelease.xdata), int(erelease.ydata)
-            rect = plt.Rectangle( (min(x1,x2),min(y1,y2)), np.abs(x1-x2), np.abs(y1-y2), Fill=False )
-            ax.add_patch(rect)           
+            # rect = plt.Rectangle( (min(x1,x2),min(y1,y2)), np.abs(x1-x2), np.abs(y1-y2), fill=False )
+            # ax.add_patch(rect)
+            # plt.gcf().canvas.draw_idle()
             self.roi_xmin = min(x1,x2)
             self.roi_xmax = max(x1,x2)
             self.roi_ymin = min(y1,y2)
             self.roi_ymax = max(y1,y2)
         
-        self.rs = RectangleSelector(ax, select_box, drawtype='box', useblit=False, button=[1], 
-                                    minspanx=5, minspany=5, spancoords='pixels', interactive=True)    
+        self.rs = RectangleSelector(ax, select_box, useblit=True, button=[1], minspanx=5, minspany=5, spancoords='pixels', interactive=True)  
         self.cid = self.fig.canvas.mpl_connect('key_press_event', self.apply_factor_from_roi_press_enter)
         
         self.wait = True
@@ -155,12 +155,6 @@ class DoseAnalysis():
             plt.close(self.fig)   
             self.wait = False
             return
-
-
-
-
-
-
 
     def apply_factor_from_norm_film(self, norm_dose = None):
         """ Define an ROI of standard dimension to compute dose factor from normalisation film. """
@@ -199,16 +193,10 @@ class DoseAnalysis():
             self.roi_ymin = int(event.ydata) - taille
             self.roi_ymax = int(event.ydata) + taille
             
-            rect = plt.Rectangle( (min(self.roi_xmin,self.roi_xmax),min(self.roi_ymin,self.roi_ymax)), np.abs(self.roi_xmin-self.roi_xmax), np.abs(self.roi_ymin-self.roi_ymax), Fill=False )
+            rect = plt.Rectangle( (min(self.roi_xmin,self.roi_xmax),min(self.roi_ymin,self.roi_ymax)), np.abs(self.roi_xmin-self.roi_xmax), np.abs(self.roi_ymin-self.roi_ymax), fill=False )
             ax.add_patch(rect)    
             ax.plot((self.roi_center[0]-50,self.roi_center[0]+50),(self.roi_center[1],self.roi_center[1]),'w', linewidth=2)
             ax.plot((self.roi_center[0],self.roi_center[0]),(self.roi_center[1]-50,self.roi_center[1]+50),'w', linewidth=2)
-
-
-
-
-
-
 
     def crop_film(self):
         """ Define an ROI to crop film. """     
@@ -227,16 +215,16 @@ class DoseAnalysis():
             ax = plt.gca()
             x1, y1 = int(eclick.xdata), int(eclick.ydata)
             x2, y2 = int(erelease.xdata), int(erelease.ydata)
-            rect = plt.Rectangle( (min(x1,x2),min(y1,y2)), np.abs(x1-x2), np.abs(y1-y2), Fill=False )
-            ax.add_patch(rect)
+            # rect = plt.Rectangle( (min(x1,x2),min(y1,y2)), np.abs(x1-x2), np.abs(y1-y2), fill=False, color='r' )
+            # ax.add_patch(rect)
+            # plt.gcf().canvas.draw_idle()
             
             self.roi_xmin = min(x1,x2)
             self.roi_xmax = max(x1,x2)
             self.roi_ymin = min(y1,y2)
             self.roi_ymax = max(y1,y2)
         
-        self.rs = RectangleSelector(ax, select_box, drawtype='box', useblit=False, button=[1], 
-                                    minspanx=5, minspany=5, spancoords='pixels', interactive=True)    
+        self.rs = RectangleSelector(ax, select_box, useblit=True, button=[1], minspanx=5, minspany=5, spancoords='pixels', interactive=True)  
         self.cid = self.fig.canvas.mpl_connect('key_press_event', self.crop_film_press_enter)
         self.wait = True
         while self.wait:
@@ -589,6 +577,7 @@ class DoseAnalysis():
                 ax.plot((self.markers[3][0]-5,self.markers[3][0]+5),(self.markers[3][1],self.markers[3][1]),'w', linewidth=2)
                 ax.plot((self.markers[3][0],self.markers[3][0]),(self.markers[3][1]-5,self.markers[3][1]+5),'w', linewidth=2)
                 ax.set_title('Top= {}; Right= {}; Bottom= {}; Left= {}'.format(self.markers[0], self.markers[1], self.markers[2], self.markers[3]))
+            plt.gcf().canvas.draw_idle()
         
     def ontype(self, event):
         fig = plt.gcf()
