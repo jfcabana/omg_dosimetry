@@ -28,14 +28,12 @@ from pylinac.core.utilities import is_close
 import math
 from scipy.signal import medfilt
 import pickle
-
 from pylinac.core import pdf
 import io
-from reportlab.lib.units import cm
-
-# from npgamma import calc_gamma
+from pathlib import Path
 import pymedphys
 from matplotlib.widgets  import RectangleSelector
+import webbrowser
 
 class DoseAnalysis():
     
@@ -305,13 +303,6 @@ class DoseAnalysis():
             film_dose.normalize(norm_val)
             ref_dose.normalize(norm_val)
 
-        # invalidate dose values below threshold so gamma doesn't calculate over it
-#        ref_dose.array[ref_dose.array < threshold * np.max(ref_dose)] = 0
-#        film_dose.array[ref_dose.array < threshold * np.max(ref_dose)] = 0
-        # ref_dose.array[ref_dose.array < threshold] = 0  # Enlevé * np.max(ref_dose) parce que déjà normalisé à 1, et on veut couper un threshold par rapport à ce qui a été normalisé, pas nécesserairement le max
-        # film_dose.array[ref_dose.array < threshold] = 0
-
-
         # set coordinates [mm]
         x_coord = (np.array(range(0, self.ref_dose.shape[0])) / self.ref_dose.dpmm - self.ref_dose.physical_shape[0]/2).tolist()
         y_coord = (np.array(range(0, self.ref_dose.shape[1])) / self.ref_dose.dpmm - self.ref_dose.physical_shape[1]/2).tolist()
@@ -320,9 +311,8 @@ class DoseAnalysis():
         dose_reference = ref_dose.array
         dose_evaluation = film_dose.array
 
-        gamma = pymedphys.gamma(axes_reference, dose_reference, axes_evaluation, dose_evaluation, doseTA, distTA,
-                               threshold*100, local_gamma=local_gamma, max_gamma = 2.0)
-
+        # gamma = pymedphys.gamma(axes_reference, dose_reference, axes_evaluation, dose_evaluation, doseTA, distTA, threshold*100, local_gamma=local_gamma, max_gamma = 2.0)
+        gamma = pymedphys.gamma(axes_reference, dose_reference, axes_evaluation, dose_evaluation, doseTA, distTA, threshold*100, local_gamma=local_gamma)
         GammaMap = imageRGB.ArrayImage(gamma, dpi=film_dose.dpi)
               
         fail = np.zeros(GammaMap.shape)
@@ -841,14 +831,8 @@ class DoseAnalysis():
         if filename is None:
             filename = os.path.join(self.path, 'Report.pdf')
         title='Film Analysis Report'
-        canvas = pdf.create_pylinac_page_template(filename, analysis_title=title)
-        
-        data = io.BytesIO()
-        self.save_analyzed_image(data,  x=x, y=y)
-        img = pdf.create_stream_image(data)
-        canvas.drawImage(img, 0.5 * cm, 3 * cm, width=20 * cm, height=20 * cm, preserveAspectRatio=True)
-        
-        pdf.draw_text(canvas, x=1 * cm, y=25.5 * cm, text='Analysis infos:', fontsize=12)
+        canvas = pdf.PylinacCanvas(filename, page_title=title, logo=Path(__file__).parent / 'OMG_Logo.png')
+        canvas.add_text(text='Film infos:', location=(1, 25.5), font_size=12)
         text = ['Film dose: {}'.format(os.path.basename(self.film_dose.path)),
                 'Film dose factor: {}'.format(self.film_dose_factor),
                 'Reference dose: {}'.format(os.path.basename(self.ref_dose.path)),
@@ -859,26 +843,21 @@ class DoseAnalysis():
                 'Gamma distance-to-agreement: {}'.format(self.distTA),
                 'Gamma normalization: {}'.format(self.norm_val)
                ]
-        pdf.draw_text(canvas, x=1 * cm, y=25 * cm, text=text, fontsize=10)
-        canvas.showPage()
+        canvas.add_text(text=text, location=(1, 25), font_size=10)
+        data = io.BytesIO()
+        self.save_analyzed_image(data, x=x, y=y)
+        canvas.add_image(image_data=data, location=(0.5, 3), dimensions=(19, 19))
         
-        pdf.add_pylinac_page_template(canvas, analysis_title=title)
-        pdf.draw_text(canvas, x=1 * cm, y=25.5 * cm, text='Analysis infos:', fontsize=12)
-        pdf.draw_text(canvas, x=1 * cm, y=25 * cm, text=text, fontsize=10)
+        canvas.add_new_page()
+        canvas.add_text(text='Analysis infos:', location=(1, 25.5), font_size=12)
+        canvas.add_text(text=text, location=(1, 25), font_size=10)
         data = io.BytesIO()
         self.save_analyzed_gamma(data, figsize=(10, 10), **kwargs)
-        img = pdf.create_stream_image(data)
-        canvas.drawImage(img, 0.5*cm, 2*cm, width=20*cm, height=20*cm, preserveAspectRatio=True)
-#        canvas.showPage()
-        
-        if notes is not None:
-            pdf.draw_text(canvas, x=1 * cm, y=2.5 * cm, fontsize=14, text="Notes:")
-            pdf.draw_text(canvas, x=1 * cm, y=2 * cm, text=notes)
-        pdf.finish(canvas, open_file=open_file, filename=filename)         
-        
+        canvas.add_image(image_data=data, location=(0.5, 2), dimensions=(20, 20))
 
-        
-
+        canvas.finish()
+        if open_file:
+            webbrowser.open(filename)       
 
 
     def get_profile_offsets(self):
