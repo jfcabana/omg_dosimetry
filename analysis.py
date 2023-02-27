@@ -15,6 +15,7 @@ Requirements:
     Tested with pylinac 2.0.0, which is compatible with python 3.5.
     
 Written by Jean-Francois Cabana, copyright 2018
+Version 2023-02-24
 """
 
 import numpy as np
@@ -27,14 +28,12 @@ from pylinac.core.utilities import is_close
 import math
 from scipy.signal import medfilt
 import pickle
-
 from pylinac.core import pdf
 import io
-from reportlab.lib.units import cm
-
-from npgamma import calc_gamma
-#from pymedphys import gamma as npgamma
+from pathlib import Path
+import pymedphys
 from matplotlib.widgets  import RectangleSelector
+import webbrowser
 
 class DoseAnalysis():
     
@@ -119,15 +118,15 @@ class DoseAnalysis():
             ax = plt.gca()
             x1, y1 = int(eclick.xdata), int(eclick.ydata)
             x2, y2 = int(erelease.xdata), int(erelease.ydata)
-            rect = plt.Rectangle( (min(x1,x2),min(y1,y2)), np.abs(x1-x2), np.abs(y1-y2), Fill=False )
-            ax.add_patch(rect)           
+            # rect = plt.Rectangle( (min(x1,x2),min(y1,y2)), np.abs(x1-x2), np.abs(y1-y2), fill=False )
+            # ax.add_patch(rect)
+            # plt.gcf().canvas.draw_idle()
             self.roi_xmin = min(x1,x2)
             self.roi_xmax = max(x1,x2)
             self.roi_ymin = min(y1,y2)
             self.roi_ymax = max(y1,y2)
         
-        self.rs = RectangleSelector(ax, select_box, drawtype='box', useblit=False, button=[1], 
-                                    minspanx=5, minspany=5, spancoords='pixels', interactive=True)    
+        self.rs = RectangleSelector(ax, select_box, useblit=True, button=[1], minspanx=5, minspany=5, spancoords='pixels', interactive=True)  
         self.cid = self.fig.canvas.mpl_connect('key_press_event', self.apply_factor_from_roi_press_enter)
         
         self.wait = True
@@ -155,12 +154,6 @@ class DoseAnalysis():
             plt.close(self.fig)   
             self.wait = False
             return
-
-
-
-
-
-
 
     def apply_factor_from_norm_film(self, norm_dose = None):
         """ Define an ROI of standard dimension to compute dose factor from normalisation film. """
@@ -199,16 +192,10 @@ class DoseAnalysis():
             self.roi_ymin = int(event.ydata) - taille
             self.roi_ymax = int(event.ydata) + taille
             
-            rect = plt.Rectangle( (min(self.roi_xmin,self.roi_xmax),min(self.roi_ymin,self.roi_ymax)), np.abs(self.roi_xmin-self.roi_xmax), np.abs(self.roi_ymin-self.roi_ymax), Fill=False )
+            rect = plt.Rectangle( (min(self.roi_xmin,self.roi_xmax),min(self.roi_ymin,self.roi_ymax)), np.abs(self.roi_xmin-self.roi_xmax), np.abs(self.roi_ymin-self.roi_ymax), fill=False )
             ax.add_patch(rect)    
             ax.plot((self.roi_center[0]-50,self.roi_center[0]+50),(self.roi_center[1],self.roi_center[1]),'w', linewidth=2)
             ax.plot((self.roi_center[0],self.roi_center[0]),(self.roi_center[1]-50,self.roi_center[1]+50),'w', linewidth=2)
-
-
-
-
-
-
 
     def crop_film(self):
         """ Define an ROI to crop film. """     
@@ -227,16 +214,16 @@ class DoseAnalysis():
             ax = plt.gca()
             x1, y1 = int(eclick.xdata), int(eclick.ydata)
             x2, y2 = int(erelease.xdata), int(erelease.ydata)
-            rect = plt.Rectangle( (min(x1,x2),min(y1,y2)), np.abs(x1-x2), np.abs(y1-y2), Fill=False )
-            ax.add_patch(rect)
+            # rect = plt.Rectangle( (min(x1,x2),min(y1,y2)), np.abs(x1-x2), np.abs(y1-y2), fill=False, color='r' )
+            # ax.add_patch(rect)
+            # plt.gcf().canvas.draw_idle()
             
             self.roi_xmin = min(x1,x2)
             self.roi_xmax = max(x1,x2)
             self.roi_ymin = min(y1,y2)
             self.roi_ymax = max(y1,y2)
         
-        self.rs = RectangleSelector(ax, select_box, drawtype='box', useblit=False, button=[1], 
-                                    minspanx=5, minspany=5, spancoords='pixels', interactive=True)    
+        self.rs = RectangleSelector(ax, select_box, useblit=True, button=[1], minspanx=5, minspany=5, spancoords='pixels', interactive=True)  
         self.cid = self.fig.canvas.mpl_connect('key_press_event', self.crop_film_press_enter)
         self.wait = True
         while self.wait:
@@ -261,7 +248,7 @@ class DoseAnalysis():
             self.wait = False
             return
         
-    def analyse(self, film_filt=0, doseTA=3.0, distTA=3.0, threshold=0.1, norm_val='max'):
+    def analyse(self, film_filt=0, doseTA=3.0, distTA=3.0, threshold=0.1, norm_val='max', local_gamma=False):
         
         # Save some settings
         self.film_filt = film_filt
@@ -272,7 +259,7 @@ class DoseAnalysis():
             
 #        if film_filt:
 #            self.film_dose.array = medfilt(self.film_dose.array,  kernel_size=(film_filt, film_filt))
-        self.GammaMap = self.computeGamma2(doseTA=doseTA, distTA=distTA, threshold=threshold, norm_val=norm_val)       
+        self.GammaMap = self.computeGamma2(doseTA=doseTA, distTA=distTA, threshold=threshold, norm_val=norm_val, local_gamma=local_gamma)       
         self.computeDiff()
     
     def computeHDmedianDiff(self, threshold=0.8, ref = 'max'):
@@ -292,8 +279,8 @@ class DoseAnalysis():
         self.DiffMap.MSE =  sum(sum(self.DiffMap.array**2)) / len(self.film_dose.array[(self.film_dose.array > 0)]) 
         self.DiffMap.RMSE = self.DiffMap.MSE**0.5    
     
-    def computeGamma2(self, doseTA=2, distTA=2, threshold=0.1, norm_val=None, computeIDF = False):
-        """Using npgamma
+    def computeGamma2(self, doseTA=2, distTA=2, threshold=0.1, norm_val=None, local_gamma=False):
+        """Using pymedphys.gamma
         """
 #       # error checking
         if not is_close(self.film_dose.dpi, self.ref_dose.dpi, delta=3):
@@ -316,35 +303,16 @@ class DoseAnalysis():
             film_dose.normalize(norm_val)
             ref_dose.normalize(norm_val)
 
-        # invalidate dose values below threshold so gamma doesn't calculate over it
-#        ref_dose.array[ref_dose.array < threshold * np.max(ref_dose)] = 0
-#        film_dose.array[ref_dose.array < threshold * np.max(ref_dose)] = 0
-        ref_dose.array[ref_dose.array < threshold] = 0  # Enlevé * np.max(ref_dose) parce que déjà normalisé à 1, et on veut couper un threshold par rapport à ce qui a été normalisé, pas nécesserairement le max
-        film_dose.array[ref_dose.array < threshold] = 0
+        # set coordinates [mm]
+        x_coord = (np.array(range(0, self.ref_dose.shape[0])) / self.ref_dose.dpmm - self.ref_dose.physical_shape[0]/2).tolist()
+        y_coord = (np.array(range(0, self.ref_dose.shape[1])) / self.ref_dose.dpmm - self.ref_dose.physical_shape[1]/2).tolist()
+        axes_reference = (x_coord, y_coord)
+        axes_evaluation = (x_coord, y_coord)
+        dose_reference = ref_dose.array
+        dose_evaluation = film_dose.array
 
-        # convert distance value from mm to pixels
-        distTA_pixels = self.film_dose.dpmm * distTA
-
-        # set coordinates (we use pixels since distTA is in pixels)
-        x = ref_dose.shape[0]
-        y = ref_dose.shape[1]
-        x_coord =  list(range(0,x))
-        y_coord =  list(range(0,y))
-        coords_reference = (x_coord, y_coord)
-        coords_evaluation = (x_coord, y_coord)
-        
-        # set thresholds
-        distance_threshold = distTA_pixels
-        distance_step_size = distance_threshold / 10
-        dose_threshold = doseTA/100 * np.max(ref_dose)
-        lower_dose_cutoff = threshold * np.max(ref_dose)
-        
-        maximum_test_distance = distance_threshold * 1
-        max_concurrent_calc_points = np.inf
-        num_threads = 2
-        
-        gamma = calc_gamma(coords_reference, ref_dose.array, coords_evaluation, film_dose.array, distance_threshold, dose_threshold, lower_dose_cutoff=lower_dose_cutoff, distance_step_size=distance_step_size, maximum_test_distance=maximum_test_distance, max_concurrent_calc_points=max_concurrent_calc_points, num_threads=num_threads)
-
+        # gamma = pymedphys.gamma(axes_reference, dose_reference, axes_evaluation, dose_evaluation, doseTA, distTA, threshold*100, local_gamma=local_gamma, max_gamma = 2.0)
+        gamma = pymedphys.gamma(axes_reference, dose_reference, axes_evaluation, dose_evaluation, doseTA, distTA, threshold*100, local_gamma=local_gamma)
         GammaMap = imageRGB.ArrayImage(gamma, dpi=film_dose.dpi)
               
         fail = np.zeros(GammaMap.shape)
@@ -425,8 +393,9 @@ class DoseAnalysis():
         analyzed = np.isfinite(self.GammaMap.array)
         bins = np.arange(0, self.ref_dose.array.max()+bin_size, bin_size)
         dose = self.ref_dose.array[analyzed]
-        gamma_pass = self.GammaMap.passed.array[analyzed]
+        gamma_pass = self.GammaMap.passed.array[analyzed]   # analyzed array includes failing gamma points
         dose_pass = (gamma_pass * dose)
+        dose_pass = dose_pass[dose_pass > 0]     # Remove failing gamma points (value 0 from self.GammaMap.passed.array)
         dose_hist = np.histogram(dose, bins=bins)
         dose_pass_hist = np.histogram(dose_pass, bins=bins)
         dose_pass_rel = np.zeros(len(dose_pass_hist[0]))
@@ -589,6 +558,7 @@ class DoseAnalysis():
                 ax.plot((self.markers[3][0]-5,self.markers[3][0]+5),(self.markers[3][1],self.markers[3][1]),'w', linewidth=2)
                 ax.plot((self.markers[3][0],self.markers[3][0]),(self.markers[3][1]-5,self.markers[3][1]+5),'w', linewidth=2)
                 ax.set_title('Top= {}; Right= {}; Bottom= {}; Left= {}'.format(self.markers[0], self.markers[1], self.markers[2], self.markers[3]))
+            plt.gcf().canvas.draw_idle()
         
     def ontype(self, event):
         fig = plt.gcf()
@@ -861,14 +831,8 @@ class DoseAnalysis():
         if filename is None:
             filename = os.path.join(self.path, 'Report.pdf')
         title='Film Analysis Report'
-        canvas = pdf.create_pylinac_page_template(filename, analysis_title=title)
-        
-        data = io.BytesIO()
-        self.save_analyzed_image(data,  x=x, y=y)
-        img = pdf.create_stream_image(data)
-        canvas.drawImage(img, 0.5 * cm, 3 * cm, width=20 * cm, height=20 * cm, preserveAspectRatio=True)
-        
-        pdf.draw_text(canvas, x=1 * cm, y=25.5 * cm, text='Analysis infos:', fontsize=12)
+        canvas = pdf.PylinacCanvas(filename, page_title=title, logo=Path(__file__).parent / 'OMG_Logo.png')
+        canvas.add_text(text='Film infos:', location=(1, 25.5), font_size=12)
         text = ['Film dose: {}'.format(os.path.basename(self.film_dose.path)),
                 'Film dose factor: {}'.format(self.film_dose_factor),
                 'Reference dose: {}'.format(os.path.basename(self.ref_dose.path)),
@@ -879,26 +843,21 @@ class DoseAnalysis():
                 'Gamma distance-to-agreement: {}'.format(self.distTA),
                 'Gamma normalization: {}'.format(self.norm_val)
                ]
-        pdf.draw_text(canvas, x=1 * cm, y=25 * cm, text=text, fontsize=10)
-        canvas.showPage()
+        canvas.add_text(text=text, location=(1, 25), font_size=10)
+        data = io.BytesIO()
+        self.save_analyzed_image(data, x=x, y=y)
+        canvas.add_image(image_data=data, location=(0.5, 3), dimensions=(19, 19))
         
-        pdf.add_pylinac_page_template(canvas, analysis_title=title)
-        pdf.draw_text(canvas, x=1 * cm, y=25.5 * cm, text='Analysis infos:', fontsize=12)
-        pdf.draw_text(canvas, x=1 * cm, y=25 * cm, text=text, fontsize=10)
+        canvas.add_new_page()
+        canvas.add_text(text='Analysis infos:', location=(1, 25.5), font_size=12)
+        canvas.add_text(text=text, location=(1, 25), font_size=10)
         data = io.BytesIO()
         self.save_analyzed_gamma(data, figsize=(10, 10), **kwargs)
-        img = pdf.create_stream_image(data)
-        canvas.drawImage(img, 0.5*cm, 2*cm, width=20*cm, height=20*cm, preserveAspectRatio=True)
-#        canvas.showPage()
-        
-        if notes is not None:
-            pdf.draw_text(canvas, x=1 * cm, y=2.5 * cm, fontsize=14, text="Notes:")
-            pdf.draw_text(canvas, x=1 * cm, y=2 * cm, text=notes)
-        pdf.finish(canvas, open_file=open_file, filename=filename)         
-        
+        canvas.add_image(image_data=data, location=(0.5, 2), dimensions=(20, 20))
 
-        
-
+        canvas.finish()
+        if open_file:
+            webbrowser.open(filename)       
 
 
     def get_profile_offsets(self):

@@ -17,12 +17,11 @@ import matplotlib.pyplot as plt
 import numpy as np
 from PIL import Image as pImage
 from scipy import ndimage
-from scipy.misc import imresize
 from skimage.transform import rotate
 import scipy.ndimage.filters as spf
 
-from pylinac.core.utilities import is_close, minmax_scale
-from pylinac.core.decorators import type_accept, value_accept
+from pylinac.core.utilities import is_close
+# from pylinac.core.decorators import type_accept, value_accept
 from pylinac.core.geometry import Point
 from pylinac.core.io import get_url, TemporaryZipDirectory, retrieve_filenames
 from pylinac.core.profile import stretch as stretcharray
@@ -32,16 +31,6 @@ ARRAY = 'Array'
 DICOM = 'DICOM'
 IMAGE = 'Image'
 MM_PER_INCH = 25.4
-
-
-def prepare_for_classification(path):
-    """Load and resize the image and return as flattened numpy array. Used when converting an image into
-    a classification feature dataset"""
-    img = load(path, dtype=np.float32)
-    resized_img = imresize(img.array, size=(100, 100), mode='F').flatten()
-    rescaled_img = minmax_scale(resized_img)
-    return rescaled_img
-
 
 def equate_images(image1, image2):
     """Crop and resize two images to make them:
@@ -383,7 +372,7 @@ class BaseImage:
             plt.show()
         return cax
 
-    @value_accept(kind=('median', 'gaussian'))
+    # @value_accept(kind=('median', 'gaussian'))
     def filter(self, size=0.05, kind='median'):
         """Filter the profile.
 
@@ -409,7 +398,7 @@ class BaseImage:
         elif kind == 'gaussian':
             self.array = ndimage.gaussian_filter(self.array, sigma=size)
 
-    @type_accept(pixels=int)
+    # @type_accept(pixels=int)
     def crop(self, pixels=15, edges=('top', 'bottom', 'left', 'right')):
         """Removes pixels on all edges of the image in-place.
 
@@ -526,7 +515,7 @@ class BaseImage:
         orig_array = self.array
         self.array = -orig_array + orig_array.max() + orig_array.min()
 
-    @type_accept(direction=str, amount=int)
+    # @type_accept(direction=str, amount=int)
     def roll(self, direction='x', amount=1):
         """Roll the image array around in-place. Wrapper for np.roll().
 
@@ -540,7 +529,7 @@ class BaseImage:
         axis = 1 if direction == 'x' else 0
         self.array = np.roll(self.array, amount, axis=axis)
 
-    @type_accept(n=int)
+    # @type_accept(n=int)
     def rot90(self, n=1):
         """Wrapper for numpy.rot90; rotate the array by 90 degrees CCW."""
         self.array = np.rot90(self.array, n)
@@ -559,7 +548,7 @@ class BaseImage:
         """
         self.array = imresize(self.array, size=size, interp=interp, mode='F')
 
-    @value_accept(kind=('high', 'low'))
+    # @value_accept(kind=('high', 'low'))
     def threshold(self, threshold, kind='high'):
         """Apply a high- or low-pass threshold filter.
 
@@ -592,7 +581,7 @@ class BaseImage:
         array = np.where(self.array >= threshold, 1, 0)
         return ArrayImage(array)
 
-    @type_accept(point=(Point, tuple))
+    # @type_accept(point=(Point, tuple))
     def dist2edge_min(self, point):
         """Calculates minimum distance from given point to image edges.
 
@@ -646,7 +635,7 @@ class BaseImage:
             val = norm_val
         self.array = self.array / val
 
-    @type_accept(box_size=int)
+    # @type_accept(box_size=int)
     def check_inversion(self, box_size=20, position=(0.0, 0.0)):
         """Check the image for inversion by sampling the 4 image corners.
         If the average value of the four corners is above the average pixel value, then it is very likely inverted.
@@ -668,7 +657,7 @@ class BaseImage:
         if avg > np.mean(self.array.flatten()):
             self.invert()
 
-    @value_accept(threshold=(0.0, 1.0))
+    # @value_accept(threshold=(0.0, 1.0))
     def gamma(self, comparison_image, doseTA=1, distTA=1, threshold=0.1):
         """Calculate the gamma between the current image (reference) and a comparison image.
 
@@ -775,9 +764,6 @@ class BaseImage:
         dpi = self.dpi
         im = pImage.fromarray(self.array)
         im.save(outfile, dpi=(dpi,dpi))
-#        img1 = self.array
-#        img1.meta.resolution = (dpi,dpi)
-#        imageio.imwrite(file_out, img1)
 
     def move_pixel_to_center(self, x0, y0):
         left = x0
@@ -1131,7 +1117,7 @@ class DicomImageStack:
             raise ValueError("The minimum number images from the same study were not found")
         return [i for i in self.images if i.metadata.SeriesInstanceUID == most_common_uid[0]]
 
-    @type_accept(slice=int)
+    # @type_accept(slice=int)
     def plot(self, slice=0):
         """Plot a slice of the DICOM dataset.
 

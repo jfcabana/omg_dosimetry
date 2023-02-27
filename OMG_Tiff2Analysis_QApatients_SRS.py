@@ -11,44 +11,26 @@ if __name__ == '__main__':
 
 #%% ################################## Entrer vos informations ci-dessous ##################################
     #### Infos film ####
-    info = dict(author = 'JFC',
+    info = dict(author = 'PDD',
                 unit = '1',
-                film_lot = 'C13',
+                film_lot = 'C11',
                 scanner_id = 'Epson 12000XL',
-                date_exposed = '2023-01-10',
-                date_scanned = '2023-01-11',
-                wait_time = '24h',
+                date_exposed = '2023-01-18',
+                date_scanned = '2023-01-20',
+                wait_time = '36h',
                 notes = 'Scan en transmission à 300ppp')
 
     #### Infos plan ####
-    ID_patient = '0phy_SRS_multi'
-    ID_plan = 'A1A_Multi_6cm'
+    ID_patient = 'phy_CRAD'
+    ID_plan = 'A1A-VHD1'
 
     ### Orientation ###
 #    orientation = 'sag'
 #    orientation = 'coro'
-    orientation = 'BB'
-    
-    shift_x = 0             # Shift to apply to the ref dose in the x direction (mm)
-    shift_y = -0.8             # Shift to apply to the ref dose in the y direction (mm)
-    
+    orientation = 'Quasar'
+
     ### Prescription (cGy / fraction) ###
-    if "2cm" in ID_plan:
-        prescription = 370
-        normalisation = 0.991 
-    if "6cm" in ID_plan:
-        prescription = 300
-        normalisation = 0.961 
-    if "10cm" in ID_plan:
-        prescription = 230
-        normalisation = 0.940 
-    if "Multi" in ID_plan:
-        prescription = 400
-        normalisation = 'ref_roi'
-    if "B1A" in ID_plan:
-        prescription = 2100
-        normalisation = 1.0
-        shift_y = 0 
+    prescription = 1200
 
     #### Choisir les étapes à effectuer ####
     rot_scan = 0        # Mettre à 1 pour appliquer une rotation de 90 degrés sur l'image (si l'image de scan est verticale)
@@ -60,7 +42,7 @@ if __name__ == '__main__':
     dose_2_analysis_show_pdf = 0
 
     #### Choisir une méthode de normalisation ###
-#    normalisation = 0.991      # Si un chiffre, applique ce facteur de normalisation.
+    normalisation = 1.0      # Si un chiffre, applique ce facteur de normalisation.
 #    normalisation = 'ref_roi'    # Si 'ref_roi': sélectionne une ROI sur le film et normalisation par rapport à la dose de référence
 #    normalisation = 'norm_film'   # Si 'norm_film': sélectionne le film de normalisation (dans le même scan) pour calculer le facteur par rapport à une dose attendue
 #    norm_film_MU = 1350            # Combien de MU délivrés pour le film de normalisation
@@ -93,7 +75,14 @@ if __name__ == '__main__':
         flipLR = 1          # 1 if the film needs to be flipped in the left-right direction, 0 if not
         flipUD = 0          # 1 if the film needs to be flipped in the up-down direction, 0 if not
         rot90 = 1           # Number of 90 degrees rotation to apply to film dose
-        
+    
+    if orientation == 'Quasar':    # Paramètres à confirmer selone stadardisation
+        flipLR = 1          # 1 if the film needs to be flipped in the left-right direction, 0 if not
+        flipUD = 0          # 1 if the film needs to be flipped in the up-down direction, 0 if not
+        rot90 = 1           # Number of 90 degrees rotation to apply to film dose
+    
+    shift_x = 0             # Shift to apply to the ref dose in the x direction (mm)
+    shift_y = 0             # Shift to apply to the ref dose in the y direction (mm)
 
     ### Centre marqueurs ###   
     # Référence 2022-08-26
@@ -106,6 +95,8 @@ if __name__ == '__main__':
     
     #    BabyBlue 3 films 2022-12-16
     if orientation == 'BB': markers_center = [0.8, 1.2, 233.3]
+    #    Quasar 2023-01-16
+    if orientation == 'Quasar': markers_center = [95.7, -599.6, 211.3]
 
     #### Gamma analysis parameters
     # Le code plus bas fait l'analyse Gamma 3/3 et 2/2. On peut changer les paramètres suivants au besoin:
@@ -124,7 +115,7 @@ if __name__ == '__main__':
     path_plan = os.path.join(path_patient, ID_plan)
     path_scan = os.path.join(path_plan, 'Scan')
     path_doseFilm = os.path.join(path_plan, 'DoseFilm')
-    path_doseRS = os.path.join(path_plan, 'DoseRS_CC')
+    path_doseRS = os.path.join(path_plan, 'DoseRS')
     path_analyse = os.path.join(path_plan, 'Analyse')
 
     # Create folders
@@ -202,7 +193,7 @@ if __name__ == '__main__':
         doseTA = 5
         distTA = 1
 #        norm_val = film.ref_dose.array.max() * 0.7
-        filename= '{}_Facteur{:.2f}_Filtre{}_Gamma{}%-{}mm_report.pdf'.format(filebase + "_CC", film.film_dose_factor,film_filt, doseTA, distTA)
+        filename= '{}_Facteur{:.2f}_Filtre{}_Gamma{}%-{}mm_report.pdf'.format(filebase, film.film_dose_factor,film_filt, doseTA, distTA)
         fileout=os.path.join(path_analyse, filename)
         print("Analyse en cours...")
         film.analyse(doseTA=doseTA, distTA=distTA, threshold=threshold, norm_val=norm_val, film_filt=film_filt)
@@ -220,7 +211,7 @@ if __name__ == '__main__':
         doseTA = 5
         distTA = 0.5
 #        norm_val = film.ref_dose.array.max() * 0.7
-        filename= '{}_Facteur{:.2f}_Filtre{}_Gamma{}%-{}mm_report.pdf'.format(filebase + "_CC", film.film_dose_factor,film_filt, doseTA, distTA)
+        filename= '{}_Facteur{:.2f}_Filtre{}_Gamma{}%-{}mm_report.pdf'.format(filebase, film.film_dose_factor,film_filt, doseTA, distTA)
         fileout=os.path.join(path_analyse, filename)
         print("Analyse en cours...")
         film.analyse(doseTA=doseTA, distTA=distTA, threshold=threshold, norm_val=norm_val, film_filt=film_filt)
@@ -248,11 +239,11 @@ if __name__ == '__main__':
         film.get_profile_offsets()
 #
         #%% ################################## Écriture du fichier Excel ################################
-        path_Excel = path_patient
-        filename = ID_patient + '_' + ID_plan + '_BB_'
-        if 'CC' in path_doseRS: filename += 'CC.xlsx'
-        elif 'MC' in path_doseRS: filename += 'MC.xlsx'
-        file_Excel = os.path.join(path_Excel,filename)
+        path_Excel = 'P:\\Projets\\CRIC\\Physique_Medicale\\QA Patients\\'
+        files = os.listdir(path_Excel)
+        for file in files:
+           if (ID_patient in file) and (ID_plan in file) and (orientation[0:3].lower() in file.lower()):
+               file_Excel = os.path.join(path_Excel,file)
 
         wb = openpyxl.load_workbook(file_Excel)
         ws = wb["Mesure"]
@@ -291,23 +282,3 @@ if __name__ == '__main__':
 
         # Ouverture du fichier pour copier-coller la ligne résumé
         os.startfile(file_Excel)
-        
-        #%% ############## Sauvegarde ############################
-        #write to pickle
-        fileOut_pkl = os.path.join(path_plan, "Analyse_CC.pkl")
-        with open(fileOut_pkl, 'wb') as fp:
-            pickle.dump(film, fp)
-        film.ref_dose.save(os.path.join(path_plan, "DoseRS_CC.tiff"))
-#        film.film_dose.save(os.path.join(path_plan, "DoseFilm.tiff"))
-        
-#        #%% Correction dose côté X- (D patient)
-#        factor = 0.92
-#        film.apply_film_factor(film_dose_factor = factor)
-#        film.analyse(doseTA=doseTA, distTA=distTA, threshold=threshold, norm_val=norm_val, film_filt=film_filt)
-#        film.show_results()
-#        
-#        filename= '{}_Facteur{:.2f}_Filtre{}_Gamma{}%-{}mm_report.pdf'.format(filebase, factor,film_filt, doseTA, distTA)
-#        fileout=os.path.join(path_analyse, filename)
-#        film.publish_pdf(fileout, open_file=dose_2_analysis_show_pdf, show_hist=True, show_pass_hist=True, show_varDistTA=False, show_var_DoseTA=False, x=None, y=None)
-#
-#        
