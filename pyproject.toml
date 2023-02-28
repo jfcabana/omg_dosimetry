@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "omg_dosimetry"
-version = "0.0.3"
+version = "1.0.0"
 authors = [
   { name="JF Cabana", email="jean-francois.cabana.cisssca@ssss.gouv.qc.ca" },
 ]
