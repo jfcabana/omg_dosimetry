@@ -31,6 +31,7 @@ Requirements:
     Tested with pylinac 2.0.0 and python 3.5.
     
 Written by Jean-Francois Cabana, copyright 2018
+version 2023-02-28
 """
 
 from pylinac.core.profile import SingleProfile, MultiProfile
@@ -38,7 +39,6 @@ from pylinac import profile
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.widgets  import RectangleSelector
-import imageRGB
 import pickle
 import csv
 from scipy.signal import medfilt
@@ -51,6 +51,8 @@ from random import randint
 from scipy.interpolate import UnivariateSpline
 from pathlib import Path
 import webbrowser
+# import imageRGB
+from .imageRGB import load, load_folder, stack_images
 
 class LUT:
     """ Class for performing gafchromic calibration.
@@ -187,10 +189,10 @@ class LUT:
         self.baseline = baseline
         if baseline is not None:
             if os.path.isdir(baseline):
-                images = imageRGB.load_folder(baseline)     
-                img = imageRGB.stack_images(images, axis=1)
+                images = load_folder(baseline)     
+                img = stack_images(images, axis=1)
             elif os.path.isfile(baseline):
-                img = imageRGB.load(baseline)
+                img = load(baseline)
             self.base = img
 
         # Initialize some things
@@ -218,10 +220,10 @@ class LUT:
             together and stack multiple scans side-by-side.
         """
         if os.path.isdir(path):
-            images = imageRGB.load_folder(path)                 # load all tiff images in folder and merge multiples copies of same scan        
-            img = imageRGB.stack_images(images, axis=1)         # merge different scans side by side   
+            images = load_folder(path)                 # load all tiff images in folder and merge multiples copies of same scan        
+            img = stack_images(images, axis=1)         # merge different scans side by side   
         elif os.path.isfile(path):
-            img = imageRGB.load(path)
+            img = load(path)
         else:
             raise ValueError("ERROR: path is not valid: ", path)
 

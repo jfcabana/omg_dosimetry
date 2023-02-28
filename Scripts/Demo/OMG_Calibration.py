@@ -1,5 +1,5 @@
 #%% import librairies
-import calibration
+from omg_dosimetry import calibration
 import os
 
 #%% Set metadata

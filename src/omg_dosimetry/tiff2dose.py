@@ -22,13 +22,11 @@ Requirements:
     Tested with pylinac 3.7.2, which is compatible with python 3.7+.
     
 Written by Jean-Francois Cabana, copyright 2018
-version 2023-02-01
+version 2023-02-28
 """
 
 import os
-import calibration
 import numpy as np
-import imageRGB
 from scipy.signal import medfilt
 import matplotlib.pyplot as plt
 import pickle
@@ -37,6 +35,8 @@ import io
 from matplotlib.widgets  import RectangleSelector
 import webbrowser
 from pathlib import Path
+from .imageRGB import load, load_multiples
+from .calibration import load_lut
 
 class Gaf:
     """Base class for gafchromic films.
@@ -52,7 +52,7 @@ class Gaf:
         self.lut_filt = lut_filt
         self.fit_type = fit_type
         self.info = info
-        self.lut = calibration.load_lut(lut_file)       
+        self.lut = load_lut(lut_file)       
         self.load_files(path)
         self.clip = clip
         if rot90: self.img.array = np.rot90(self.img.array, k=rot90)   
@@ -91,8 +91,8 @@ class Gaf:
                     file_list.append(os.path.join(folder,name + fileext))
                     
         # If path is a list, we assume they are multiple copies of the same film
-        if len(file_list) > 0: self.img = imageRGB.load_multiples(file_list)     
-        else: self.img = imageRGB.load(path)
+        if len(file_list) > 0: self.img = load_multiples(file_list)     
+        else: self.img = load(path)
 
     def convert2dose(self, img_filt=0, lut_filt=35, fit_type='rational', k=3, ext=3, s=0):        
         """ Performs the conversion to dose.
@@ -197,16 +197,16 @@ class Gaf:
             dose_opt[dose_opt > self.clip] = self.clip
             dose_ave[dose_ave > self.clip] = self.clip
         
-        self.dose_m = imageRGB.load(dose_m, dpi=self.img.dpi) 
-        self.dose_r = imageRGB.load(dose_r, dpi=self.img.dpi)   
-        self.dose_g = imageRGB.load(dose_g, dpi=self.img.dpi)      
-        self.dose_b = imageRGB.load(dose_b, dpi=self.img.dpi)    
-        self.dose_ave = imageRGB.load(dose_ave, dpi=self.img.dpi)  
-        self.dose_opt = imageRGB.load(dose_opt, dpi=self.img.dpi)   
-        self.dose_opt_delta = imageRGB.load(delta, dpi=self.img.dpi)   
-        self.dose_opt_RE = imageRGB.load(RE, dpi=self.img.dpi)  
-        self.dose_rg = imageRGB.load((dose_r+dose_g)/2., dpi=self.img.dpi)  
-        self.dose_consistency = imageRGB.load(((dose_r-dose_g)**2 + (dose_r-dose_b)**2 + (dose_b-dose_g)**2)**0.5, dpi=self.img.dpi)  
+        self.dose_m = load(dose_m, dpi=self.img.dpi) 
+        self.dose_r = load(dose_r, dpi=self.img.dpi)   
+        self.dose_g = load(dose_g, dpi=self.img.dpi)      
+        self.dose_b = load(dose_b, dpi=self.img.dpi)    
+        self.dose_ave = load(dose_ave, dpi=self.img.dpi)  
+        self.dose_opt = load(dose_opt, dpi=self.img.dpi)   
+        self.dose_opt_delta = load(delta, dpi=self.img.dpi)   
+        self.dose_opt_RE = load(RE, dpi=self.img.dpi)  
+        self.dose_rg = load((dose_r+dose_g)/2., dpi=self.img.dpi)  
+        self.dose_consistency = load(((dose_r-dose_g)**2 + (dose_r-dose_b)**2 + (dose_b-dose_g)**2)**0.5, dpi=self.img.dpi)  
         
     def show_results(self):
         max_dose_m = np.percentile(self.dose_m.array,[99.9])[0].round(decimals=-1)

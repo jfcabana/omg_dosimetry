@@ -9,7 +9,7 @@
 
 
 #%% Load images and perform registration
-import analysis as analysis
+from omg_dosimetry import analysis
 import os
     
 baseName = '123456789_ThLSD1A_doseOpt'    # Nom du fichier de dose à analyser (sans extension .tif)
