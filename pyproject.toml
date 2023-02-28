@@ -23,3 +23,8 @@ dependencies = [
 
 [project.urls]
 "Homepage" = "https://bitbucket.org/cric_levis/omg-film-dosimetry"
+
+[tool.hatch.build]
+exclude = [
+  "scripts/*",
+]
