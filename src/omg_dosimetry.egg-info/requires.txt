@@ -1,0 +1,2 @@
+pymedphys==0.39.3
+pylinac==3.7.2

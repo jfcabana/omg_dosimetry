@@ -1,6 +1,5 @@
-import analysis
+from omg_dosimetry import analysis, tiff2dose
 import os
-import tiff2dose
 import pickle
 import matplotlib.pyplot as plt
 from pathlib import Path
@@ -11,38 +10,59 @@ if __name__ == '__main__':
 
 #%% ################################## Entrer vos informations ci-dessous ##################################
     #### Infos film ####
-    info = dict(author = 'PDD',
+    info = dict(author = 'JFC',
                 unit = '1',
-                film_lot = 'C11',
+                film_lot = 'C14',
                 scanner_id = 'Epson 12000XL',
-                date_exposed = '2023-01-18',
-                date_scanned = '2023-01-20',
-                wait_time = '36h',
+                date_exposed = '2023-01-30',
+                date_scanned = '2023-01-31',
+                wait_time = '18h',
                 notes = 'Scan en transmission à 300ppp')
 
     #### Infos plan ####
-    ID_patient = 'phy_CRAD'
-    ID_plan = 'A1A-VHD1'
+    ID_patient = '0phy_SRS_multi'
+    ID_plan = 'A1A_Multi_10cm'
 
     ### Orientation ###
 #    orientation = 'sag'
 #    orientation = 'coro'
-    orientation = 'Quasar'
-
+    orientation = 'BB'
+    
+    shift_x = 0             # Shift to apply to the ref dose in the x direction (mm)
+    shift_y = -0.8             # Shift to apply to the ref dose in the y direction (mm)
+    
     ### Prescription (cGy / fraction) ###
-    prescription = 1200
+    if "2cm" in ID_plan:
+        prescription = 370
+        normalisation = 1.0 
+    if "6cm" in ID_plan:
+        prescription = 300
+        normalisation = 1.0 
+    if "10cm" in ID_plan:
+        prescription = 230
+        normalisation = 1.0
+#    if "Multi" in ID_plan:
+#        prescription = 400
+#        normalisation = 1.0
+    if "B1A" in ID_plan:
+        prescription = 2100
+        normalisation = 1.0
+        shift_y = 0 
+    if "Norm" in ID_plan:
+        prescription = 300
+        normalisation = 'ref_roi'
 
     #### Choisir les étapes à effectuer ####
     rot_scan = 0        # Mettre à 1 pour appliquer une rotation de 90 degrés sur l'image (si l'image de scan est verticale)
-    crop_film = 0       # Mettre à 1 pour cropper l'image du film avant l'analyse, 0 si non
+    crop_film = 1       # Mettre à 1 pour cropper l'image du film avant l'analyse, 0 si non
 
-    tiff_2_dose = 0     # True(1) to convert the tiff film file to a dose file, False(0) to not do it
+    tiff_2_dose = 1     # True(1) to convert the tiff film file to a dose file, False(0) to not do it
     tiff_2_dose_show_pdf = 0
     dose_2_analysis = 1  # True(1) to perform the gamma analysis, False(0) to not do it
     dose_2_analysis_show_pdf = 0
 
     #### Choisir une méthode de normalisation ###
-    normalisation = 1.0      # Si un chiffre, applique ce facteur de normalisation.
+#    normalisation = 0.991      # Si un chiffre, applique ce facteur de normalisation.
 #    normalisation = 'ref_roi'    # Si 'ref_roi': sélectionne une ROI sur le film et normalisation par rapport à la dose de référence
 #    normalisation = 'norm_film'   # Si 'norm_film': sélectionne le film de normalisation (dans le même scan) pour calculer le facteur par rapport à une dose attendue
 #    norm_film_MU = 1350            # Combien de MU délivrés pour le film de normalisation
@@ -54,8 +74,9 @@ if __name__ == '__main__':
     #################################### Paramètres automatiques #############################################
     if info['film_lot'] == 'C11': lut_file = 'P:\Projets\CRIC\Physique_Medicale\Films\Calibrations\C11-XD_calib_18h_trans_300ppp_0-30Gy.pkl'
     elif info['film_lot'] == 'C10': lut_file = 'P:\Projets\CRIC\Physique_Medicale\Films\Calibrations\C10_calib_24h_trans_vitre_0-10Gy.pkl'
-#    elif info['film_lot'] == 'C13': lut_file = 'P:\Projets\CRIC\Physique_Medicale\Films\Calibrations\C13_calib_18h_trans_300ppp_0-3Gy.pkl'
     elif info['film_lot'] == 'C13': lut_file = 'P:\Projets\CRIC\Physique_Medicale\Films\Calibrations\C13_calib_18h_trans_300ppp_0-9Gy.pkl'
+    elif info['film_lot'] == 'C14': lut_file = 'P:\Projets\CRIC\Physique_Medicale\Films\Calibrations\C14_calib_18h_trans_300ppp_0-9Gy_LatCorr_BeamCorr.pkl'
+#    elif info['film_lot'] == 'C14': lut_file = 'P:\Projets\CRIC\Physique_Medicale\Films\Calibrations\C14_calib_18h_trans_300ppp_0-9Gy.pkl'
 
     #### Scan2Dose parameters ####
     clip = prescription * 1.5  # Entrer une valeur en cGy maximum où couper la dose. Si 'None', n'applique pas de threshold.
@@ -75,14 +96,7 @@ if __name__ == '__main__':
         flipLR = 1          # 1 if the film needs to be flipped in the left-right direction, 0 if not
         flipUD = 0          # 1 if the film needs to be flipped in the up-down direction, 0 if not
         rot90 = 1           # Number of 90 degrees rotation to apply to film dose
-    
-    if orientation == 'Quasar':    # Paramètres à confirmer selone stadardisation
-        flipLR = 1          # 1 if the film needs to be flipped in the left-right direction, 0 if not
-        flipUD = 0          # 1 if the film needs to be flipped in the up-down direction, 0 if not
-        rot90 = 1           # Number of 90 degrees rotation to apply to film dose
-    
-    shift_x = 0             # Shift to apply to the ref dose in the x direction (mm)
-    shift_y = 0             # Shift to apply to the ref dose in the y direction (mm)
+        
 
     ### Centre marqueurs ###   
     # Référence 2022-08-26
@@ -95,8 +109,6 @@ if __name__ == '__main__':
     
     #    BabyBlue 3 films 2022-12-16
     if orientation == 'BB': markers_center = [0.8, 1.2, 233.3]
-    #    Quasar 2023-01-16
-    if orientation == 'Quasar': markers_center = [95.7, -599.6, 211.3]
 
     #### Gamma analysis parameters
     # Le code plus bas fait l'analyse Gamma 3/3 et 2/2. On peut changer les paramètres suivants au besoin:
@@ -239,11 +251,9 @@ if __name__ == '__main__':
         film.get_profile_offsets()
 #
         #%% ################################## Écriture du fichier Excel ################################
-        path_Excel = 'P:\\Projets\\CRIC\\Physique_Medicale\\QA Patients\\'
-        files = os.listdir(path_Excel)
-        for file in files:
-           if (ID_patient in file) and (ID_plan in file) and (orientation[0:3].lower() in file.lower()):
-               file_Excel = os.path.join(path_Excel,file)
+        path_Excel = path_plan
+        filename = ID_patient + '_' + ID_plan + '_BB.xlsx'
+        file_Excel = os.path.join(path_Excel,filename)
 
         wb = openpyxl.load_workbook(file_Excel)
         ws = wb["Mesure"]
@@ -282,3 +292,12 @@ if __name__ == '__main__':
 
         # Ouverture du fichier pour copier-coller la ligne résumé
         os.startfile(file_Excel)
+        
+        #%% ############## Sauvegarde ############################
+        #write to pickle
+        fileOut_pkl = os.path.join(path_plan, "Analyse.pkl")
+        with open(fileOut_pkl, 'wb') as fp:
+            pickle.dump(film, fp)
+        film.ref_dose.save(os.path.join(path_plan, "DoseRS.tiff"))
+        film.film_dose.save(os.path.join(path_plan, "DoseFilm.tiff"))
+        

@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-import tiff2dose
+from omg_dosimetry import tiff2dose
 import os
 
 #%% Set info

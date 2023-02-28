@@ -15,11 +15,10 @@ Requirements:
     Tested with pylinac 2.0.0, which is compatible with python 3.5.
     
 Written by Jean-Francois Cabana, copyright 2018
-Version 2023-02-24
+Version 2023-02-28
 """
 
 import numpy as np
-import imageRGB
 import scipy.ndimage.filters as spf
 import copy
 import matplotlib.pyplot as plt
@@ -34,13 +33,15 @@ from pathlib import Path
 import pymedphys
 from matplotlib.widgets  import RectangleSelector
 import webbrowser
+# import imageRGB
+from .imageRGB import load, ArrayImage, equate_images
 
 class DoseAnalysis():
     
     def __init__(self, film_dose=None, ref_dose=None, film_dose_factor=1, ref_dose_factor=1, flipLR=False, flipUD=False, rot90=0, ref_dose_sum=False):
         
         if film_dose is not None:
-            self.film_dose = imageRGB.load(film_dose)
+            self.film_dose = load(film_dose)
         if rot90:
             self.film_dose.array = np.rot90(self.film_dose.array, k=rot90)
         if flipLR:
@@ -63,12 +64,12 @@ class DoseAnalysis():
                         continue
                     if os.path.isdir(img_file):
                         continue       
-                    img_list.append(imageRGB.load(img_file))    
+                    img_list.append(load(img_file))    
                 self.ref_dose = img_list[0]
                 new_array = np.stack(tuple(img.array for img in img_list), axis=-1)
                 self.ref_dose.array = np.sum(new_array, axis=-1) 
             else:
-                self.ref_dose = imageRGB.load(ref_dose)
+                self.ref_dose = load(ref_dose)
   
         self.apply_film_factor(film_dose_factor = film_dose_factor)
         self.apply_ref_factor(ref_dose_factor = ref_dose_factor)
@@ -274,8 +275,8 @@ class DoseAnalysis():
     def computeDiff(self):
         """ Compute the difference map with the reference image.
             Returns self.DiffMap = film_dose - ref_dose """
-        self.DiffMap = imageRGB.ArrayImage(self.film_dose.array - self.ref_dose.array, dpi=self.film_dose.dpi)
-        self.RelError = imageRGB.ArrayImage(100*(self.film_dose.array - self.ref_dose.array)/self.ref_dose.array, dpi=self.film_dose.dpi)
+        self.DiffMap = ArrayImage(self.film_dose.array - self.ref_dose.array, dpi=self.film_dose.dpi)
+        self.RelError = ArrayImage(100*(self.film_dose.array - self.ref_dose.array)/self.ref_dose.array, dpi=self.film_dose.dpi)
         self.DiffMap.MSE =  sum(sum(self.DiffMap.array**2)) / len(self.film_dose.array[(self.film_dose.array > 0)]) 
         self.DiffMap.RMSE = self.DiffMap.MSE**0.5    
     
@@ -291,8 +292,8 @@ class DoseAnalysis():
             raise AttributeError("The images are not the same size: {} vs. {}".format(self.film_dose.shape, self.ref_dose.shape))
 
         # set up reference and comparison images
-        film_dose = imageRGB.ArrayImage(copy.copy(self.film_dose.array))
-        ref_dose = imageRGB.ArrayImage(copy.copy(self.ref_dose.array))
+        film_dose = ArrayImage(copy.copy(self.film_dose.array))
+        ref_dose = ArrayImage(copy.copy(self.ref_dose.array))
         
         if self.film_filt:
             film_dose.array = medfilt(film_dose.array,  kernel_size=(self.film_filt, self.film_filt))
@@ -313,15 +314,15 @@ class DoseAnalysis():
 
         # gamma = pymedphys.gamma(axes_reference, dose_reference, axes_evaluation, dose_evaluation, doseTA, distTA, threshold*100, local_gamma=local_gamma, max_gamma = 2.0)
         gamma = pymedphys.gamma(axes_reference, dose_reference, axes_evaluation, dose_evaluation, doseTA, distTA, threshold*100, local_gamma=local_gamma)
-        GammaMap = imageRGB.ArrayImage(gamma, dpi=film_dose.dpi)
+        GammaMap = ArrayImage(gamma, dpi=film_dose.dpi)
               
         fail = np.zeros(GammaMap.shape)
         fail[(GammaMap.array > 1.0)] = 1
-        GammaMap.fail = imageRGB.ArrayImage(fail, dpi=film_dose.dpi)
+        GammaMap.fail = ArrayImage(fail, dpi=film_dose.dpi)
         
         passed = np.zeros(GammaMap.shape)
         passed[(GammaMap.array <= 1.0)] = 1
-        GammaMap.passed = imageRGB.ArrayImage(passed, dpi=film_dose.dpi)
+        GammaMap.passed = ArrayImage(passed, dpi=film_dose.dpi)
         
         GammaMap.npassed = sum(sum(passed == 1))
         GammaMap.nfail = sum(sum(fail == 1))
@@ -704,7 +705,7 @@ class DoseAnalysis():
         ref_dose_path = self.ref_dose.path
 #        meta = self.ref_dose.metadata
         
-        (self.film_dose, self.ref_dose) = imageRGB.equate_images(self.film_dose, self.ref_dose)
+        (self.film_dose, self.ref_dose) = equate_images(self.film_dose, self.ref_dose)
         self.film_dose.path = film_dose_path
         self.ref_dose.path = ref_dose_path
 #        self.ref_dose.metadata = meta
@@ -730,7 +731,7 @@ class DoseAnalysis():
             img_array = film_grad - ref_grad
         else:
             img_array = self.film_dose.array - self.ref_dose.array
-        img = imageRGB.load(img_array, dpi=self.film_dose.dpi)
+        img = load(img_array, dpi=self.film_dose.dpi)
         
         RMSE =  (sum(sum(img.array**2)) / len(self.film_dose.array[(self.film_dose.array > 0)]))**0.5
         

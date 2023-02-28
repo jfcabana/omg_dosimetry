@@ -48,9 +48,15 @@ Thumbs.db
 *.mov
 *.wmv
 
-temp.py
-OMG_Tiff2Analysis_QApatients_SRS_multi.py
+
 *.ini
-QA/OMG_Tiff2Analysis_QApatients_SRS_multi.py
 *.bak
-pymedphys_gamma_demo.py
+
+# Spyder project files
+.spyproject/
+
+# Python cache files
+__pycache__/
+
+# Virtual env
+.venv/

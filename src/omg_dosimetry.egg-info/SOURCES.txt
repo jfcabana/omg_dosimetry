@@ -1,0 +1,13 @@
+LICENSE
+README.md
+pyproject.toml
+src/omg_dosimetry/__init__.py
+src/omg_dosimetry/analysis.py
+src/omg_dosimetry/calibration.py
+src/omg_dosimetry/imageRGB.py
+src/omg_dosimetry/tiff2dose.py
+src/omg_dosimetry.egg-info/PKG-INFO
+src/omg_dosimetry.egg-info/SOURCES.txt
+src/omg_dosimetry.egg-info/dependency_links.txt
+src/omg_dosimetry.egg-info/requires.txt
+src/omg_dosimetry.egg-info/top_level.txt
