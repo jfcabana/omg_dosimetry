@@ -1,6 +1,33 @@
 # -*- coding: utf-8 -*-
+"""
+Ce script est sert à démontrer l'utilisation du module tiff2dose de omg_dosimetry.
+Vous pouvez en faire une copie et l'adapter selon vos besoins.
+    
+Écrit par Jean-François Cabana
+jean-francois.cabana.cisssca@ssss.gouv.qc.ca
+2023-03-01
+"""
+
+#%% Importer les librairies
 from omg_dosimetry import tiff2dose
 import os
+
+#%% Définir les informations générales
+info = dict(author = 'Demo Physicien',
+            unit = 'Demo Linac',
+            film_lot = 'XD_1',
+            scanner_id = 'Epson 72000XL',
+            date_exposed = '2023-01-24 16h',
+            date_scanned = '2023-01-25 16h',
+            wait_time = '24 heures',
+            notes = 'Scan en transmission @300ppp'
+           )
+
+path = os.path.join(os.path.dirname(__file__), "files", "tiff2dose")   # Dossier racine
+path_scan = os.path.join(path, "scan")                                 # Dossier contenant les images numérisées
+outname = 'Demo_calib'                                                 # Nom du fichier de calibration à produire
+
+
 
 #%% Set info
 info = dict(author = 'JFC',
