@@ -59,6 +59,4 @@ LUT = calibration.LUT(path=path_scan, doses=doses, output=output, lateral_correc
 # LUT.plot_roi()
 # LUT.plot_fit()
 LUT.publish_pdf(filename=os.path.join(path, outname +'_report.pdf'), open_file=True)
-
-filename = os.path.join(path, outname + '.pkl')
-calibration.save_lut(LUT, filename, use_compression=True)
+calibration.save_lut(LUT, filename=os.path.join(path, outname + '.pkl'), use_compression=True)
