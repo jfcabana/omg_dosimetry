@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Ce script est sert à démontrer l'utilisation du module tiff2dose de omg_dosimetry.
+Ce script est sert à démontrer exemple d'utilisation du module tiff2dose de omg_dosimetry.
 Vous pouvez en faire une copie et l'adapter selon vos besoins.
     
 Écrit par Jean-François Cabana
@@ -24,20 +24,20 @@ info = dict(author = 'Demo Physicien',
            )
 
 path = os.path.join(os.path.dirname(__file__), "files", "tiff2dose")   # Dossier racine
-path_scan = os.path.join(path, "scan",'A1A_Multi_6cm_001.tif')         # Dossier contenant les images numérisées                                            # Nom du fichier de calibration à produire
-outname = "Demo_dose"
+path_scan = os.path.join(path, "scan",'A1A_Multi_6cm_001.tif')         # Dossier contenant les images numérisées, ou nom de fichier si le dossier contient plusieurs numérisations de films différents
+outname = "Demo_dose"                                                  # Nom de fichier à produire (tif et pdf)
 
 #%% Définir les paramètres de conversion en dose
-lut_file = os.path.join(os.path.dirname(__file__), "files", "calibration","Demo_calib.pkl")    
-fit_type = 'rational'
-clip = 500
+lut_file = os.path.join(os.path.dirname(__file__), "files", "calibration","Demo_calib.pkl")   # Chemin vers le fichier LUT à utiliser
+fit_type = 'rational'                                                                         # Type de fonction à utiliser pour le fit de la courbe de calibration. 'rational' ou 'spline'
+clip = 500                                                                                    # Valeur maximale [cGy] à laquelle la dose doit être limitée. Utile pour éviter des valeurs de dose extrêmes par exemple sur les marques faites sur le film.
 
 #%% Effectuer la conversion en dose
 gaf1 = tiff2dose.Gaf(path=path_scan, lut_file=lut_file, fit_type=fit_type, info=info, clip = clip)
 
 #%% Sauvegarder la dose et produire le rapport PDF
 filename_tif = os.path.join(path, outname+'.tif')
-gaf1.dose_opt.save(filename_tif) 
+gaf1.dose_opt.save(filename_tif)                    # On sauvegarde la "dose_opt". D'autres options sont disponibles également.
 
 filename_pdf = os.path.join(path, outname+'.pdf')
-gaf1.publish_pdf(filename_pdf, open_file=True)
+gaf1.publish_pdf(filename_pdf, open_file=True)      # Publication du rapport PDF

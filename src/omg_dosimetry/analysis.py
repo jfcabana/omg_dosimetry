@@ -35,6 +35,7 @@ from matplotlib.widgets  import RectangleSelector
 import webbrowser
 # import imageRGB
 from .imageRGB import load, ArrayImage, equate_images
+import bz2
 
 class DoseAnalysis():
     
@@ -907,21 +908,6 @@ class DoseAnalysis():
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 ########################### End class DoseAnalysis ############################## 
     
 def line_intersection(line1, line2):
@@ -948,3 +934,23 @@ def save_dose(dose, filename):
 def load_dose(filename):
     with open(filename, 'rb') as input:
         return pickle.load(input)
+
+def load_analysis(filename):
+    print("Loading analysis file {}...".format(filename))
+    try:
+        file = bz2.open(filename, 'rb')
+        analysis = pickle.load(file)
+    except:
+        file = open(filename, 'rb')
+        analysis = pickle.load(file)
+    file.close()
+    return analysis
+
+def save_analysis(analysis, filename, use_compression=True):
+    print("Saving analysis file as {}...".format(filename))
+    if use_compression:
+        file = bz2.open(filename, 'wb')
+    else:
+        file = open(filename, 'wb')
+    pickle.dump(analysis, file, pickle.HIGHEST_PROTOCOL)
+    file.close()

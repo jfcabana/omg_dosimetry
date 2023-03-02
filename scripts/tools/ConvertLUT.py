@@ -16,15 +16,18 @@ for file in files:
     if file.endswith(".pkl"):
         file_in = path_in + file
         file_out = path_out + file
+        
+        lut = calibration.load_lut(file_in)
+        calibration.save_lut(lut, file_out)
 
-        sys.modules['calibration'] = calibration
-        sys.modules['imageRGB'] = imageRGB
+        # sys.modules['calibration'] = calibration
+        # sys.modules['imageRGB'] = imageRGB
         
-        with open(file_in, 'rb') as input:
-            lut = pickle.load(input)
+        # with open(file_in, 'rb') as input:
+        #     lut = pickle.load(input)
             
-        del sys.modules['calibration']
-        del sys.modules['imageRGB']
+        # del sys.modules['calibration']
+        # del sys.modules['imageRGB']
         
-        with open(file_out, 'wb') as output:
-            pickle.dump(lut, output, pickle.HIGHEST_PROTOCOL)
+        # with open(file_out, 'wb') as output:
+        #     pickle.dump(lut, output, pickle.HIGHEST_PROTOCOL)

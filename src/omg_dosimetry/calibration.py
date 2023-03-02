@@ -828,10 +828,10 @@ def save_lut_array(arr, filename):
 def load_lut(filename):
     print("Loading LUT file {}...".format(filename))
     try:
-        file = open(filename, 'rb')
+        file = bz2.open(filename, 'rb')
         lut = pickle.load(file)
     except:
-        file = bz2.open(filename, 'rb')
+        file = open(filename, 'rb')
         lut = pickle.load(file)
     file.close()
     return lut
