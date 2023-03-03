@@ -60,3 +60,7 @@ __pycache__/
 
 # Virtual env
 .venv/
+
+# Fichiers de calibration
+*.pkl
+*.pdf

@@ -34,7 +34,7 @@ Written by Jean-Francois Cabana, copyright 2018
 version 2023-02-28
 """
 
-from pylinac.core.profile import SingleProfile, MultiProfile
+from pylinac.core.profile import SingleProfile
 from pylinac import profile
 import numpy as np
 import matplotlib.pyplot as plt
@@ -45,14 +45,13 @@ from scipy.signal import medfilt
 import os
 from pylinac.core import pdf
 import io
-from reportlab.lib.units import cm
 from scipy.optimize import curve_fit
 from random import randint
 from scipy.interpolate import UnivariateSpline
 from pathlib import Path
 import webbrowser
-# import imageRGB
 from .imageRGB import load, load_folder, stack_images
+import bz2
 
 class LUT:
     """ Class for performing gafchromic calibration.
@@ -227,9 +226,6 @@ class LUT:
         else:
             raise ValueError("ERROR: path is not valid: ", path)
 
-#        if self.baseline is not None:
-#            img.array = np.log10(img.array / self.base.array)     
-
         if filt:                                            # apply median filt to each channel if needed
             for i in range (0,3):
                 img.array[:,:,i] = medfilt(img.array[:,:,i],  kernel_size=(filt,filt)) 
@@ -261,11 +257,7 @@ class LUT:
     def detect_film(self):
         """ Detect the films positions and construct ROIs automatically.
         """
-        
-        # Find peaks in the profile. You might need to adjust the values below.
-        # x = self.longitudinal_profile.find_fwxm_peaks(x=50, threshold=0.3, min_distance=0.02)
-        # x = self.longitudinal_profile.find_fwxm_peaks(threshold=0.3, min_distance=0.02)
-        # xpos = [int(i) for i in x[0]]
+        print("Automatic film detection in progress...")
         xpos = self.longitudinal_profile[0]
         data_longi = self.longitudinal_profile[1]
         n = len(xpos)
@@ -281,8 +273,6 @@ class LUT:
             data = prof.fwxm_data(x=50)
             y = data["center index (rounded)"]
             l = data["width (rounded)"]
-            # y = prof.fwxm_center(x=50)
-            # l = prof.fwxm(x=50)
             ypos.append(y)
             length.append(l)
             
@@ -292,7 +282,6 @@ class LUT:
             width = []
             # for p in longi_profiles:
             for i in range(0,n):
-                # w = p.fwxm(x=50)
                 w = data_longi["right_bases"][i] - data_longi["left_bases"][i]
                 width.append(w)
             crop = self.roi_crop * self.img.dpmm
@@ -360,17 +349,20 @@ class LUT:
             self.roi_length.append(int(np.abs(y1-y2)))
         
         self.rs = RectangleSelector(ax, select_box, useblit=True, button=[1], minspanx=5, minspany=5, spancoords='pixels', interactive=True)
-        
         plt.gcf().canvas.mpl_connect('key_press_event', self.press_enter)
+        self.wait = True
+        while self.wait:
+            plt.pause(5)
         
     def press_enter(self, event):
         """ Continue LUT creation when ''enter'' is pressed. """
         
         if event.key == 'enter':
-            plt.close(plt.gcf()) 
+            plt.close(plt.gcf())
             del self.rs
             self.get_rois()
-            self.create_LUT()    
+            self.create_LUT()
+            self.wait = False
       
     def get_rois(self):
         """ Get the values and profiles inside ROIs. """
@@ -407,7 +399,7 @@ class LUT:
     def create_LUT(self):
         """ Creates the actual LUT array.     
         """
-        
+        print("Creating LUT...")
         nDose = self.nfilm  
         if nDose != len(self.doses):
             raise ValueError("Number of films does not match number of doses!")
@@ -615,18 +607,6 @@ class LUT:
             ax4 = plt.subplot2grid((3, 6), (2, 0), colspan=2)
             ax5 = plt.subplot2grid((3, 6), (2, 2), colspan=2)
             ax6 = plt.subplot2grid((3, 6), (2, 4), colspan=2)
-#            ax1 = plt.subplot2grid((5,2), (0, 0), rowspan=2)
-#            ax2 = plt.subplot2grid((5,2), (0, 1), rowspan=2)
-#            ax3 = plt.subplot2grid((5,2), (2, 0), rowspan=3)
-#            ax4 = plt.subplot2grid((5,2), (2, 1))
-#            ax5 = plt.subplot2grid((5,2), (3, 1))
-#            ax6 = plt.subplot2grid((5,2), (4, 1))
-#            ax1 = plt.subplot2grid((4, 6), (0, 0), colspan=3)
-#            ax2 = plt.subplot2grid((4, 6), (0, 3), colspan=3)
-#            ax3 = plt.subplot2grid((4, 6), (1, 0), colspan=6, rowspan=2)
-#            ax4 = plt.subplot2grid((4, 6), (3, 0), colspan=2)
-#            ax5 = plt.subplot2grid((4, 6), (3, 2), colspan=2)
-#            ax6 = plt.subplot2grid((4, 6), (3, 4), colspan=2)
             self.plot_roi(ax=ax1)
             self.plot_profile(ax=ax2)
             self.plot_calibration_curves(mode='all',ax=ax3)
@@ -741,19 +721,10 @@ class LUT:
         if filename is None:
             filename = os.path.join(self.path, 'Report.pdf')
         title = 'Film Calibration Report'
-        # canvas = pdf.create_pylinac_page_template(filename, analysis_title='Film Calibration Report')
         canvas = pdf.PylinacCanvas(filename, page_title=title, logo=Path(__file__).parent / 'OMG_Logo.png')
-        
-        # data = io.BytesIO()
-        # self.save_analyzed_image(data)
-        # img = pdf.create_stream_image(data)
-        # canvas.drawImage(img, 3 * cm, 3.5 * cm, width=15 * cm, height=15 * cm, preserveAspectRatio=True)
-        
         data = io.BytesIO()
         self.save_analyzed_image(data)
         canvas.add_image(image_data=data, location=(3, 3.5), dimensions=(15, 15))
-        
-        # pdf.draw_text(canvas, x=1 * cm, y=25.5 * cm, text='Film infos:', fontsize=10)
         canvas.add_text(text='Film infos:', location=(1, 25.5), font_size=10)
         text = ['Author: {}'.format(self.info['author']),
                 'Unit: {}'.format(self.info['unit']),
@@ -763,10 +734,7 @@ class LUT:
                 'Date scanned: {}'.format(self.info['date_scanned']),
                 'Wait time: {}'.format(self.info['wait_time']),
                ]
-        # pdf.draw_text(canvas, x=1 * cm, y=25 * cm, text=text, fontsize=8)
         canvas.add_text(text=text, location=(1, 25), font_size=8)
-
-        # pdf.draw_text(canvas, x=1 * cm, y=21.5 * cm, text='Calibration options:', fontsize=10)
         canvas.add_text(text='Calibration options:', location=(1, 21.5), font_size=10)
         text = ['Images path: {}'.format(self.path),
                 'Nominal doses: ' + np.array2string(self.doses, precision=1, separator=', ', floatmode='fixed', max_line_width=150),
@@ -775,13 +743,7 @@ class LUT:
                 'Beam profile correction applied: {}'.format(self.beam_profile),
                 'Median filter kernel size: {}'.format(self.filt)
                ]       
-        # pdf.draw_text(canvas, x=1 * cm, y=21 * cm, text=text, fontsize=8)
         canvas.add_text(text=text, location=(1, 21), font_size=8)
-        
-        # if self.info['notes'] != '':
-        #     pdf.draw_text(canvas, x=1 * cm, y=2.5 * cm, fontsize=10, text="Notes:")
-        #     pdf.draw_text(canvas, x=1 * cm, y=2 * cm, fontsize=8, text=self.info['notes'])
-        # pdf.finish(canvas, open_file=open_file, filename=filename)
         
         if self.info['notes'] != '':
             canvas.add_text(text='Notes:', location=(1, 2.5), font_size=10)
@@ -864,12 +826,24 @@ def save_lut_array(arr, filename):
     np.save(filename, arr)
     
 def load_lut(filename):
-    with open(filename, 'rb') as input:
-        return pickle.load(input)
+    print("Loading LUT file {}...".format(filename))
+    try:
+        file = open(filename, 'rb')
+        lut = pickle.load(file)
+    except:
+        file = bz2.open(filename, 'rb')
+        lut = pickle.load(file)
+    file.close()
+    return lut
 
-def save_lut(lut, filename):
-    with open(filename, 'wb') as output:
-        pickle.dump(lut, output, pickle.HIGHEST_PROTOCOL)
+def save_lut(lut, filename, use_compression=True):
+    print("Saving LUT file as {}...".format(filename))
+    if use_compression:
+        file = bz2.open(filename, 'wb')
+    else:
+        file = open(filename, 'wb')
+    pickle.dump(lut, file, pickle.HIGHEST_PROTOCOL)
+    file.close()
 
 
 
