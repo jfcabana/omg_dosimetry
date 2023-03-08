@@ -81,7 +81,7 @@ class Gaf:
             folder = os.path.dirname(path)
             filename = os.path.basename(path)
             files = os.listdir(folder)
-            
+        self.filename = filename
         file_list = []
         filebase, fileext = os.path.splitext(filename)   
         if filebase[-3:-1] == '00':
@@ -277,7 +277,7 @@ class Gaf:
                ]
         canvas.add_text(text=text, location=(1, 25), font_size=10)
         canvas.add_text(text='Conversion options:', location=(1, 21.5), font_size=12)
-        text = ['Film file: {}'.format(os.path.basename(self.path)),
+        text = ['Film file: {}'.format(os.path.basename(self.filename)),
                 'LUT file: {}'.format(os.path.basename(self.lut_file)),
                 'Film filter kernel: {}'.format(self.img_filt),
                 'LUT filter kernel: {}'.format(self.lut_filt),

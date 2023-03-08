@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Ce script est sert à démontrer l'utilisation du module calibration de omg_dosimetry.
+Ce script est sert à démontrer exemple d'utilisation du module calibration de omg_dosimetry.
 Vous pouvez en faire une copie et l'adapter selon vos besoins.
     
 Écrit par Jean-François Cabana
@@ -29,8 +29,7 @@ outname = 'Demo_calib'                                                 ## Nom du
 
 #%% Définir les paramètres de calibration
 #### Dose
-doses = [0.00, 100.00, 200.00, 400.00, 650.00, 950.00, 
-         1300.00, 1700.00, 2150.00, 2650.00, 3200.00] ## Doses nominales [cGy] irradiées sur les films
+doses = [0.0, 100.0, 200.0, 400.0, 650.0, 950.0]      ## Doses nominales [cGy] irradiées sur les films
 output = 1.0                                          ## Si nécessaire, correction pour l'output quotidien de la machine 
 
 ### Correction latérale
@@ -56,9 +55,7 @@ LUT = calibration.LUT(path=path_scan, doses=doses, output=output, lateral_correc
                         film_detect=film_detect, roi_size=roi_size, roi_crop=roi_crop, filt=filt, info=info, crop_top_bottom = crop_top_bottom)
 
 #%% Afficher les résultats et sauvegarde de la LUT           
-# LUT.plot_roi()
-# LUT.plot_fit()
-LUT.publish_pdf(filename=os.path.join(path, outname +'_report.pdf'), open_file=True)
-
-filename = os.path.join(path, outname + '.pkl')
-calibration.save_lut(LUT, filename, use_compression=True)
+# LUT.plot_roi()  # Pour afficher les films et les ROIs utilisées pour la calibration
+# LUT.plot_fit()  # Pour afficher un graphique de la courbe de calibration et la fonction algébrique fittée
+LUT.publish_pdf(filename=os.path.join(path, outname +'_report.pdf'), open_file=True)            # Publication du rapport PDF
+calibration.save_lut(LUT, filename=os.path.join(path, outname + '.pkl'), use_compression=True)  # Sauvegarde du fichier LUT. use_compression permet une réduction d'un facteur ~10 de la taille de fichier, mais ralentit l'opération.
