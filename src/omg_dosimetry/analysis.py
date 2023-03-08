@@ -31,7 +31,7 @@ from pylinac.core import pdf
 import io
 from pathlib import Path
 import pymedphys
-from matplotlib.widgets  import RectangleSelector
+from matplotlib.widgets  import RectangleSelector, MultiCursor, Cursor
 import webbrowser
 from .imageRGB import load, ArrayImage, equate_images
 import bz2
@@ -416,10 +416,7 @@ class DoseAnalysis():
             ax.plot(x_axis, diff_prof,'g-', linewidth=2)
             
     
-    def show_results(self, fig=None, x=None, y=None):
-        film_fileName=os.path.basename(self.film_dose.path)
-        ref_fileName=os.path.basename(self.ref_dose.path)
-        
+    def show_results(self, fig=None, x=None, y=None):       
         if x is None: x = np.floor(self.ref_dose.shape[1] / 2).astype(int)
         if y is None: y = np.floor(self.ref_dose.shape[0] / 2).astype(int)
          
@@ -427,10 +424,10 @@ class DoseAnalysis():
         fig.tight_layout()
         axes = [ax1,ax2,ax3,ax4,ax5,ax6]
         max_dose_comp = np.percentile(self.ref_dose.array,[98])[0].round(decimals=-1)
-        clim = [0, max_dose_comp]   
+        clim = [0, max_dose_comp]  
 
-        self.film_dose.plotCB(ax1, clim=clim, title='Film dose ({})'.format(film_fileName))
-        self.ref_dose.plotCB(ax2, clim=clim, title='Reference dose ({})'.format(ref_fileName))
+        self.film_dose.plotCB(ax1, clim=clim, title='Film dose')
+        self.ref_dose.plotCB(ax2, clim=clim, title='Reference dose')
         self.GammaMap.plotCB(ax3, clim=[0,2], cmap='bwr', title='Gamma map ({:.2f}% pass; {:.2f} mean)'.format(self.GammaMap.passRate, self.GammaMap.mean))
         
         min_value = max(-20, np.percentile(self.DiffMap.array,[1])[0].round(decimals=0))
@@ -451,7 +448,9 @@ class DoseAnalysis():
             while len(ax.lines) > 0:
                 ax.lines[-1].remove()
             ax.plot((x,x),(0,self.ref_dose.shape[0]),'w--', linewidth=1)
-            ax.plot((0,self.ref_dose.shape[1]),(y,y),'w--', linewidth=1)
+            ax.plot((0,self.ref_dose.shape[1]),(y,y),'w--', linewidth=1) 
+        plt.multi = MultiCursor(None, (axes[0],axes[1],axes[2],axes[3]), color='r', lw=1, horizOn=True)
+        plt.show()
         
     def set_profile(self, event, axes):
         x = int(event.xdata)
@@ -481,6 +480,8 @@ class DoseAnalysis():
         ax.set_title('Marker 1 =  ; Marker 2 =  ; Marker 3 =  ; Marker 4 =  ')
         self.fig.canvas.mpl_connect('button_press_event', self.onclick)
         self.cid = self.fig.canvas.mpl_connect('key_press_event', self.ontype)
+        cursor = Cursor(ax, useblit=True, color='white', linewidth=1)
+        plt.show()
         
         self.wait = True
         while self.wait: plt.pause(5)
@@ -488,23 +489,23 @@ class DoseAnalysis():
     def onclick(self, event):
         ax = plt.gca()
         if event.dblclick:
-            l = 10
+            l = 20
             self.markers.append([int(event.xdata), int(event.ydata)])
             if len(self.markers)==1:
-                ax.plot((self.markers[0][0]-l,self.markers[0][0]+l),(self.markers[0][1],self.markers[0][1]),'w', linewidth=2)
-                ax.plot((self.markers[0][0],self.markers[0][0]),(self.markers[0][1]-l,self.markers[0][1]+l),'w', linewidth=2)
+                ax.plot((self.markers[0][0]-l,self.markers[0][0]+l),(self.markers[0][1],self.markers[0][1]),'w', linewidth=1)
+                ax.plot((self.markers[0][0],self.markers[0][0]),(self.markers[0][1]-l,self.markers[0][1]+l),'w', linewidth=1)
                 ax.set_title('Marker 1 = {}; Marker 2 =  ; Marker 3 =  ; Marker 4 =  '.format(self.markers[0]))
             if len(self.markers)==2:
-                ax.plot((self.markers[1][0]-l,self.markers[1][0]+l),(self.markers[1][1],self.markers[1][1]),'w', linewidth=2)
-                ax.plot((self.markers[1][0],self.markers[1][0]),(self.markers[1][1]-l,self.markers[1][1]+l),'w', linewidth=2)
+                ax.plot((self.markers[1][0]-l,self.markers[1][0]+l),(self.markers[1][1],self.markers[1][1]),'w', linewidth=1)
+                ax.plot((self.markers[1][0],self.markers[1][0]),(self.markers[1][1]-l,self.markers[1][1]+l),'w', linewidth=1)
                 ax.set_title('Marker 1 = {}; Marker 2 = {}; Marker 3 =  ; Marker 4 =  '.format(self.markers[0], self.markers[1]))
             if len(self.markers)==3:
-                ax.plot((self.markers[2][0]-l,self.markers[2][0]+l),(self.markers[2][1],self.markers[2][1]),'w', linewidth=2)
-                ax.plot((self.markers[2][0],self.markers[2][0]),(self.markers[2][1]-l,self.markers[2][1]+l),'w', linewidth=2)
+                ax.plot((self.markers[2][0]-l,self.markers[2][0]+l),(self.markers[2][1],self.markers[2][1]),'w', linewidth=1)
+                ax.plot((self.markers[2][0],self.markers[2][0]),(self.markers[2][1]-l,self.markers[2][1]+l),'w', linewidth=1)
                 ax.set_title('Marker 1 = {}; Marker 2 = {}; Marker 3 = {}; Marker 4 =  '.format(self.markers[0], self.markers[1], self.markers[2]))
             if len(self.markers)==4:
-                ax.plot((self.markers[3][0]-l,self.markers[3][0]+l),(self.markers[3][1],self.markers[3][1]),'w', linewidth=2)
-                ax.plot((self.markers[3][0],self.markers[3][0]),(self.markers[3][1]-l,self.markers[3][1]+l),'w', linewidth=2)
+                ax.plot((self.markers[3][0]-l,self.markers[3][0]+l),(self.markers[3][1],self.markers[3][1]),'w', linewidth=1)
+                ax.plot((self.markers[3][0],self.markers[3][0]),(self.markers[3][1]-l,self.markers[3][1]+l),'w', linewidth=1)
                 ax.set_title('Marker 1 = {}; Marker 2 = {}; Marker 3 = {}; Marker 4 = {}'.format(self.markers[0], self.markers[1], self.markers[2], self.markers[3]))
             plt.gcf().canvas.draw_idle()
         
@@ -633,7 +634,6 @@ class DoseAnalysis():
         # Make the isocenter position the center of ref image
         pad_x_pixels =  int(round(self.shifts[0] * self.ref_dose.dpmm )) *2
         pad_y_pixels =  int(round(self.shifts[1] * self.ref_dose.dpmm )) *2
-#        print("Applying shifts of {} pixels in x and {} pixels in y.".format(pad_x_pixels, pad_y_pixels))
         
         if pad_x_pixels > 0:
             self.ref_dose.pad(pixels=pad_x_pixels, value=0, edges='left')
@@ -649,12 +649,10 @@ class DoseAnalysis():
             self.ref_dose = self.film_dose
         film_dose_path = self.film_dose.path
         ref_dose_path = self.ref_dose.path
-#        meta = self.ref_dose.metadata
         
         (self.film_dose, self.ref_dose) = equate_images(self.film_dose, self.ref_dose)
         self.film_dose.path = film_dose_path
         self.ref_dose.path = ref_dose_path
-#        self.ref_dose.metadata = meta
         print('Fine tune registration using keyboard if needed. Arrow keys = move; ctrl+left/right = rotate. Press enter when done.')
         self.fig = plt.figure()
         ax = plt.gca()
