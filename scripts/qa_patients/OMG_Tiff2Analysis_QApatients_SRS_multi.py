@@ -12,16 +12,16 @@ if __name__ == '__main__':
     #### Infos film ####
     info = dict(author = 'JFC',
                 unit = '1',
-                film_lot = 'C14',
+                film_lot = 'C11',
                 scanner_id = 'Epson 12000XL',
-                date_exposed = '2023-01-30',
-                date_scanned = '2023-01-31',
-                wait_time = '18h',
+                date_exposed = '2022-11-18',
+                date_scanned = '2022-11-21',
+                wait_time = '64h',
                 notes = 'Scan en transmission à 300ppp')
 
     #### Infos plan ####
-    ID_patient = '0phy_SRS_multi'
-    ID_plan = 'A1A_Multi_10cm'
+    ID_patient = '566484'
+    ID_plan = 'C1A'
 
     ### Orientation ###
 #    orientation = 'sag'

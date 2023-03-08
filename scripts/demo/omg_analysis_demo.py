@@ -63,7 +63,7 @@ print("Écart médian: {:.2f}% (seuil = {:0.1f} * {} cGy = {} cGy)".format(media
 
 #%% Effectuer l'analyse gamma
 print("Analyse en cours...")
-film.analyse(doseTA=doseTA, distTA=distTA, threshold=threshold, norm_val=norm_val, film_filt=film_filt)
+film.gamma_analysis(doseTA=doseTA, distTA=distTA, threshold=threshold, norm_val=norm_val, film_filt=film_filt)
 print("Gammma {}% {}mm: Taux de passage={:.2f}%; Moyenne={:.2f}".format(doseTA, distTA, film.GammaMap.passRate, film.GammaMap.mean))
 
 #%% Afficher et sauvegarder les résultats

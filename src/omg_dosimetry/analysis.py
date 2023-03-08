@@ -14,8 +14,8 @@ Requirements:
     This module is built as an extension to pylinac package.
     Tested with pylinac 2.0.0, which is compatible with python 3.5.
     
-Written by Jean-Francois Cabana, copyright 2018
-Version 2023-02-28
+Written by Jean-Francois Cabana
+Version 2023-03-08
 """
 
 import numpy as np
@@ -33,25 +33,17 @@ from pathlib import Path
 import pymedphys
 from matplotlib.widgets  import RectangleSelector
 import webbrowser
-# import imageRGB
 from .imageRGB import load, ArrayImage, equate_images
 import bz2
 
-class DoseAnalysis():
+class DoseAnalysis(): 
     
-    def __init__(self, film_dose=None, ref_dose=None, film_dose_factor=1, ref_dose_factor=1, flipLR=False, flipUD=False, rot90=0, ref_dose_sum=False):
-        
-        if film_dose is not None:
-            self.film_dose = load(film_dose)
-        if rot90:
-            self.film_dose.array = np.rot90(self.film_dose.array, k=rot90)
-        if flipLR:
-            self.film_dose.array = np.fliplr(self.film_dose.array)
-        if flipUD:
-            self.film_dose.array = np.flipud(self.film_dose.array)
-        
-        if ref_dose is None:
-            self.ref_dose = None
+    def __init__(self, film_dose=None, ref_dose=None, film_dose_factor=1, ref_dose_factor=1, flipLR=False, flipUD=False, rot90=0, ref_dose_sum=False): 
+        if film_dose is not None: self.film_dose = load(film_dose)
+        if rot90: self.film_dose.array = np.rot90(self.film_dose.array, k=rot90)
+        if flipLR: self.film_dose.array = np.fliplr(self.film_dose.array)
+        if flipUD: self.film_dose.array = np.flipud(self.film_dose.array)
+        if ref_dose is None: self.ref_dose = None
             
         if ref_dose is not None:
             # If need to add multiple plane dose images, assume all images in folder given by ref_dose
@@ -61,16 +53,13 @@ class DoseAnalysis():
                 for file in files: 
                     img_file = os.path.join(ref_dose, file)
                     filebase, fileext = os.path.splitext(file)    
-                    if file == 'Thumbs.db':
-                        continue
-                    if os.path.isdir(img_file):
-                        continue       
+                    if file == 'Thumbs.db': continue
+                    if os.path.isdir(img_file): continue       
                     img_list.append(load(img_file))    
                 self.ref_dose = img_list[0]
                 new_array = np.stack(tuple(img.array for img in img_list), axis=-1)
                 self.ref_dose.array = np.sum(new_array, axis=-1) 
-            else:
-                self.ref_dose = load(ref_dose)
+            else: self.ref_dose = load(ref_dose)
   
         self.apply_film_factor(film_dose_factor = film_dose_factor)
         self.apply_ref_factor(ref_dose_factor = ref_dose_factor)
@@ -102,11 +91,9 @@ class DoseAnalysis():
         
         self.norm_dose = norm_dose      
         msg = 'Factor from ROI: Click and drag to draw an ROI manually. Press ''enter'' when finished.'
-        self.roi_xmin = []
-        self.roi_xmax = []
-        self.roi_ymin = []
-        self.roi_ymax = []
-        
+        self.roi_xmin, self.roi_xmax = [], []
+        self.roi_ymin, self.roi_ymax = [], []
+
         self.fig = plt.figure()
         ax = plt.gca()  
         self.film_dose.plot(ax=ax)  
@@ -117,23 +104,15 @@ class DoseAnalysis():
         print(msg)
         
         def select_box(eclick, erelease):
-            ax = plt.gca()
             x1, y1 = int(eclick.xdata), int(eclick.ydata)
             x2, y2 = int(erelease.xdata), int(erelease.ydata)
-            # rect = plt.Rectangle( (min(x1,x2),min(y1,y2)), np.abs(x1-x2), np.abs(y1-y2), fill=False )
-            # ax.add_patch(rect)
-            # plt.gcf().canvas.draw_idle()
-            self.roi_xmin = min(x1,x2)
-            self.roi_xmax = max(x1,x2)
-            self.roi_ymin = min(y1,y2)
-            self.roi_ymax = max(y1,y2)
+            self.roi_xmin, self.roi_xmax = min(x1,x2), max(x1,x2)
+            self.roi_ymin, self.roi_ymax = min(y1,y2), max(y1,y2)
         
         self.rs = RectangleSelector(ax, select_box, useblit=True, button=[1], minspanx=5, minspany=5, spancoords='pixels', interactive=True)  
         self.cid = self.fig.canvas.mpl_connect('key_press_event', self.apply_factor_from_roi_press_enter)
-        
         self.wait = True
-        while self.wait:
-            plt.pause(5)
+        while self.wait: plt.pause(5)
         return
         
     def apply_factor_from_roi_press_enter(self, event):
@@ -144,11 +123,9 @@ class DoseAnalysis():
             if self.norm_dose is None:  # If no normalisation dose is given, assume we normalisation on ref_dose
                 roi_ref = np.median(self.ref_dose.array[self.roi_ymin:self.roi_ymax, self.roi_xmin:self.roi_xmax])
                 factor = roi_ref/roi_film
-                
                 print("Median film dose = {} cGy; median ref dose = {} cGy".format(roi_film, roi_ref))
                 
-            else:
-                factor = self.norm_dose / roi_film            
+            else: factor = self.norm_dose / roi_film            
             self.apply_film_factor(film_dose_factor = factor)
             
             if hasattr(self, "rs"): del self.rs                
@@ -163,10 +140,8 @@ class DoseAnalysis():
         self.norm_dose = norm_dose      
         msg = 'Factor from normalisation film: Double-click at the center of the film markers. Press enter when done'
         self.roi_center = []
-        self.roi_xmin = []
-        self.roi_xmax = []
-        self.roi_ymin = []
-        self.roi_ymax = []
+        self.roi_xmin, self.roi_xmax = [], []
+        self.roi_ymin, self.roi_ymax = [], []
         
         self.fig = plt.figure()
         ax = plt.gca()  
@@ -178,21 +153,17 @@ class DoseAnalysis():
         print(msg)
         
         self.fig.canvas.mpl_connect('button_press_event', self.onclick_norm)
-        self.cid = self.fig.canvas.mpl_connect('key_press_event', self.apply_factor_from_roi_press_enter)
-                
+        self.cid = self.fig.canvas.mpl_connect('key_press_event', self.apply_factor_from_roi_press_enter)         
         self.wait = True
-        while self.wait:
-            plt.pause(5)
+        while self.wait: plt.pause(5)
             
     def onclick_norm(self, event):
         ax = plt.gca()
         if event.dblclick:
             taille = 100
             self.roi_center = ([int(event.xdata), int(event.ydata)])
-            self.roi_xmin = int(event.xdata) - taille
-            self.roi_xmax = int(event.xdata) + taille
-            self.roi_ymin = int(event.ydata) - taille
-            self.roi_ymax = int(event.ydata) + taille
+            self.roi_xmin, self.roi_xmax = int(event.xdata) - taille, int(event.xdata) + taille
+            self.roi_ymin, self.roi_ymax = int(event.ydata) - taille, int(event.ydata) + taille
             
             rect = plt.Rectangle( (min(self.roi_xmin,self.roi_xmax),min(self.roi_ymin,self.roi_ymax)), np.abs(self.roi_xmin-self.roi_xmax), np.abs(self.roi_ymin-self.roi_ymax), fill=False )
             ax.add_patch(rect)    
@@ -213,23 +184,15 @@ class DoseAnalysis():
         print(msg)
         
         def select_box(eclick, erelease):
-            ax = plt.gca()
             x1, y1 = int(eclick.xdata), int(eclick.ydata)
-            x2, y2 = int(erelease.xdata), int(erelease.ydata)
-            # rect = plt.Rectangle( (min(x1,x2),min(y1,y2)), np.abs(x1-x2), np.abs(y1-y2), fill=False, color='r' )
-            # ax.add_patch(rect)
-            # plt.gcf().canvas.draw_idle()
-            
-            self.roi_xmin = min(x1,x2)
-            self.roi_xmax = max(x1,x2)
-            self.roi_ymin = min(y1,y2)
-            self.roi_ymax = max(y1,y2)
-        
+            x2, y2 = int(erelease.xdata), int(erelease.ydata)   
+            self.roi_xmin, self.roi_xmax = min(x1,x2), max(x1,x2)
+            self.roi_ymin, self.roi_ymax = min(y1,y2), max(y1,y2)
+
         self.rs = RectangleSelector(ax, select_box, useblit=True, button=[1], minspanx=5, minspany=5, spancoords='pixels', interactive=True)  
         self.cid = self.fig.canvas.mpl_connect('key_press_event', self.crop_film_press_enter)
         self.wait = True
-        while self.wait:
-            plt.pause(5)
+        while self.wait: plt.pause(5)
         return
         
     def crop_film_press_enter(self, event):
@@ -250,23 +213,15 @@ class DoseAnalysis():
             self.wait = False
             return
         
-    def analyse(self, film_filt=0, doseTA=3.0, distTA=3.0, threshold=0.1, norm_val='max', local_gamma=False):
-        
+    def gamma_analysis(self, film_filt=0, doseTA=3.0, distTA=3.0, threshold=0.1, norm_val='max', local_gamma=False):
         # Save some settings
-        self.film_filt = film_filt
-        self.doseTA = doseTA
-        self.distTA = distTA
-        self.threshold = threshold
-        self.norm_val = norm_val
-            
-#        if film_filt:
-#            self.film_dose.array = medfilt(self.film_dose.array,  kernel_size=(film_filt, film_filt))
-        self.GammaMap = self.computeGamma2(doseTA=doseTA, distTA=distTA, threshold=threshold, norm_val=norm_val, local_gamma=local_gamma)       
+        self.doseTA, self.distTA = doseTA, distTA
+        self.film_filt, self.threshold, self.norm_val = film_filt, threshold, norm_val        
+        self.GammaMap = self.computeGamma(doseTA=doseTA, distTA=distTA, threshold=threshold, norm_val=norm_val, local_gamma=local_gamma)       
         self.computeDiff()
     
     def computeHDmedianDiff(self, threshold=0.8, ref = 'max'):
-        if ref == 'max':
-            HDthreshold = threshold * self.ref_dose.array.max()
+        if ref == 'max': HDthreshold = threshold * self.ref_dose.array.max()
         else:  HDthreshold = threshold * ref
         film_HD = self.film_dose.array[self.ref_dose.array > HDthreshold]
         ref_HD = self.ref_dose.array[self.ref_dose.array > HDthreshold]
@@ -281,9 +236,10 @@ class DoseAnalysis():
         self.DiffMap.MSE =  sum(sum(self.DiffMap.array**2)) / len(self.film_dose.array[(self.film_dose.array > 0)]) 
         self.DiffMap.RMSE = self.DiffMap.MSE**0.5    
     
-    def computeGamma2(self, doseTA=2, distTA=2, threshold=0.1, norm_val=None, local_gamma=False):
+    def computeGamma(self, doseTA=2, distTA=2, threshold=0.1, norm_val=None, local_gamma=False):
         """Using pymedphys.gamma
         """
+        print("Computing {}% {} mm Gamma...".format(doseTA, distTA))
 #       # error checking
         if not is_close(self.film_dose.dpi, self.ref_dose.dpi, delta=3):
             raise AttributeError("The image DPIs to not match: {:.2f} vs. {:.2f}".format(self.film_dose.dpi, self.ref_dose.dpi))
@@ -293,27 +249,22 @@ class DoseAnalysis():
             raise AttributeError("The images are not the same size: {} vs. {}".format(self.film_dose.shape, self.ref_dose.shape))
 
         # set up reference and comparison images
-        film_dose = ArrayImage(copy.copy(self.film_dose.array))
-        ref_dose = ArrayImage(copy.copy(self.ref_dose.array))
+        film_dose, ref_dose = ArrayImage(copy.copy(self.film_dose.array)), ArrayImage(copy.copy(self.ref_dose.array))
         
         if self.film_filt:
             film_dose.array = medfilt(film_dose.array,  kernel_size=(self.film_filt, self.film_filt))
 
         if norm_val is not None:
-            if norm_val == 'max':
-                norm_val = ref_dose.array.max()
+            if norm_val == 'max': norm_val = ref_dose.array.max()
             film_dose.normalize(norm_val)
             ref_dose.normalize(norm_val)
 
         # set coordinates [mm]
         x_coord = (np.array(range(0, self.ref_dose.shape[0])) / self.ref_dose.dpmm - self.ref_dose.physical_shape[0]/2).tolist()
         y_coord = (np.array(range(0, self.ref_dose.shape[1])) / self.ref_dose.dpmm - self.ref_dose.physical_shape[1]/2).tolist()
-        axes_reference = (x_coord, y_coord)
-        axes_evaluation = (x_coord, y_coord)
-        dose_reference = ref_dose.array
-        dose_evaluation = film_dose.array
+        axes_reference, axes_evaluation = (x_coord, y_coord), (x_coord, y_coord)
+        dose_reference, dose_evaluation = ref_dose.array, film_dose.array
 
-        # gamma = pymedphys.gamma(axes_reference, dose_reference, axes_evaluation, dose_evaluation, doseTA, distTA, threshold*100, local_gamma=local_gamma, max_gamma = 2.0)
         gamma = pymedphys.gamma(axes_reference, dose_reference, axes_evaluation, dose_evaluation, doseTA, distTA, threshold*100, local_gamma=local_gamma)
         GammaMap = ArrayImage(gamma, dpi=film_dose.dpi)
               
@@ -343,7 +294,7 @@ class DoseAnalysis():
 
         i=0
         for value in values:
-            gamma = self.computeGamma2(doseTA=value, distTA=distTA, threshold=threshold, norm_val=norm_val)
+            gamma = self.computeGamma(doseTA=value, distTA=distTA, threshold=threshold, norm_val=norm_val)
             GammaVarDoseTA[i,0] = value
             GammaVarDoseTA[i,1] = gamma.passRate
             i=i+1
@@ -367,7 +318,7 @@ class DoseAnalysis():
         
         i=0
         for value in values:
-            gamma = self.computeGamma2(doseTA=doseTA, distTA=value, threshold=threshold, norm_val=norm_val)
+            gamma = self.computeGamma(doseTA=doseTA, distTA=value, threshold=threshold, norm_val=norm_val)
             GammaVarDistTA[i,0] = value
             GammaVarDistTA[i,1] = gamma.passRate
             i=i+1
@@ -524,7 +475,8 @@ class DoseAnalysis():
         self.markers_center = markers_center
         if threshold > 0 :
             self.film_dose.crop_edges(threshold=threshold)
-        print('Please double-click on each marker, starting from top and going clockwise. Press ''enter'' when done')
+        print('Please double-click on each marker. Press ''enter'' when done')
+        print('Keyboard shortcuts: Right arrow = Rotate 90 degrees; Left arrow = Flip horizontally; Up arrow = Flip vertically')
         self.film_dose.plot()
         self.select_markers()
         
@@ -532,34 +484,34 @@ class DoseAnalysis():
         self.fig = plt.gcf()
         self.markers = []
         ax = plt.gca()
-        ax.set_title('Top=  ; Right=  ; Bottom=  ; Left=  ')
+        ax.set_title('Marker 1 =  ; Marker 2 =  ; Marker 3 =  ; Marker 4 =  ')
         self.fig.canvas.mpl_connect('button_press_event', self.onclick)
         self.cid = self.fig.canvas.mpl_connect('key_press_event', self.ontype)
         
         self.wait = True
-        while self.wait:
-            plt.pause(5)
+        while self.wait: plt.pause(5)
         
     def onclick(self, event):
         ax = plt.gca()
         if event.dblclick:
+            l = 10
             self.markers.append([int(event.xdata), int(event.ydata)])
             if len(self.markers)==1:
-                ax.plot((self.markers[0][0]-5,self.markers[0][0]+5),(self.markers[0][1],self.markers[0][1]),'w', linewidth=2)
-                ax.plot((self.markers[0][0],self.markers[0][0]),(self.markers[0][1]-5,self.markers[0][1]+5),'w', linewidth=2)
-                ax.set_title('Top= {}; Right=  ; Bottom=  ; Left=  '.format(self.markers[0]))
+                ax.plot((self.markers[0][0]-l,self.markers[0][0]+l),(self.markers[0][1],self.markers[0][1]),'w', linewidth=2)
+                ax.plot((self.markers[0][0],self.markers[0][0]),(self.markers[0][1]-l,self.markers[0][1]+l),'w', linewidth=2)
+                ax.set_title('Marker 1 = {}; Marker 2 =  ; Marker 3 =  ; Marker 4 =  '.format(self.markers[0]))
             if len(self.markers)==2:
-                ax.plot((self.markers[1][0]-5,self.markers[1][0]+5),(self.markers[1][1],self.markers[1][1]),'w', linewidth=2)
-                ax.plot((self.markers[1][0],self.markers[1][0]),(self.markers[1][1]-5,self.markers[1][1]+5),'w', linewidth=2)
-                ax.set_title('Top= {}; Right= {}; Bottom=  ; Left=  '.format(self.markers[0], self.markers[1]))
+                ax.plot((self.markers[1][0]-l,self.markers[1][0]+l),(self.markers[1][1],self.markers[1][1]),'w', linewidth=2)
+                ax.plot((self.markers[1][0],self.markers[1][0]),(self.markers[1][1]-l,self.markers[1][1]+l),'w', linewidth=2)
+                ax.set_title('Marker 1 = {}; Marker 2 = {}; Marker 3 =  ; Marker 4 =  '.format(self.markers[0], self.markers[1]))
             if len(self.markers)==3:
-                ax.plot((self.markers[2][0]-5,self.markers[2][0]+5),(self.markers[2][1],self.markers[2][1]),'w', linewidth=2)
-                ax.plot((self.markers[2][0],self.markers[2][0]),(self.markers[2][1]-5,self.markers[2][1]+5),'w', linewidth=2)
-                ax.set_title('Top= {}; Right= {}; Bottom= {}; Left=  '.format(self.markers[0], self.markers[1], self.markers[2]))
+                ax.plot((self.markers[2][0]-l,self.markers[2][0]+l),(self.markers[2][1],self.markers[2][1]),'w', linewidth=2)
+                ax.plot((self.markers[2][0],self.markers[2][0]),(self.markers[2][1]-l,self.markers[2][1]+l),'w', linewidth=2)
+                ax.set_title('Marker 1 = {}; Marker 2 = {}; Marker 3 = {}; Marker 4 =  '.format(self.markers[0], self.markers[1], self.markers[2]))
             if len(self.markers)==4:
-                ax.plot((self.markers[3][0]-5,self.markers[3][0]+5),(self.markers[3][1],self.markers[3][1]),'w', linewidth=2)
-                ax.plot((self.markers[3][0],self.markers[3][0]),(self.markers[3][1]-5,self.markers[3][1]+5),'w', linewidth=2)
-                ax.set_title('Top= {}; Right= {}; Bottom= {}; Left= {}'.format(self.markers[0], self.markers[1], self.markers[2], self.markers[3]))
+                ax.plot((self.markers[3][0]-l,self.markers[3][0]+l),(self.markers[3][1],self.markers[3][1]),'w', linewidth=2)
+                ax.plot((self.markers[3][0],self.markers[3][0]),(self.markers[3][1]-l,self.markers[3][1]+l),'w', linewidth=2)
+                ax.set_title('Marker 1 = {}; Marker 2 = {}; Marker 3 = {}; Marker 4 = {}'.format(self.markers[0], self.markers[1], self.markers[2], self.markers[3]))
             plt.gcf().canvas.draw_idle()
         
     def ontype(self, event):
@@ -579,21 +531,21 @@ class DoseAnalysis():
             self.film_dose.plot(ax=ax)
             fig.canvas.draw_idle()
         
-        
         if event.key == 'enter':
-            
             if len(self.markers) != 4:
                 print('')
                 print('Please start over...')
                 print('{} markers were selected when 4 were expected...'.format(len(self.markers)))
-                print('Please double-click on each marker, starting from top and going clockwise. Press ''enter'' when done')
+                print('Please double-click on each marker. Press ''enter'' when done')
                 self.markers = []
                 ax = plt.gca()
+                self.film_dose.plot(ax=ax)
                 ax.set_title('Top=  ; Right=  ; Bottom=  ; Left=  ')
+                fig.canvas.draw_idle()
             else:
                 self.fig.canvas.mpl_disconnect(self.cid)
                 plt.close(self.fig)
-                
+                                
                 self.move_iso_center()
                 self.remove_rotation()
                 if self.ref_dose is not None:
@@ -601,16 +553,14 @@ class DoseAnalysis():
                 self.tune_registration()
                 return
                 
-    def start_thread(self):
-        print('Thread started')
-                
     def move_iso_center(self):
-        x = [ self.markers[0][0], self.markers[1][0], self.markers[2][0], self.markers[3][0] ]
-        y = [ self.markers[0][1], self.markers[1][1], self.markers[2][1], self.markers[3][1] ]
+        x, y = [m[0] for m in self.markers], [m[1] for m in self.markers]
+        t, b = y.index(min(y)), y.index(max(y))
+        l, r = x.index(min(x)), x.index(max(x))
         
         # Find intersection -> (x0, y0)
-        line1 = ((x[0],y[0]),(x[2],y[2]))
-        line2 = ((x[1],y[1]),(x[3],y[3]))
+        line1 = ((x[t],y[t]),(x[b],y[b]))
+        line2 = ((x[r],y[r]),(x[l],y[l]))
         (x0,y0) = line_intersection(line1, line2)
         
         self.x0 = int(np.around(x0))
@@ -659,12 +609,13 @@ class DoseAnalysis():
             self.ref_dose.move_pixel_to_center(x0, y0)
 
     def remove_rotation(self):
-        x = [ self.markers[0][0], self.markers[1][0], self.markers[2][0], self.markers[3][0] ]
-        y = [ self.markers[0][1], self.markers[1][1], self.markers[2][1], self.markers[3][1] ]
+        x, y = [m[0] for m in self.markers], [m[1] for m in self.markers]
+        t, b = y.index(min(y)), y.index(max(y))
+        l, r = x.index(min(x)), x.index(max(x))
         
         # Find rotation angle
-        angle1 = math.degrees( math.atan( (x[2]-x[0]) / (y[2]-y[0]) ) )
-        angle2 = math.degrees( math.atan( (y[3]-y[1]) / (x[1]-x[3]) ) )
+        angle1 = math.degrees( math.atan( (x[b]-x[t]) / (y[b]-y[t]) ) )
+        angle2 = math.degrees( math.atan( (y[l]-y[r]) / (x[r]-x[l]) ) )
         
         # Appy inverse rotation
         angleCorr = -1.0*(angle1+angle2)/2
@@ -858,31 +809,28 @@ class DoseAnalysis():
         canvas.add_image(image_data=data, location=(0.5, 2), dimensions=(20, 20))
 
         canvas.finish()
-        if open_file:
-            webbrowser.open(filename)       
-
+        if open_file: webbrowser.open(filename)       
 
     def get_profile_offsets(self):
-        self.get_profile_offset(direction='x', side='gauche')
+        self.get_profile_offset(direction='x', side='left')
         self.offset_x_gauche = self.offset
-        self.get_profile_offset(direction='x', side='droit')
+        self.get_profile_offset(direction='x', side='right')
         self.offset_x_droite = self.offset
-        self.get_profile_offset(direction='y', side='gauche')
+        self.get_profile_offset(direction='y', side='left')
         self.offset_y_gauche = self.offset
-        self.get_profile_offset(direction='y', side='droit')
+        self.get_profile_offset(direction='y', side='right')
         self.offset_y_droite = self.offset
 
-
     def get_profile_offset(self, direction='x', side='left'):
-        print('Utiliser les flèches gauche et droite pour déplacer le profil mesuré pour ajuster le côté ' + side + '. Faire Enter lorsque terminé.')
+        msg = 'Use left/right keyboard arrows to move profile and fit on ' + side + ' side. Press Enter when done.'
+        print(msg)
         self.offset = 0
         self.direction = direction
-        self.plot_profile(profile=direction, diff=True, offset=0)
+        self.plot_profile(profile=direction, diff=True, offset=0, title='Fit profiles on ' + side + ' side')
         self.fig = plt.gcf()
         self.cid = self.fig.canvas.mpl_connect('key_press_event', self.move_profile_ontype)
         self.wait = True
-        while self.wait:
-            plt.pause(5)
+        while self.wait: plt.pause(5)
                 
     def move_profile_ontype(self, event):
         fig = plt.gcf()
@@ -892,13 +840,13 @@ class DoseAnalysis():
             self.offset -= 0.1
             self.plot_profile(ax=ax, profile=self.direction, position=None, title=None, diff=False, offset=self.offset)
             fig.canvas.draw_idle()
-            ax.set_title('Décalage = ' + str(self.offset) + ' mm')
+            ax.set_title('Shift = ' + str(self.offset) + ' mm')
             
         if event.key == 'right':
             self.offset += 0.1
             self.plot_profile(ax=ax, profile=self.direction, position=None, title=None, diff=False, offset=self.offset)
             fig.canvas.draw_idle()
-            ax.set_title('Décalage = ' + str(self.offset) + ' mm')
+            ax.set_title('Shift = ' + str(self.offset) + ' mm')
         
         if event.key == 'enter':
             self.fig.canvas.mpl_disconnect(self.cid)
@@ -906,13 +854,11 @@ class DoseAnalysis():
             self.wait = False
             return self.offset
 
-
-
 ########################### End class DoseAnalysis ############################## 
     
 def line_intersection(line1, line2):
     xdiff = (line1[0][0] - line1[1][0], line2[0][0] - line2[1][0])
-    ydiff = (line1[0][1] - line1[1][1], line2[0][1] - line2[1][1]) #Typo was here
+    ydiff = (line1[0][1] - line1[1][1], line2[0][1] - line2[1][1])
 
     def det(a, b):
         return a[0] * b[1] - a[1] * b[0]
