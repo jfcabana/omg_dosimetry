@@ -65,29 +65,30 @@ class DoseAnalysis():
         self.apply_ref_factor(ref_dose_factor = ref_dose_factor)
 
     def apply_film_factor(self, film_dose_factor = None):
+        """ Apply a normalisation factor to film dose. """
         if film_dose_factor is not None:
             self.film_dose_factor = film_dose_factor
             self.film_dose.array = self.film_dose.array * self.film_dose_factor
             print("Applied film normalisation factor = {}".format(self.film_dose_factor))
 
     def apply_ref_factor(self, ref_dose_factor = None):
+        """ Apply a normalisation factor to reference dose. """
         if ref_dose_factor is not None:
             self.ref_dose_factor = ref_dose_factor
             self.ref_dose.array = self.ref_dose.array * self.ref_dose_factor
             print("Applied ref dose normalisation factor = {}".format(self.ref_dose_factor))
 
     def apply_factor_from_isodose(self, norm_isodose = 0):
-        """ Compute dose factor from a reference dose isodose. """
-        
+        """ Apply film normalisation factor from a reference dose isodose. """
+        print("Computing normalisation factor from doses > {} cGy.".format(norm_isodose))
         self.norm_dose = norm_isodose        
         indices = np.where(self.ref_dose.array > self.norm_dose)
         mean_ref = np.mean(self.ref_dose.array[indices])
-        mean_film = np.mean(self.film_dose.array[indices])
-        factor = mean_ref / mean_film            
-        self.apply_film_factor(film_dose_factor = factor)
+        mean_film = np.mean(self.film_dose.array[indices])          
+        self.apply_film_factor(film_dose_factor = mean_ref / mean_film )
         
     def apply_factor_from_roi(self, norm_dose = None):
-        """ Define an ROI to compute dose factor. """
+        """ Apply film normalisation factor from a rectangle ROI. """
         
         self.norm_dose = norm_dose      
         msg = 'Factor from ROI: Click and drag to draw an ROI manually. Press ''enter'' when finished.'
@@ -134,10 +135,11 @@ class DoseAnalysis():
             self.wait = False
             return
 
-    def apply_factor_from_norm_film(self, norm_dose = None):
-        """ Define an ROI of standard dimension to compute dose factor from normalisation film. """
+    def apply_factor_from_norm_film(self, norm_dose = None, norm_roi_size = 10):
+        """ Define an ROI of norm_roi_size mm x norm_roi_size mm to compute dose factor from normalisation film. """
         
-        self.norm_dose = norm_dose      
+        self.norm_dose = norm_dose
+        self.norm_roi_size = norm_roi_size
         msg = 'Factor from normalisation film: Double-click at the center of the film markers. Press enter when done'
         self.roi_center = []
         self.roi_xmin, self.roi_xmax = [], []
@@ -160,15 +162,16 @@ class DoseAnalysis():
     def onclick_norm(self, event):
         ax = plt.gca()
         if event.dblclick:
-            taille = 100
+            size_px = self.norm_roi_size * self.film_dose.dpmm / 2
             self.roi_center = ([int(event.xdata), int(event.ydata)])
-            self.roi_xmin, self.roi_xmax = int(event.xdata) - taille, int(event.xdata) + taille
-            self.roi_ymin, self.roi_ymax = int(event.ydata) - taille, int(event.ydata) + taille
+            self.roi_xmin, self.roi_xmax = int(event.xdata) - size_px, int(event.xdata) + size_px
+            self.roi_ymin, self.roi_ymax = int(event.ydata) - size_px, int(event.ydata) + size_px
             
             rect = plt.Rectangle( (min(self.roi_xmin,self.roi_xmax),min(self.roi_ymin,self.roi_ymax)), np.abs(self.roi_xmin-self.roi_xmax), np.abs(self.roi_ymin-self.roi_ymax), fill=False )
             ax.add_patch(rect)    
-            ax.plot((self.roi_center[0]-50,self.roi_center[0]+50),(self.roi_center[1],self.roi_center[1]),'w', linewidth=2)
-            ax.plot((self.roi_center[0],self.roi_center[0]),(self.roi_center[1]-50,self.roi_center[1]+50),'w', linewidth=2)
+            ax.plot((self.roi_center[0]-size_px,self.roi_center[0]+size_px),(self.roi_center[1],self.roi_center[1]),'w', linewidth=2)
+            ax.plot((self.roi_center[0],self.roi_center[0]),(self.roi_center[1]-size_px,self.roi_center[1]+size_px),'w', linewidth=2)
+            plt.gcf().canvas.draw_idle()
 
     def crop_film(self):
         """ Define an ROI to crop film. """     
@@ -214,13 +217,14 @@ class DoseAnalysis():
             return
         
     def gamma_analysis(self, film_filt=0, doseTA=3.0, distTA=3.0, threshold=0.1, norm_val='max', local_gamma=False):
-        # Save some settings
+        """ Perform Gamma analysis """
         self.doseTA, self.distTA = doseTA, distTA
         self.film_filt, self.threshold, self.norm_val = film_filt, threshold, norm_val        
         self.GammaMap = self.computeGamma(doseTA=doseTA, distTA=distTA, threshold=threshold, norm_val=norm_val, local_gamma=local_gamma)       
         self.computeDiff()
     
     def computeHDmedianDiff(self, threshold=0.8, ref = 'max'):
+        """ Compute median difference between film and reference doses in high dose region. """
         if ref == 'max': HDthreshold = threshold * self.ref_dose.array.max()
         else:  HDthreshold = threshold * ref
         film_HD = self.film_dose.array[self.ref_dose.array > HDthreshold]
@@ -237,8 +241,7 @@ class DoseAnalysis():
         self.DiffMap.RMSE = self.DiffMap.MSE**0.5    
     
     def computeGamma(self, doseTA=2, distTA=2, threshold=0.1, norm_val=None, local_gamma=False):
-        """Using pymedphys.gamma
-        """
+        """Comput Gamma (using pymedphys.gamma) """
         print("Computing {}% {} mm Gamma...".format(doseTA, distTA))
 #       # error checking
         if not is_close(self.film_dose.dpi, self.ref_dose.dpi, delta=3):
@@ -252,7 +255,7 @@ class DoseAnalysis():
         film_dose, ref_dose = ArrayImage(copy.copy(self.film_dose.array)), ArrayImage(copy.copy(self.ref_dose.array))
         
         if self.film_filt:
-            film_dose.array = medfilt(film_dose.array,  kernel_size=(self.film_filt, self.film_filt))
+            film_dose.array = medfilt(film_dose.array, kernel_size=(self.film_filt, self.film_filt))
 
         if norm_val is not None:
             if norm_val == 'max': norm_val = ref_dose.array.max()
@@ -265,6 +268,7 @@ class DoseAnalysis():
         axes_reference, axes_evaluation = (x_coord, y_coord), (x_coord, y_coord)
         dose_reference, dose_evaluation = ref_dose.array, film_dose.array
 
+        # Gamma computation and set maps
         gamma = pymedphys.gamma(axes_reference, dose_reference, axes_evaluation, dose_evaluation, doseTA, distTA, threshold*100, local_gamma=local_gamma)
         GammaMap = ArrayImage(gamma, dpi=film_dose.dpi)
               
@@ -285,10 +289,8 @@ class DoseAnalysis():
         return GammaMap
                     
     def plot_gamma_varDoseTA(self, ax=None, start=0.5, stop=4, step=0.5): 
-        distTA = self.distTA
-        threshold = self.threshold
-        norm_val = self.norm_val
-        
+        """ Plot graph of Gamma pass rate vs variable doseTA """
+        distTA, threshold, norm_val = self.distTA, self.threshold, self.norm_val
         values = np.arange(start,stop,step)
         GammaVarDoseTA = np.zeros((len(values),2))
 
@@ -299,16 +301,15 @@ class DoseAnalysis():
             GammaVarDoseTA[i,1] = gamma.passRate
             i=i+1
         
-        if ax is None:
-            fig, ax = plt.subplots()
-        x = GammaVarDoseTA[:,0]
-        y = GammaVarDoseTA[:,1]
+        if ax is None: fig, ax = plt.subplots()
+        x, y = GammaVarDoseTA[:,0], GammaVarDoseTA[:,1]
         ax.plot(x,y,'o-')
         ax.set_title('Variable Dose TA, Dist TA = {} mm'.format(distTA))
         ax.set_xlabel('Dose TA (%)')
         ax.set_ylabel('Gamma pass rate (%)')
         
     def plot_gamma_varDistTA(self, ax=None, start=0.5, stop=4, step=0.5): 
+        """ Plot graph of Gamma pass rate vs variable distTA """
         doseTA = self.doseTA
         threshold = self.threshold
         norm_val = self.norm_val
@@ -419,20 +420,14 @@ class DoseAnalysis():
         film_fileName=os.path.basename(self.film_dose.path)
         ref_fileName=os.path.basename(self.ref_dose.path)
         
-        if x is None:
-            x = np.floor(self.ref_dose.shape[1] / 2).astype(int)
-        if y is None:
-            y = np.floor(self.ref_dose.shape[0] / 2).astype(int)
-        
-        
+        if x is None: x = np.floor(self.ref_dose.shape[1] / 2).astype(int)
+        if y is None: y = np.floor(self.ref_dose.shape[0] / 2).astype(int)
+         
         fig, ((ax1,ax2),(ax3,ax4),(ax5,ax6)) = plt.subplots(3,2, figsize=(10, 8))
         fig.tight_layout()
         axes = [ax1,ax2,ax3,ax4,ax5,ax6]
-        
-#        max_dose_film = np.percentile(self.film_dose.array,[98])[0].round(decimals=-1)
         max_dose_comp = np.percentile(self.ref_dose.array,[98])[0].round(decimals=-1)
         clim = [0, max_dose_comp]   
-#        clim = [0, max(max_dose_film, max_dose_comp)]   
 
         self.film_dose.plotCB(ax1, clim=clim, title='Film dose ({})'.format(film_fileName))
         self.ref_dose.plotCB(ax2, clim=clim, title='Reference dose ({})'.format(ref_fileName))
@@ -455,7 +450,6 @@ class DoseAnalysis():
             ax = axes[i]
             while len(ax.lines) > 0:
                 ax.lines[-1].remove()
-            
             ax.plot((x,x),(0,self.ref_dose.shape[0]),'w--', linewidth=1)
             ax.plot((0,self.ref_dose.shape[1]),(y,y),'w--', linewidth=1)
         
@@ -683,14 +677,8 @@ class DoseAnalysis():
             img_array = film_grad - ref_grad
         else:
             img_array = self.film_dose.array - self.ref_dose.array
-        img = load(img_array, dpi=self.film_dose.dpi)
-        
+        img = load(img_array, dpi=self.film_dose.dpi) 
         RMSE =  (sum(sum(img.array**2)) / len(self.film_dose.array[(self.film_dose.array > 0)]))**0.5
-        
-        
-#        img.ground()
-#        img.normalize()
-#        img = self.film_dose
         
         clim = [np.percentile(img_array,[1])[0].round(decimals=-1), np.percentile(img_array,[99])[0].round(decimals=-1)]   
         img.plot(ax=ax, clim=clim, cmap=cmap)     
@@ -703,7 +691,6 @@ class DoseAnalysis():
     def reg_ontype(self, event):
         fig = plt.gcf()
         ax = plt.gca()
-#        print(event.key)
         if event.key == 'up':
             self.film_dose.roll(direction='y', amount=-1)
             self.show_registration(ax=ax)
@@ -729,37 +716,20 @@ class DoseAnalysis():
             self.show_registration(ax=ax)
             fig.canvas.draw_idle()
         if event.key == 'enter':
-#            plt.close(plt.gcf())
             self.fig.canvas.mpl_disconnect(self.cid)
             plt.close(self.fig)
             self.wait = False
             return
             
     def save_analyzed_image(self, filename,  x=None, y=None, **kwargs):
-        """Save the analyzed image to a file.
-
-        Parameters
-        ----------
-        filename : str
-            The location and filename to save to.
-        kwargs
-            Keyword arguments are passed to plt.savefig().
-        """
+        """Save the analyzed image to a file. """
         self.show_results(x=x, y=y)
         fig = plt.gcf()
         fig.savefig(filename)
         plt.close(fig)
         
     def save_analyzed_gamma(self, filename, **kwargs):
-        """Save the analyzed image to a file.
-
-        Parameters
-        ----------
-        filename : str
-            The location and filename to save to.
-        kwargs
-            Keyword arguments are passed to plt.savefig().
-        """
+        """Save the analyzed gamma to a file. """
         self.plot_gamma_stats(**kwargs)
         fig = plt.gcf()
         fig.savefig(filename)

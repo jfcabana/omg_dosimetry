@@ -44,12 +44,10 @@ if __name__ == '__main__':
     #### Choisir une méthode de normalisation (Décommenter la ligne selon la normalisation voulue) ###
     normalisation = 1.0           # Chiffre (float): applique ce facteur de normalisation. Laisser à 1.0 si aucune normalisation
     # normalisation = 'ref_roi'    # 'ref_roi': sélectionne une ROI sur le film et normalisation par rapport à la dose de référence
-
-###  Méthodes en développement. Ne pas utiliser pour l'instant ###
-#    normalisation = 'norm_film'  # 'norm_film': sélectionne le film de normalisation (dans le même scan) pour calculer le facteur par rapport à une dose attendue
-#    norm_film_MU = 1350            # Combien de MU délivrés pour le film de normalisation
-#    normalisation = 'isodose'
-#    norm_thresh = 0.8
+    # normalisation = 'norm_film'  # 'norm_film': sélectionne le film de normalisation (dans le même scan) pour calculer le facteur par rapport à une dose attendue
+    # norm_film_dose = 1500        # Si normalisation = 'norm_film', la dose moyenne [cGy] sur une ROI au centre du film
+    normalisation = 'isodose'    # 'isodose': Applique un facteur de normalisation pour faire correspondre la dose moyenne pour tout ce qui est suppérieur à norm_isodose
+    norm_isodose = prescription * 0.8  # Dose [cGy] à utiliser pour la normalisation de type 'isodose'
 
     #################################### Paramètres automatiques, modifiables au besoin #############################################
     #### Paramètres de conversion en dose ####
@@ -132,18 +130,17 @@ if __name__ == '__main__':
     if dose_2_analysis:
         if type(normalisation) is float: film_dose_factor = normalisation
         else: film_dose_factor = 1.0
+        
         film = analysis.DoseAnalysis(film_dose=file_doseFilm, ref_dose=ref_dose, ref_dose_factor=1.0, film_dose_factor=film_dose_factor, flipLR=flipLR, flipUD=flipUD, ref_dose_sum=True, rot90=rot90)
 
-        # if normalisation == 'norm_film':
-        #     norm_film_ref_MU = 1000
-        #     if fantome == 'sag': norm_film_ref_dose = 896.88
-        #     elif fantome == 'coro': norm_film_ref_dose = 755.37
-        #     norm_film_dose = norm_film_MU / norm_film_ref_MU * norm_film_ref_dose
-        #     film.apply_factor_from_norm_film(norm_dose=norm_film_dose)
+        if normalisation == 'norm_film': film.apply_factor_from_roi(norm_dose=norm_film_dose)
 
         if crop_film: film.crop_film()
+        
         film.register(shift_x=shift_x, shift_y=shift_y, threshold=10, register_using_gradient=True, markers_center=markers_center)
+        
         if normalisation == 'ref_roi': film.apply_factor_from_roi()
+        if normalisation == 'isodose': film.apply_factor_from_isodose(norm_isodose)
 
 
         #%% Écart médian haute dose
