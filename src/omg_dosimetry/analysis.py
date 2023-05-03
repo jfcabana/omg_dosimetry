@@ -462,9 +462,10 @@ class DoseAnalysis():
         if event.button==1:
             self.set_profile(event, axes)  
         
-    def register(self, shift_x=0, shift_y=0, threshold=10, register_using_gradient=False, markers_center=None):
+    def register(self, shift_x=0, shift_y=0, threshold=10, register_using_gradient=False, markers_center=None, rot=0):
         self.register_using_gradient = register_using_gradient
         self.shifts = [shift_x, shift_y]
+        self.rot = rot
         self.markers_center = markers_center
         if threshold > 0 :
             self.film_dose.crop_edges(threshold=threshold)
@@ -545,6 +546,9 @@ class DoseAnalysis():
                 self.remove_rotation()
                 if self.ref_dose is not None:
                     self.apply_shifts_ref()
+                
+                if self.rot:
+                    self.film_dose.rotate(self.rot)
                 self.tune_registration()
                 return
                 

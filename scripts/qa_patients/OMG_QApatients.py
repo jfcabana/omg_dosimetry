@@ -65,7 +65,8 @@ if __name__ == '__main__':
     #### Paramètres de recalage ####
     shift_x = 0             # Si décalage connu en X [mm]
     shift_y = 0             # Si décalage connu en Y [mm]
-
+    rot = 0                 # Si rotation connue [degrés] (+: rotation anti-horaire)
+    
     # flipLR: Symétrie miroir horizontale du film; flipUD: Symétrie vertical; rot90: # de rotations de 90 degrés
     # markers_center: corrdonnées du centre des marques sur le CT de référence [RL, IS, PA] en mm
     if fantome == 'Goret coro SRS':
@@ -138,7 +139,7 @@ if __name__ == '__main__':
         film = analysis.DoseAnalysis(film_dose=file_doseFilm, ref_dose=ref_dose, ref_dose_factor=1.0, film_dose_factor=film_dose_factor, flipLR=flipLR, flipUD=flipUD, ref_dose_sum=True, rot90=rot90)
         if normalisation == 'norm_film': film.apply_factor_from_roi(norm_dose=norm_film_dose)
         if crop_film: film.crop_film()
-        film.register(shift_x=shift_x, shift_y=shift_y, threshold=10, register_using_gradient=True, markers_center=markers_center)
+        film.register(shift_x=shift_x, shift_y=shift_y, threshold=10, register_using_gradient=True, markers_center=markers_center, rot=rot)
         if normalisation == 'ref_roi': film.apply_factor_from_roi()
         if normalisation == 'isodose': film.apply_factor_from_isodose(norm_isodose)
 
