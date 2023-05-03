@@ -8,37 +8,38 @@ path_films = 'P:\\Projets\\CRIC\\Physique_Medicale\\Films\\'
 if __name__ == '__main__':
 #%% ################################## Entrer vos informations ci-dessous ##################################
     #### Infos film ####
-    info = dict(author = 'JFC',                 # Initiales du phys qui a fait la mesure
+    info = dict(author = 'JMo',                 # Initiales du phys qui a fait la mesure
                 unit = '1',                     # Salle
                 film_lot = 'C11',               # Lot de film utilisé. Important car détermine la calibration à prendre.
                 scanner_id = 'Epson 12000XL',   # Ne change pas
-                date_exposed = '2022-12-16',    # Date d'exposition des films
-                date_scanned = '2022-12-19',    # Date de numérisation des films
-                wait_time = '64h',              # Temps d'attente entre l'exposition et la numérisation
-                notes = 'Scan en transmission à 300ppp') 
+                date_exposed = '2022-03-29',    # Date d'exposition des films
+                date_scanned = '2022-03-30',    # Date de numérisation des films
+                wait_time = '16h',              # Temps d'attente entre l'exposition et la numérisation
+                notes = 'Scan en transmission à 72ppp') 
 
     #### Infos plan ####
-    ID_patient = '179276'         # ID du patient
-    ID_plan = 'C1A_sag'           # ID du plan
+    ID_patient = 'Goret_VersaHD_FFF'         # ID du patient
+    ID_plan = 'D1A'           # ID du plan
     prescription = 2100           # Dose prescription (cGy / fraction)
 
     ### Fantôme (Décommenter la ligne qui correspond au fantôme utilisé) ###
-    fantome = 'Goret sag SRS'         # Le Petit Goret avec film sagittal
-#    fantome = 'Goret coro SRS'       # Le Petit Goret avec film coronal
+    # fantome = 'Goret sag SRS'         # Le Petit Goret avec film sagittal
+    fantome = 'Goret coro SRS'       # Le Petit Goret avec film coronal
 #    fantome = 'Quasar'           # Quasar avec film sagittal
 #    fantome = 'Baby Blue SRS'    # Baby Blue montage sprécial pour SRS multi
 #    fantome = 'eau solide'       # Fantôme QA IMRT Classique
+#    fantome = 'output electrons'       # Fantôme pour output électrons. Utiliser lorsque mesure film électrons préparé avec script QA électrons.
 #    fantome = 'autre'            # Si besoin de définir des paramètres de fantôme particuliers
 
     #### Choisir les étapes à effectuer ####
     rot_scan = 0                  # True (1) pour appliquer une rotation de 90 degrés sur l'image (si l'image de scan est verticale), False (0) sinon
     tiff_2_dose = 0               # True (1) pour convertir les scans en dose, False (0) si cette étape est déjà faite
-    tiff_2_dose_show_pdf = 1      # True (1) pour ouvrir le PDF de rapport de conversion en dose, False (0) sinon
+    tiff_2_dose_show_pdf = 0      # True (1) pour ouvrir le PDF de rapport de conversion en dose, False (0) sinon
     crop_film = 0                 # True (1) pour cropper l'image du film avant l'analyse, False (0) sinon
     dose_2_analysis = 1           # True (1) pour effectuer l'analyse Gamma, False(0) sinon
     dose_2_analysis_show_pdf = 0  # True (1) pour ouvrir le PDF de rapport d'analyse gamme, False (0) sinon
     save_analysis = 0             # True (1) pour sauvegarder les résultats de l'analyse en format pkl pour pouvoir les recharger plus tard
-    get_profile_offsets = 0       # True (1) pour lancer l'outil d'analyse de décalage des profiles
+    get_profile_offsets = 1       # True (1) pour lancer l'outil d'analyse de décalage des profiles
 
     #### Choisir une méthode de normalisation (Décommenter la ligne selon la normalisation voulue) ###
     normalisation = 1.0           # Chiffre (float): applique ce facteur de normalisation. Laisser à 1.0 si aucune normalisation
@@ -53,8 +54,9 @@ if __name__ == '__main__':
     path_calib = os.path.join(path_films, 'Calibrations')
     if info['film_lot'] == 'C10': lut_file = os.path.join(path_calib, 'C10_calib_24h_trans_vitre_0-10Gy.pkl')
     elif info['film_lot'] == 'C11': lut_file = os.path.join(path_calib, 'C11-XD_calib_18h_trans_300ppp_0-30Gy.pkl')
-    elif info['film_lot'] == 'C13': lut_file = os.path.join(path_calib, 'C13_calib_18h_trans_300ppp_0-9Gy.pkl')
-    elif info['film_lot'] == 'C14': lut_file = os.path.join(path_calib, 'C14_calib_18h_trans_300ppp_0-9Gy_LatCorr_BeamCorr.pkl')
+    elif info['film_lot'] == 'C13': lut_file = os.path.join(path_calib, 'C13_calib_18h_trans_300ppp_0-3Gy.pkl')
+    # elif info['film_lot'] == 'C14': lut_file = os.path.join(path_calib, 'C14_calib_18h_trans_300ppp_0-9Gy_LatCorr_BeamCorr.pkl')
+    elif info['film_lot'] == 'C14': lut_file = os.path.join(path_calib, 'C14_calib_18h_trans_300ppp_0-30Gy_LatCorr_BeamCorr.pkl')
 #    elif info['film_lot'] == 'C14': lut_file = os.path.join(path_calib, 'C14_calib_18h_trans_300ppp_0-9Gy.pkl')
 
     clip = prescription * 1.5  # Dose maximum où couper la dose [cGy]. Si 'None', n'applique pas de threshold.
@@ -86,6 +88,10 @@ if __name__ == '__main__':
         flipLR, flipUD, rot90 = True, False, 1
         markers_center = [-0.3, -722.7, 221.0]    # IMRT classique
     
+    if fantome == 'output electrons':
+        flipLR, flipUD, rot90 = True, False, 1
+        markers_center = [0.0, 250.0, 230.0]    # IMRT classique
+    
     if fantome == 'autre':
         flipLR, flipUD, rot90 = True, False, 1
         markers_center = [0.0, 0.0, 0.0]          # À définir selon besoins particuliers
@@ -97,7 +103,7 @@ if __name__ == '__main__':
     norm_val = prescription      # 'max' pour normaliser par rapport à la dose maximum, ou entre une dose absolue en cGy pour normaliser sur une autre valeur  
 
     # Pour les cas SRS, les critères Gamma sont différents
-    if 'Goret' in fantome:
+    if 'SRS' in fantome:
         doseTA_1, distTA_1 = 5, 1
         doseTA_2, distTA_2 = 5, 0.5 
 #%% ################################## NE RIEN CHANGER PLUS BAS ########################################

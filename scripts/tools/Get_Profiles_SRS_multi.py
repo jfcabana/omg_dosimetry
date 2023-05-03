@@ -17,7 +17,8 @@ subfolders = [ f.path for f in os.scandir(path) if f.is_dir() ]
 
 for folder in subfolders:
     if 'Norm' in folder: continue
-    file_pkl = os.path.join(folder, "Analyse_CC.pkl")
+    # if 'A1A_1x1_2_10cm' not in folder: continue
+    file_pkl = os.path.join(folder, "Analyse.pkl")
     if not os.path.isfile(file_pkl): continue
     with open(file_pkl, 'rb') as f:
         film = pickle.load(f)
@@ -42,7 +43,7 @@ for folder in subfolders:
     film.plot_profile(ax=ax1, profile='x', title='Horizontal profile (y={})'.format(y0), position=y0)
     film.plot_profile(ax=ax2, profile='y', title='Vertical profile (x={})'.format(x0), position=x0)
     fig.savefig(fileOut)
-    plt.close(fig)
+    # plt.close(fig)
 
     
     # Write to mcc
