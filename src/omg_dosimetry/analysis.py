@@ -21,6 +21,7 @@ Version 2023-03-08
 import numpy as np
 import scipy.ndimage.filters as spf
 import copy
+import matplotlib
 import matplotlib.pyplot as plt
 import os
 from pylinac.core.utilities import is_close
@@ -35,6 +36,7 @@ from matplotlib.widgets  import RectangleSelector, MultiCursor, Cursor
 import webbrowser
 from .imageRGB import load, ArrayImage, equate_images
 import bz2
+import time
 
 class DoseAnalysis(): 
     
@@ -216,11 +218,13 @@ class DoseAnalysis():
             self.wait = False
             return
         
-    def gamma_analysis(self, film_filt=0, doseTA=3.0, distTA=3.0, threshold=0.1, norm_val='max', local_gamma=False):
+    def gamma_analysis(self, film_filt=0, doseTA=3.0, distTA=3.0, threshold=0.1, norm_val='max', local_gamma=False, max_gamma=None, random_subset=None):
         """ Perform Gamma analysis """
         self.doseTA, self.distTA = doseTA, distTA
         self.film_filt, self.threshold, self.norm_val = film_filt, threshold, norm_val        
-        self.GammaMap = self.computeGamma(doseTA=doseTA, distTA=distTA, threshold=threshold, norm_val=norm_val, local_gamma=local_gamma)       
+        start_time = time.time()
+        self.GammaMap = self.computeGamma(doseTA=doseTA, distTA=distTA, threshold=threshold, norm_val=norm_val, local_gamma=local_gamma, max_gamma=max_gamma, random_subset=random_subset)       
+        print("--- Calcul Gamma fait en %s seconds ---" % (time.time() - start_time))
         self.computeDiff()
     
     def computeHDmedianDiff(self, threshold=0.8, ref = 'max'):
@@ -240,7 +244,7 @@ class DoseAnalysis():
         self.DiffMap.MSE =  sum(sum(self.DiffMap.array**2)) / len(self.film_dose.array[(self.film_dose.array > 0)]) 
         self.DiffMap.RMSE = self.DiffMap.MSE**0.5    
     
-    def computeGamma(self, doseTA=2, distTA=2, threshold=0.1, norm_val=None, local_gamma=False):
+    def computeGamma(self, doseTA=2, distTA=2, threshold=0.1, norm_val=None, local_gamma=False, max_gamma=None, random_subset=None):
         """Comput Gamma (using pymedphys.gamma) """
         print("Computing {}% {} mm Gamma...".format(doseTA, distTA))
 #       # error checking
@@ -268,8 +272,16 @@ class DoseAnalysis():
         axes_reference, axes_evaluation = (x_coord, y_coord), (x_coord, y_coord)
         dose_reference, dose_evaluation = ref_dose.array, film_dose.array
 
+        # set film_dose = 0 to Nan to avoid computing on padded pixels
+        dose_evaluation[dose_evaluation == 0] = 'nan'
+        
+        # Compute the number of pixels to analyze
+        if random_subset:
+            random_subset = int(len(dose_reference[dose_reference >= threshold].flat) * random_subset)
+        
         # Gamma computation and set maps
-        gamma = pymedphys.gamma(axes_reference, dose_reference, axes_evaluation, dose_evaluation, doseTA, distTA, threshold*100, local_gamma=local_gamma)
+        gamma = pymedphys.gamma(axes_reference, dose_reference, axes_evaluation, dose_evaluation, doseTA, distTA, threshold*100,
+                                local_gamma=local_gamma, interp_fraction=10, max_gamma=max_gamma, random_subset=random_subset)
         GammaMap = ArrayImage(gamma, dpi=film_dose.dpi)
               
         fail = np.zeros(GammaMap.shape)
@@ -417,8 +429,18 @@ class DoseAnalysis():
             
     
     def show_results(self, fig=None, x=None, y=None):       
-        if x is None: x = np.floor(self.ref_dose.shape[1] / 2).astype(int)
-        if y is None: y = np.floor(self.ref_dose.shape[0] / 2).astype(int)
+        a = None
+        if x is None:
+            x = np.floor(self.ref_dose.shape[1] / 2).astype(int)
+        elif x == 'max':
+            a = np.unravel_index(self.ref_dose.array.argmax(), self.ref_dose.array.shape)
+            x = a[1]
+        if y is None:
+            y = np.floor(self.ref_dose.shape[0] / 2).astype(int)
+        elif y == 'max':
+            if a is None:
+                a = np.unravel_index(self.ref_dose.array.argmax(), self.ref_dose.array.shape)
+            y = a[0]
          
         fig, ((ax1,ax2),(ax3,ax4),(ax5,ax6)) = plt.subplots(3,2, figsize=(10, 8))
         fig.tight_layout()
@@ -428,7 +450,15 @@ class DoseAnalysis():
 
         self.film_dose.plotCB(ax1, clim=clim, title='Film dose')
         self.ref_dose.plotCB(ax2, clim=clim, title='Reference dose')
-        self.GammaMap.plotCB(ax3, clim=[0,2], cmap='bwr', title='Gamma map ({:.2f}% pass; {:.2f} mean)'.format(self.GammaMap.passRate, self.GammaMap.mean))
+        # gamma_map = ArrayImage(copy.copy(self.GammaMap.array))
+        # np.nan_to_num(gamma_map.array, copy=False, nan=1.0)
+        masked_array = np.ma.array(self.GammaMap.array, mask=np.isnan(self.GammaMap.array))
+        gamma_map = ArrayImage(masked_array)
+        cmap = matplotlib.cm.bwr
+        cmap.set_bad('k',1.)
+        gamma_map.plotCB(ax3, clim=[0,2], cmap='bwr', title='Gamma map ({:.2f}% pass; {:.2f} mean)'.format(self.GammaMap.passRate, self.GammaMap.mean))
+
+        # self.GammaMap.plotCB(ax3, clim=[0,2], cmap='bwr', title='Gamma map ({:.2f}% pass; {:.2f} mean)'.format(self.GammaMap.passRate, self.GammaMap.mean))
         
         min_value = max(-20, np.percentile(self.DiffMap.array,[1])[0].round(decimals=0))
         max_value = min(20, np.percentile(self.DiffMap.array,[99])[0].round(decimals=0))
@@ -437,7 +467,7 @@ class DoseAnalysis():
         self.show_profiles(axes, x=x, y=y)
         
         fig.canvas.mpl_connect('button_press_event', lambda event: self.set_profile(event, axes))
-        fig.canvas.mpl_connect('motion_notify_event', lambda event: self.moved_and_pressed(event, axes))
+        #fig.canvas.mpl_connect('motion_notify_event', lambda event: self.moved_and_pressed(event, axes))
         
     def show_profiles(self, axes, x, y):
         self.plot_profile(ax=axes[-2], profile='x', title='Horizontal profile (y={})'.format(y), position=y)
@@ -453,10 +483,19 @@ class DoseAnalysis():
         plt.show()
         
     def set_profile(self, event, axes):
-        x = int(event.xdata)
-        y = int(event.ydata)
-        self.show_profiles(axes,x=x, y=y)
-        plt.gcf().canvas.draw_idle()
+        # Only clicks inside this axis are valid.
+        try: # use try/except in case we are not using Qt backend
+            zooming_panning = ( plt.gcf().canvas.cursor().shape() != 0 ) # 0 is the arrow, which means we are not zooming or panning.
+        except:
+            zooming_panning = False
+        if zooming_panning: 
+            return
+        if event.inaxes in axes[0:4]:
+            if event.button == 1:
+                x = int(event.xdata)
+                y = int(event.ydata)
+                self.show_profiles(axes,x=x, y=y)
+                plt.gcf().canvas.draw_idle()
         
     def moved_and_pressed(self, event, axes):
         if event.button==1:
