@@ -1,58 +1,47 @@
 # -*- coding: utf-8 -*-
 """
-Created on Fri Jan 13 15:41:59 2023
-
-@author: caje1277
 """
 
+from omg_dosimetry import analysis
 import os
-import pickle
-import matplotlib.pyplot as plt
-plt.ion()
 import numpy as np
+import matplotlib.pyplot as plt
 import csv
 
-path = "P:\\Projets\\CRIC\\Physique_Medicale\\Films\\QA Patients\\0phy_SRS_multi\\"
-subfolders = [ f.path for f in os.scandir(path) if f.is_dir() ]
+#% Set paths
+baseDir = 'P:\\Projets\\CRIC\\Physique_Medicale\\Films\\Mesures\\2023-03-09 Eval scanner\\Moyennage\Dose\\'
+path_in = baseDir
+path_out = baseDir + 'MCC\\'
+if not os.path.exists(path_out): os.makedirs(path_out)
 
-for folder in subfolders:
-    if 'Norm' in folder: continue
-    # if 'A1A_1x1_2_10cm' not in folder: continue
-    file_pkl = os.path.join(folder, "Analyse.pkl")
-    if not os.path.isfile(file_pkl): continue
-    with open(file_pkl, 'rb') as f:
-        film = pickle.load(f)
-    fileBase = folder.split("\\")[-1]
+files = os.listdir(path_in)
+for file in files:
+    fileBase, fileext = os.path.splitext(file)
+    if fileext != '.tif': continue
+
+    fileIn = os.path.join(path_in, file)
+    fileOut = os.path.join(path_out, fileBase + '.mcc')
+    film = analysis.DoseAnalysis(film_dose=fileIn, flipLR=True, ref_dose=fileIn, rot90=1)
     
-    x0 = int(film.film_dose.center.x)
-    y0 = int(film.film_dose.center.y)
-    width = 5
-    crop = 50
-            
-    img = film.film_dose.array
-    crossline_prof = np.median(img[y0-width:y0+width, crop:-1-crop], axis=0)
+    FS = '250'
+    width = 3  # number of pixels on each side of center to get average profile
+    crop = 1
+    Offset_X = 0  #pixels offset profils inplanes Y
+    Offset_Y = 0  #pixels offset profils crossplane X
+    
+    x0 = int(film.film_dose.array.shape[1]/2) + Offset_X
+    y0 = int(film.film_dose.array.shape[0]/2) + Offset_Y
+    
+    img = film.film_dose.array / film.film_dose.array[y0][x0]
+    
+    crossline_prof = np.median(img[y0-width:y0+width, crop:-1*crop], axis=0)
     crossline_pos = (np.asarray(range(len(crossline_prof))) - int(len(crossline_prof)/2)) / film.film_dose.dpmm
     
-    inline_prof = np.median(img[crop:-1-crop, x0-width:x0+width], axis=1)
+    inline_prof = np.median(img[crop:-1*crop, x0-width:x0+width], axis=1)
     inline_pos = (np.asarray(range(len(inline_prof))) - int(len(inline_prof)/2)) / film.film_dose.dpmm
     
-    # Save profiles
-    #    plt.plot(inline_pos, inline_prof,crossline_pos, crossline_prof)
-    fileOut = os.path.join(path,fileBase + ".png")
-    fig, (ax1,ax2) = plt.subplots(1,2, figsize=(10, 4))
-    film.plot_profile(ax=ax1, profile='x', title='Horizontal profile (y={})'.format(y0), position=y0)
-    film.plot_profile(ax=ax2, profile='y', title='Vertical profile (x={})'.format(x0), position=x0)
-    fig.savefig(fileOut)
-    # plt.close(fig)
-
-    
     # Write to mcc
-    fileOut = os.path.join(path,fileBase + ".mcc")
-    if "1x1" in fileBase: FS = "10.0"
-    if "3x3" in fileBase: FS = "30.0"
-    if '2cm' in fileBase: prof = "20.0"
-    if '6cm' in fileBase: prof = "60.0"
-    if '10cm' in fileBase: prof = "100.0"
+    fieldnames = ['Position', 'Value']
     
     with open(fileOut, 'w',  newline='') as csvfile:
         csvwriter = csv.writer(csvfile, delimiter='\t', quoting=csv.QUOTE_MINIMAL)
@@ -69,8 +58,8 @@ for folder in subfolders:
         csvwriter.writerow(['','','INPLANE_AXIS_DIR=TARGET_GUN'])
         csvwriter.writerow(['','','CROSSPLANE_AXIS_DIR=LEFT_RIGHT'])
         csvwriter.writerow(['','','DEPTH_AXIS_DIR=UP_DOWN'])
-        csvwriter.writerow(['','','ENERGY=10.00'])
-        csvwriter.writerow(['','','SSD=940.00'])
+        csvwriter.writerow(['','','ENERGY=6.00'])
+        csvwriter.writerow(['','','SSD=900.00'])
         csvwriter.writerow(['','','SCD=0.00'])
         csvwriter.writerow(['','','WEDGE_ANGLE=0.00'])
         csvwriter.writerow(['','','FIELD_INPLANE=' + FS])
@@ -91,11 +80,11 @@ for folder in subfolders:
         csvwriter.writerow(['','','SCAN_OFFAXIS_CROSSPLANE=0.00'])
         csvwriter.writerow(['','','SCAN_ANGLE=0.00'])
         csvwriter.writerow(['','','INCLINATION_ANGLE=0.00'])
-        csvwriter.writerow(['','','DETECTOR_NAME=Film-C13'])
+        csvwriter.writerow(['','','DETECTOR_NAME=Film-C10'])
         csvwriter.writerow(['','','FILTER=FFF'])
             
         csvwriter.writerow(['','','SCAN_CURVETYPE=INPLANE_PROFILE'])
-        csvwriter.writerow(['','','SCAN_DEPTH=' + prof])
+        csvwriter.writerow(['','','SCAN_DEPTH=100.00'])
         csvwriter.writerow(['','','BEGIN_DATA'])
     
         for i in range(0, len(inline_prof)):
@@ -118,8 +107,8 @@ for folder in subfolders:
         csvwriter.writerow(['','','INPLANE_AXIS_DIR=TARGET_GUN'])
         csvwriter.writerow(['','','CROSSPLANE_AXIS_DIR=LEFT_RIGHT'])
         csvwriter.writerow(['','','DEPTH_AXIS_DIR=UP_DOWN'])
-        csvwriter.writerow(['','','ENERGY=10.00'])
-        csvwriter.writerow(['','','SSD=940.00'])
+        csvwriter.writerow(['','','ENERGY=6.00'])
+        csvwriter.writerow(['','','SSD=900.00'])
         csvwriter.writerow(['','','SCD=0.00'])
         csvwriter.writerow(['','','WEDGE_ANGLE=0.00'])
         csvwriter.writerow(['','','FIELD_INPLANE=' + FS])
@@ -140,11 +129,11 @@ for folder in subfolders:
         csvwriter.writerow(['','','SCAN_OFFAXIS_CROSSPLANE=0.00'])
         csvwriter.writerow(['','','SCAN_ANGLE=0.00'])
         csvwriter.writerow(['','','INCLINATION_ANGLE=0.00'])
-        csvwriter.writerow(['','','DETECTOR_NAME=Film-C13'])
+        csvwriter.writerow(['','','DETECTOR_NAME=Film-C10'])
         csvwriter.writerow(['','','FILTER=FFF'])
         
         csvwriter.writerow(['','','SCAN_CURVETYPE=CROSSPLANE_PROFILE'])
-        csvwriter.writerow(['','','SCAN_DEPTH=' + prof])
+        csvwriter.writerow(['','','SCAN_DEPTH=100.00'])
         csvwriter.writerow(['','','BEGIN_DATA'])
         
         for i in range(0, len(crossline_prof)):

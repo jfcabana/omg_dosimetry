@@ -20,8 +20,8 @@ if __name__ == '__main__':
                 notes = 'Scan en transmission à 300ppp')
 
     #### Infos plan ####
-    ID_patient = '566484'
-    ID_plan = 'C1A'
+    ID_patient = '0phy_SRS_multi'
+    ID_plan = 'A1A_1x1_2_10cm'
 
     ### Orientation ###
 #    orientation = 'sag'
@@ -56,7 +56,7 @@ if __name__ == '__main__':
     rot_scan = 0        # Mettre à 1 pour appliquer une rotation de 90 degrés sur l'image (si l'image de scan est verticale)
     crop_film = 1       # Mettre à 1 pour cropper l'image du film avant l'analyse, 0 si non
 
-    tiff_2_dose = 1     # True(1) to convert the tiff film file to a dose file, False(0) to not do it
+    tiff_2_dose = 0     # True(1) to convert the tiff film file to a dose file, False(0) to not do it
     tiff_2_dose_show_pdf = 0
     dose_2_analysis = 1  # True(1) to perform the gamma analysis, False(0) to not do it
     dose_2_analysis_show_pdf = 0
@@ -208,7 +208,7 @@ if __name__ == '__main__':
         filename= '{}_Facteur{:.2f}_Filtre{}_Gamma{}%-{}mm_report.pdf'.format(filebase, film.film_dose_factor,film_filt, doseTA, distTA)
         fileout=os.path.join(path_analyse, filename)
         print("Analyse en cours...")
-        film.analyse(doseTA=doseTA, distTA=distTA, threshold=threshold, norm_val=norm_val, film_filt=film_filt)
+        film.gamma_analysis(doseTA=doseTA, distTA=distTA, threshold=threshold, norm_val=norm_val, film_filt=film_filt)
         print("")
         print("======================= Gamma 5/1 ============================")
         print("      Gammma {}% {}mm: Taux de passage={:.2f}%; Moyenne={:.2f}".format(doseTA, distTA, film.GammaMap.passRate, film.GammaMap.mean))
@@ -226,7 +226,7 @@ if __name__ == '__main__':
         filename= '{}_Facteur{:.2f}_Filtre{}_Gamma{}%-{}mm_report.pdf'.format(filebase, film.film_dose_factor,film_filt, doseTA, distTA)
         fileout=os.path.join(path_analyse, filename)
         print("Analyse en cours...")
-        film.analyse(doseTA=doseTA, distTA=distTA, threshold=threshold, norm_val=norm_val, film_filt=film_filt)
+        film.gamma_analysis(doseTA=doseTA, distTA=distTA, threshold=threshold, norm_val=norm_val, film_filt=film_filt)
         print("")
         print("======================= Gamma 5/0.5 ============================")
         print("      Gammma {}% {}mm: Taux de passage={:.2f}%; Moyenne={:.2f}".format(doseTA, distTA, film.GammaMap.passRate, film.GammaMap.mean))

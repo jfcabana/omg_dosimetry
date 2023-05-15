@@ -361,9 +361,9 @@ class BaseImage:
         fig = plt.gcf()
             
         if self.array.ndim > 2 and self.array.max() > 255:
-            cax = ax.imshow(self.array / 65535., cmap=cmap, **kwargs) 
+            cax = ax.imshow(self.array / 65535., cmap=cmap, interpolation='nearest', **kwargs) 
         else:
-            cax = ax.imshow(self.array, cmap=cmap, **kwargs)
+            cax = ax.imshow(self.array, cmap=cmap, interpolation='nearest', **kwargs)
         cax.set_clim(clim)
         fig.colorbar(cax, ax=ax)   
         ax.set_title(title)
