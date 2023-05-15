@@ -224,7 +224,7 @@ class DoseAnalysis():
         self.film_filt, self.threshold, self.norm_val = film_filt, threshold, norm_val        
         start_time = time.time()
         self.GammaMap = self.computeGamma(doseTA=doseTA, distTA=distTA, threshold=threshold, norm_val=norm_val, local_gamma=local_gamma, max_gamma=max_gamma, random_subset=random_subset)       
-        print("--- Calcul Gamma fait en %s seconds ---" % (time.time() - start_time))
+        print("--- Done! ({:.1f} seconds) ---".format((time.time() - start_time)))
         self.computeDiff()
     
     def computeHDmedianDiff(self, threshold=0.8, ref = 'max'):
@@ -450,16 +450,8 @@ class DoseAnalysis():
 
         self.film_dose.plotCB(ax1, clim=clim, title='Film dose')
         self.ref_dose.plotCB(ax2, clim=clim, title='Reference dose')
-        # gamma_map = ArrayImage(copy.copy(self.GammaMap.array))
-        # np.nan_to_num(gamma_map.array, copy=False, nan=1.0)
-        masked_array = np.ma.array(self.GammaMap.array, mask=np.isnan(self.GammaMap.array))
-        gamma_map = ArrayImage(masked_array)
-        cmap = matplotlib.cm.bwr
-        cmap.set_bad('k',1.)
-        gamma_map.plotCB(ax3, clim=[0,2], cmap='bwr', title='Gamma map ({:.2f}% pass; {:.2f} mean)'.format(self.GammaMap.passRate, self.GammaMap.mean))
-
-        # self.GammaMap.plotCB(ax3, clim=[0,2], cmap='bwr', title='Gamma map ({:.2f}% pass; {:.2f} mean)'.format(self.GammaMap.passRate, self.GammaMap.mean))
-        
+        self.GammaMap.plotCB(ax3, clim=[0,2], cmap='bwr', title='Gamma map ({:.2f}% pass; {:.2f} mean)'.format(self.GammaMap.passRate, self.GammaMap.mean))
+        ax3.set_facecolor('k')
         min_value = max(-20, np.percentile(self.DiffMap.array,[1])[0].round(decimals=0))
         max_value = min(20, np.percentile(self.DiffMap.array,[99])[0].round(decimals=0))
         clim = [min_value, max_value]    
@@ -700,6 +692,10 @@ class DoseAnalysis():
         self.fig = plt.figure()
         ax = plt.gca()
         self.cid = self.fig.canvas.mpl_connect('key_press_event', self.reg_ontype)
+        img_array = self.film_dose.array - self.ref_dose.array
+        min_max = [np.percentile(img_array,[1])[0].round(decimals=-1), np.percentile(img_array,[99])[0].round(decimals=-1)] 
+        lim = abs(max(min_max, key=abs))
+        self.clim = [-1.0*lim, lim]
         self.show_registration(ax=ax)
         
     def show_registration(self, ax=None, cmap='bwr'):
@@ -721,8 +717,8 @@ class DoseAnalysis():
         img = load(img_array, dpi=self.film_dose.dpi) 
         RMSE =  (sum(sum(img.array**2)) / len(self.film_dose.array[(self.film_dose.array > 0)]))**0.5
         
-        clim = [np.percentile(img_array,[1])[0].round(decimals=-1), np.percentile(img_array,[99])[0].round(decimals=-1)]   
-        img.plot(ax=ax, clim=clim, cmap=cmap)     
+        #clim = [np.percentile(img_array,[1])[0].round(decimals=-1), np.percentile(img_array,[99])[0].round(decimals=-1)]   
+        img.plot(ax=ax, clim=self.clim, cmap=cmap)     
         ax.plot((0, img.shape[1]), (img.center.y, img.center.y),'k--')
         ax.plot((img.center.x, img.center.x), (0, img.shape[0]),'k--')
         ax.set_xlim(0, img.shape[1])
