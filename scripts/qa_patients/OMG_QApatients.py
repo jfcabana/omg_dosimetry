@@ -1,7 +1,6 @@
 import os
 from pathlib import Path
 import openpyxl
-import time
 
 from omg_dosimetry import tiff2dose, analysis
 path_films = 'P:\\Projets\\CRIC\\Physique_Medicale\\Films\\'
@@ -38,7 +37,7 @@ if __name__ == '__main__':
     tiff_2_dose_show_pdf = 0      # True (1) pour ouvrir le PDF de rapport de conversion en dose, False (0) sinon
     crop_film = 1                 # True (1) pour cropper l'image du film avant l'analyse, False (0) sinon
     dose_2_analysis = 1           # True (1) pour effectuer l'analyse Gamma, False(0) sinon
-    dose_2_analysis_show_pdf = 0  # True (1) pour ouvrir le PDF de rapport d'analyse gamme, False (0) sinon
+    dose_2_analysis_show_pdf = 1  # True (1) pour ouvrir le PDF de rapport d'analyse gamme, False (0) sinon
     save_analysis = 0             # True (1) pour sauvegarder les résultats de l'analyse en format pkl pour pouvoir les recharger plus tard
     get_profile_offsets = 0       # True (1) pour lancer l'outil d'analyse de décalage des profiles
 
@@ -107,8 +106,8 @@ if __name__ == '__main__':
     threshold = 0.20             # Seuil de basses doses (0.2 = ne considère pas les doses < 20% du max de la dose ref)
     norm_val = prescription      # 'max' pour normaliser par rapport à la dose maximum, ou entre une dose absolue en cGy pour normaliser sur une autre valeur  
     max_gamma = 1.1             # Valeur supérieure de gamma à partir de laquelle le calcul est interrompu. None pour pas de limite. Pas d'impact sur le taux de passage, mais sur gamma moyen oui.
-    random_subset = 0.5         # 'None' pour calcul gamma sur toute la grille, ou float 0-1 pour échantillonner aléatoirement la grille sur une fraction donnée
-    x,  y = 'max', 'max'        # Position du profil par défaut. 'None' pour centré sur les marques. 'max' pour centré sur dose max.
+    random_subset = None         # None pour calcul gamma sur toute la grille, ou float 0-1 pour échantillonner aléatoirement la grille sur une fraction donnée
+    x,  y = 'max', 'max'        # Position du profil par défaut. None pour centré sur les marques. 'max' pour centré sur dose max.
     
     
     # Pour les cas SRS, les critères Gamma sont différents
@@ -148,7 +147,7 @@ if __name__ == '__main__':
         film = analysis.DoseAnalysis(film_dose=file_doseFilm, ref_dose=ref_dose, ref_dose_factor=1.0, film_dose_factor=film_dose_factor, flipLR=flipLR, flipUD=flipUD, ref_dose_sum=True, rot90=rot90)
         if normalisation == 'norm_film': film.apply_factor_from_roi(norm_dose=norm_film_dose)
         if crop_film: film.crop_film()
-        film.register(shift_x=shift_x, shift_y=shift_y, threshold=10, register_using_gradient=True, markers_center=markers_center, rot=rot)
+        film.register(shift_x=shift_x, shift_y=shift_y, threshold=10, register_using_gradient=False, markers_center=markers_center, rot=rot)
         if normalisation == 'ref_roi': film.apply_factor_from_roi()
         if normalisation == 'isodose': film.apply_factor_from_isodose(norm_isodose)
 
@@ -160,9 +159,6 @@ if __name__ == '__main__':
         print("      Écart médian: {:.2f}% (seuil = {:0.1f} * {} cGy = {} cGy)".format(medianDiff, thresh, prescription, seuil))
         print("===============================================================\n")
 
-        xoff=800   # a2000   b800
-        yoff=800   # a1000   b800
-
         #%% Perform gamma analysis
         filename= '{}_Facteur{:.2f}_Filtre{}_Gamma{}%-{}mm_report.pdf'.format(filebase, film.film_dose_factor,film_filt, doseTA_1, distTA_1)
         fileout=os.path.join(path_analyse, filename)
@@ -171,8 +167,8 @@ if __name__ == '__main__':
         print("\n===================== Analyse Gamma ========================")
         print("      Gammma {}% {}mm: Taux de passage={:.2f}%; Moyenne={:.2f}".format(doseTA_1, distTA_1, film.GammaMap.passRate, film.GammaMap.mean))
         print("==============================================================\n")
-        film.show_results(x=x, y=y)
-        film.publish_pdf(fileout, open_file=dose_2_analysis_show_pdf, show_hist=True, show_pass_hist=True, show_varDistTA=False, show_var_DoseTA=False, x=xoff, y=yoff)
+        # film.show_results(x=x, y=y)
+        film.publish_pdf(fileout, open_file=dose_2_analysis_show_pdf, show_hist=True, show_pass_hist=True, show_varDistTA=False, show_var_DoseTA=False, x=x, y=x)
 
         gamma1_pass = film.GammaMap.passRate
         gamma1_mean = film.GammaMap.mean
@@ -187,7 +183,7 @@ if __name__ == '__main__':
         print("      Gammma {}% {}mm: Taux de passage={:.2f}%; Moyenne={:.2f}".format(doseTA_2, distTA_2, film.GammaMap.passRate, film.GammaMap.mean))
         print("==============================================================\n")
         film.show_results(x=x, y=y)
-        film.publish_pdf(fileout, open_file=dose_2_analysis_show_pdf, show_hist=True, show_pass_hist=True, show_varDistTA=False, show_var_DoseTA=False, x=xoff, y=yoff)
+        film.publish_pdf(fileout, open_file=dose_2_analysis_show_pdf, show_hist=True, show_pass_hist=True, show_varDistTA=False, show_var_DoseTA=False, x=x, y=x)
 
         gamma2_pass = film.GammaMap.passRate
         gamma2_mean = film.GammaMap.mean
