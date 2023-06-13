@@ -2,7 +2,6 @@
 
 With OMG Dosimetry, you can easily perform film calibration, film-to-dose conversion, and dose analysis.
 
-It is built as an expansion to Pylinac (https://pylinac.readthedocs.io/en/latest/index.html).
 Demonstration files are provided for each module to get you started quickly. 
 Code is heavily commented so you can follow along and andapt it for your personnal usage.
 
