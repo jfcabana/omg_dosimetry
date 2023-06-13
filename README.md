@@ -1,3 +1,5 @@
+![alt text](https://github.com/jfcabana/omg_dosimetry/blob/OMG_master/src/omg_dosimetry/OMG_Logo.png?raw=true)
+
 # Optimized Multichannel Gafchromic Dosimetry (OMG Dosimetry)
 
 With OMG Dosimetry, you can easily perform film calibration, film-to-dose conversion, and dose analysis.
