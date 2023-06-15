@@ -3,7 +3,7 @@
 This script is used to demonstrate an example using the calibration module of omg_dosimetry.
 You can make a copy and adapt it according to your needs.
     
-Écrit par Jean-François Cabana
+Written by Jean-François Cabana
 jean-francois.cabana.cisssca@ssss.gouv.qc.ca
 2023-03-01
 """
@@ -20,7 +20,7 @@ info = dict(author = 'Demo Physicist',
             date_exposed = '2023-01-24 16h',
             date_scanned = '2023-01-25 16h',
             wait_time = '24 hours',
-            notes = 'Transmission mode @300ppp'
+            notes = 'Transmission mode, @300ppp and 16 bits/channel'
            )
 
 path = os.path.join(os.path.dirname(__file__), "files", "calibration") ## Root folder
@@ -29,7 +29,7 @@ outname = 'Demo_calib'                                                 ## Name o
 
 #%% Set calibration parameters
 #### Dose
-doses = [0.0, 100.0, 200.0, 400.0, 650.0, 950.0]      ## Imparted doses [cGy] to the films
+doses = [0.0, 100.0, 200.0, 400.0, 650.0, 950.0]      ## Nominal doses [cGy] imparted to the films
 output = 1.0                                          ## If necessary, correction for the daily output of the machine
 
 ### Lateral correction
@@ -55,8 +55,8 @@ LUT = calibration.LUT(path=path_scan, doses=doses, output=output, lateral_correc
                         film_detect=film_detect, roi_size=roi_size, roi_crop=roi_crop, filt=filt, info=info, crop_top_bottom = crop_top_bottom)
 
 #%% View results and save LUT
-LUT.plot_roi()  # To display films and ROIs used for calibration
-LUT.plot_fit()  # To display a plot of the calibration curve and the fitted algebraic function
-LUT.publish_pdf(filename=os.path.join(path, outname +'_report.pdf'), open_file=True)            # Publication of the PDF report
-calibration.save_lut(LUT, filename=os.path.join(path, outname + '.pkl'), use_compression=True)  # Saving the LUT file. use_compression allows a reduction  
+#LUT.plot_roi()  # To display films and ROIs used for calibration
+#LUT.plot_fit()  # To display a plot of the calibration curve and the fitted algebraic function
+LUT.publish_pdf(filename=os.path.join(path, outname +'_report.pdf'), open_file=True)            # Generate a PDF report
+calibration.save_lut(LUT, filename=os.path.join(path, outname + '.pkl'), use_compression=True)  # Save the LUT file. use_compression allows a reduction  
                                                                                                 # in file size by a factor of ~10, but slows down the operation.
