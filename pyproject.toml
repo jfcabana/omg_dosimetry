@@ -4,13 +4,16 @@ build-backend = "hatchling.build"
 
 [project]
 name = "omg_dosimetry"
-version = "1.4.1"
+version = "1.4.2"
 authors = [
   { name="JF Cabana", email="jean-francois.cabana.cisssca@ssss.gouv.qc.ca" },
 ]
+maintainers = [
+  {name = "Luis Alfonso Olivares Jimenez", email = "alfonso.cucei.udg@gmail.com"}
+]
 description = "Optimized Multichannel Gafchromic Dosimetry (OMG Dosimetry)"
 readme = "README.md"
-requires-python = ">=3.7"
+requires-python = ">=3.7, <3.11"
 classifiers = [
     "Programming Language :: Python :: 3",
     "License :: OSI Approved :: MIT License",
@@ -22,7 +25,7 @@ dependencies = [
 ]
 
 [project.urls]
-"Homepage" = "https://bitbucket.org/cric_levis/omg-film-dosimetry"
+"Homepage" = "https://github.com/jfcabana/omg_dosimetry"
 
 [tool.hatch.build]
 exclude = [
