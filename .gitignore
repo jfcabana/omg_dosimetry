@@ -64,3 +64,6 @@ __pycache__/
 # Fichiers de calibration
 *.pkl
 *.pdf
+
+# Builded web page with sphinx
+docs/build
