@@ -10,8 +10,9 @@ and then read the relevant section:
 I know Python
 =============
 
-It is recommended to create an environment and install OMG Dosimetry using conda. 
-For example, open a command line terminal and run the following commands:
+Python best practices recommend creating separate virtual environments for your different applications,
+to avoid dependency version conflicts.
+The following procedure walks you through installing a dedicated Python environment for OMG Dosimetry using conda. 
 
 .. code-block:: bash
 
@@ -26,7 +27,7 @@ Dependencies
 OMG Dosimetry, as a scientific package, has fairly standard scientific dependencies (>= means at least that version or newer).
 Installing the package via ``pip`` will install these for you:
 
-.. literalinclude:: ../../requirements.txt
+.. literalinclude:: ../../requirements_pip.txt
 
 I'm new to Python
 =================
