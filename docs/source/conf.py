@@ -6,7 +6,7 @@
 # -- Project information -----------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
-project = 'OMG dosimetry (demo)'
+project = 'OMG dosimetry'
 copyright = '2023, Jean-François Cabana and Luis Alfonso Olivares Jiménez'
 author = 'Jean-François Cabana'
 
