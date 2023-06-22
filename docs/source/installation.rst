@@ -11,8 +11,7 @@ I know Python
 =============
 
 Python best practices recommend creating separate virtual environments for your different applications,
-to avoid dependency version conflicts.
-The following procedure walks you through installing a dedicated Python environment for OMG Dosimetry using conda. 
+to avoid dependency version conflicts. The following commands will install a dedicated Python environment for OMG Dosimetry using conda. 
 
 .. code-block:: bash
 
