@@ -21,7 +21,7 @@ build:
 
 python:
    install:
-   - requirements: docs/source/requirements.txt
+   - requirements: requirements_read_the_docs.txt
 #   - method: pip
 #     path: .
 
