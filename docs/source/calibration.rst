@@ -17,4 +17,5 @@ Main classes
 
 These are the classes a typical user may interface with.
 
-
+.. autoclass:: omg_dosimetry.calibration.LUT
+    :members:
