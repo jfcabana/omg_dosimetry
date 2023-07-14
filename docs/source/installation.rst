@@ -31,7 +31,7 @@ Installing the package via ``pip`` will install these for you:
 I'm new to Python
 =================
 
-That's okay! If you're not a programmer at all you'll have a few things to do to get up. Using pylinac requires not just the base language Python, but a few dependencies as well.
+That's okay! If you're not a programmer at all you'll have a few things to do to get up. Using OMG Dosimetry requires not just the base language Python, but a few dependencies as well.
 Since most physicists don't program, or if they do it's in MATLAB, this section will help jumpstart your use of not
 just OMG Dosimetry but Python in general and all its wonderful goodness! Getting started with Python takes some work to
 get set up, but it's well worth the effort.
@@ -62,8 +62,8 @@ After Anaconda has been installed, open Anaconda Prompt. Inside it (a window wit
     $ conda create --name omg_d python=3.10
     $ pip install omg-dosimetry
 
-Get an IDE (optional)
-^^^^^^^^^^^^^^^^^^^^^
+Get an IDE
+^^^^^^^^^^
 
 * `Spyder <https://www.spyder-ide.org/>`_ - A MATLAB-like IDE with similar layout, preferred by many working in the scientific realm.
   Here are the `Spyder docs <https://docs.spyder-ide.org/current/index.html>`_.

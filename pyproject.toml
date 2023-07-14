@@ -12,7 +12,7 @@ maintainers = [
   {name = "Luis Alfonso Olivares Jimenez", email = "alfonso.cucei.udg@gmail.com"}
 ]
 description = "Optimized Multichannel Gafchromic Dosimetry (OMG Dosimetry)"
-readme = "README.md"
+readme = "README.rst"
 requires-python = ">=3.7, <3.11"
 classifiers = [
     "Programming Language :: Python :: 3",
@@ -22,10 +22,13 @@ classifiers = [
 dependencies = [
   "pymedphys~=0.39",
   "pylinac~=3.7",
+  "spyder~=5.3",
 ]
 
 [project.urls]
-"Homepage" = "https://github.com/jfcabana/omg_dosimetry"
+homepage = "https://omg-dosimetry.readthedocs.io/en/latest/"
+repository = "https://github.com/jfcabana/omg_dosimetry"
+Bug-Tracker = "https://github.com/jfcabana/omg_dosimetry/issues"
 
 [tool.hatch.build]
 exclude = [
