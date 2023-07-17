@@ -114,7 +114,7 @@ class LUT:
         calibration films exposition. Used to correct the nominal doses at each
         pixel position.
 
-        The file has to be tab seperated txt file containing the position and relative profile value.
+        The text file has to be tab seperated containing the position and relative profile value.
         First column should be a position, given in mm.
         Second column should be the measured profile relative value [%], normalised to 100 in the center.
         
