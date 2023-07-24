@@ -19,16 +19,16 @@ The calibration module computes multichannel calibration curves from scanned fil
 
 Scanned films are automatically detected and selected, or ROIs can be drawn manually.
 
-The lateral scanner response effect (inhomogeneous response of the scanner along the detector array) is accounted for by creating separate calibration curves for each pixel along the array.
+The lateral scanner response effect (inhomogeneous response of the scanner along the detector array) can be accounted for by creating separate calibration curves for each pixel along the array.
 This requires exposing long film strips and scanning them perpendicular to the scan direction (see demonstration files). 
-To account for non-flat beam profiles, the output from an ICProfiler acquired at the same time as film exposure can be given as input to correct for beam shape.
-Alternatively, the lateral scanner response correction can be turned off, then a single calibration curve is computed for all pixels.
+To account for non-flat beam profiles, a text file containing the relative beam profile shape along the film strips can be given as input to correct for non-uniform dose on the film.
+Alternatively, the lateral scanner response correction can be turned off, then a single calibration curve is computed for all pixels. This simpler calibration is adequate if scanning only small films at a reproducible location on the scanner.
 
 Features
 ^^^^^^^^
 
 - Automatically loads multiple images in a folder, average multiple copies of same image and stack different scans together.
-- Automatically detect film strips position and size, and define ROIs inside these film strips.
+- Automatically detect films position and size, and define ROIs inside these films.
 - Daily output correction
 - Beam profile correction
 - Lateral scanner response correction
