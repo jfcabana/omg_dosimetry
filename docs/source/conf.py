@@ -1,0 +1,37 @@
+# Configuration file for the Sphinx documentation builder.
+#
+# For the full list of built-in configuration values, see the documentation:
+# https://www.sphinx-doc.org/en/master/usage/configuration.html
+
+# -- Project information -----------------------------------------------------
+# https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
+
+project = 'OMG dosimetry (beta)'
+copyright = '2023, Jean-François Cabana and Luis Alfonso Olivares Jiménez'
+author = 'Jean-François Cabana and Luis Alfonso Olivares Jiménez'
+
+# The short X.Y version.
+version = "1.4"
+# The full version, including alpha/beta/rc tags.
+release = "1.4.2"
+# -- General configuration ---------------------------------------------------
+# https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
+
+extensions = [
+    'sphinx_contributors',
+    'sphinx.ext.autodoc',
+    'sphinx.ext.autosummary',
+    'sphinx.ext.napoleon',
+    'sphinx_copybutton',
+]
+
+templates_path = ['_templates']
+exclude_patterns = []
+
+
+
+# -- Options for HTML output -------------------------------------------------
+# https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
+
+html_theme = "furo"
+html_static_path = ['_static']

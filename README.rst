@@ -1,6 +1,10 @@
-![alt text](https://github.com/jfcabana/omg_dosimetry/blob/OMG_master/src/omg_dosimetry/OMG_Logo.png?raw=true)
+OMG Dosimetry
+=============
 
-# Optimized Multichannel Gafchromic Dosimetry (OMG Dosimetry)
+.. image:: https://github.com/jfcabana/omg_dosimetry/blob/OMG_master/src/omg_dosimetry/OMG_Logo.png?raw=true
+    :width: 100%
+    :target: https://github.com/jfcabana/omg_dosimetry
+    :align: center
 
 With OMG Dosimetry, you can easily perform film calibration, film-to-dose conversion, and dose analysis.
 
@@ -8,7 +12,8 @@ Demonstration files are provided for each module to get you started quickly.
 Code is heavily commented so you can follow along and andapt it for your personnal usage.
 
 
-## Gafchromic calibration module
+Gafchromic calibration module
+-----------------------------
 
 The calibration module computes multichannel calibration curves from scanned films. 
 
@@ -19,7 +24,8 @@ This requires exposing long film strips and scanning them perpendicular to the s
 To account for non-flat beam profiles, the output from an ICProfiler acquired at the same time as film exposure can be given as input to correct for beam shape.
 Alternatively, the lateral scanner response correction can be turned off, then a single calibration curve is computed for all pixels.
 
-### Features
+Features
+^^^^^^^^
 
 - Automatically loads multiple images in a folder, average multiple copies of same image and stack different scans together.
 - Automatically detect film strips position and size, and define ROIs inside these film strips.
@@ -30,12 +36,14 @@ Alternatively, the lateral scanner response correction can be turned off, then a
 - Publish PDF report
 
 
-## Film-to-dose module
+Film-to-dose module
+-------------------
 
 The film-to-dose module performs optimized multichannel conversion from scanned gafchromic films to absolute dose.
 It uses the optimized multichannel method from Mayer *et al* (https://doi.org/10.1118/1.3694100) and calibration curves obtained with the calibration module.
 
-### Features
+Features
+^^^^^^^^
 
 - Multiple scans of same film are loaded and averaged automatically
 - Automatic film detection and crop
@@ -47,11 +55,13 @@ It uses the optimized multichannel method from Mayer *et al* (https://doi.org/10
 - Publish PDF report
 
 
-## Dose analysis module
+Dose analysis module
+--------------------
 
 The dose analysis module performs in-depth comparison from film dose to reference dose image from treatment planning system.
 
-### Features
+Features
+^^^^^^^^
 
 - Perform registration by identifying fiducial markers to set isocenter
 - Interactive display of analysis results (gamma map, relative error, dose profiles)

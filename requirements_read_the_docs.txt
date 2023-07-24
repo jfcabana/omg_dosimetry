@@ -1,0 +1,7 @@
+furo
+matplotlib
+numpy
+sphinx
+sphinx-copybutton
+sphinx_contributors
+omg_dosimetry
