@@ -113,6 +113,10 @@ class LUT:
         Full path to beam profile file from an ICprofiler, as obtained during
         calibration films exposition. Used to correct the nominal doses at each
         pixel position.
+
+        The text file has to be tab seperated containing the position and relative profile value.
+        First column should be a position, given in mm.
+        Second column should be the measured profile relative value [%], normalised to 100 in the center.
         
         Corrected doses are defined as dose_corr(y) = dose * profile(y),
         where profile(y) is the beam profile, normalized to 1.0 at beam center
