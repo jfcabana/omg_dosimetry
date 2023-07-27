@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-OMG Dosimetry calibration module.
+OMG Dosimetry tiff2dose module.
 
 The film-to-dose module performs optimized multichannel conversion from scanned gafchromic films to absolute dose.
 It uses the optimized multichannel method from Mayer et al (https://doi.org/10.1118/1.3694100)
