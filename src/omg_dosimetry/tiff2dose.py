@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Gafchromic Tiff to Dose module.
+OMG Dosimetry calibration module.
 
 The film-to-dose module performs optimized multichannel conversion from scanned gafchromic films to absolute dose.
 It uses the optimized multichannel method from Mayer et al (https://doi.org/10.1118/1.3694100)
@@ -16,13 +16,9 @@ Features:
     - Output metrics for evaluation of dose conversion quality:
          disturbance map, residual error, consistency map
     - Publish PDF report
-    
-Requirements:
-    This module is built as an extension to pylinac package.
-    Tested with pylinac 3.7.2, which is compatible with python 3.7+.
-    
+        
 Written by Jean-Francois Cabana, copyright 2018
-version 2023-02-28
+version 2023-07-27
 """
 
 import os
@@ -39,7 +35,86 @@ from .imageRGB import load, load_multiples
 from .calibration import load_lut
 
 class Gaf:
-    """Base class for gafchromic films.
+    """Base class for gafchromic films converted to dose.
+
+    Usage : gaf = tiff2dose.Gaf(path='path/to/scanned/tiff/images', lut_file=l'path/to/calibration/file')
+
+    gaf.dose_r:             ArrayImage object of dose from red channnel
+    gaf.dose_g:             ArrayImage object of dose from green channnel
+    gaf.dose_b:             ArrayImage object of dose from blue channnel
+    gaf.dose_m:             ArrayImage object of dose from mean channnel (dose_m = dose_((r+g+b/3)))    
+    gaf.dose_ave:           ArrayImage object of averaged dose from channels R+G+B ((dose_ave = dose_r + dose_g + dose_b) / 3)
+    gaf.dose_rg:            ArrayImage object of averaged dose from channels R+G ((dose_ave = dose_r + dose_g) / 2)
+    gaf.dose_opt:           ArrayImage object of optimized dose (eq. 6 in Mayer et al)
+    gaf.dose_opt_delta:     ArrayImage object of disturbance map (eq. 7 in Mayer et al)
+    gaf.dose_opt_RE:        ArrayImage object of residual error (eq. 2 in Mayer et al)
+    gaf.dose_consistency:   ArrayImage object of disagreement between individual channels (RMSE of (dose_r-dose_g) + (dose_r-dose_b) + (dose_b-dose_g))
+
+    Attributes
+    ----------
+    path : str
+        File path of scanned tif images of film to convert to dose.
+        Multiple scans of the same films should be named (someName)_00x.tif
+        These files will be averaged together to increase SNR.
+
+    lut_file : str
+        File path to LUT film to use for dose conversion.
+    
+    img_filt : int, optional
+        Kernel size of median filter to apply to image before conversion to dose.
+        Default is 0.
+
+    lut_filt : int, optional
+        Kernel size of median filter to apply to LUT data before conversion to dose.
+        Used only on LUT with lateral scanner correction applied.
+        Default is 35.
+
+    fit_type : 'rational' or 'spline'
+        Function type used for fitting calibration curve.
+        Default is 'rational'.
+
+    If fit_type = "spline", the fitted function is UnivariateSpline from scipy.interpolate.
+    'k', 'ext', and 's' are parameters to pass to this function.
+    
+    k : int, optional
+        Degree of the smoothing spline.  Must be 1 <= `k` <= 5.
+        ``k = 3`` is a cubic spline. Default is 3.
+
+    s : float or None, optional
+        Positive smoothing factor used to choose the number of knots.  Number
+        of knots will be increased until the smoothing condition is satisfied::
+            sum((w[i] * (y[i]-spl(x[i])))**2, axis=0) <= s
+        If `s` is None, ``s = len(w)`` which should be a good value if
+        ``1/w[i]`` is an estimate of the standard deviation of ``y[i]``.
+        If 0, spline will interpolate through all data points. Default is None.
+
+    ext : int or str, optional
+        Controls the extrapolation mode for elements not in the interval defined by the knot sequence.
+        * if ext=0 or 'extrapolate', return the extrapolated value.
+        * if ext=1 or 'zeros', return 0
+        * if ext=2 or 'raise', raise a ValueError
+        * if ext=3 of 'const', return the boundary value.
+        Default is 0.
+
+    info : dictionary, optional
+        Used to store information that will be shown on the PDF report.
+        key:value pairs must include "author", "unit", "film_lot", "scanner_id", date_exposed", "date_scanned", "wait_time", "notes"
+        Default is None.
+
+    crop_edges : int, optional
+        If not 0, dose arrays will be cropped to remove empty areas around the film.
+        The actual value determines the threshold used for detecting what is considered non-film area.
+        Default is 0.
+
+    clip : float, optional
+        Maximum value [cGy] to limit dose.
+        Useful to avoid very high doses obtained due to markings on the film.
+        Default is None.
+
+    rot90 : int, optional
+        Number of 90 degrees rotations to apply to the image.
+        Default is 0.
+
     """
 
     def __init__(self, path='', lut_file='', img_filt=0, lut_filt=35, fit_type='rational', k=3, ext=3, s=None, info=None, crop_edges=0, clip=None, rot90=0):   
@@ -70,7 +145,12 @@ class Gaf:
             self.dose_rg.crop_edges(threshold=crop_edges)
             self.dose_consistency.crop_edges(threshold=crop_edges)
 
-    def load_files(self, path):   
+    def load_files(self, path):
+        """ Load image files found in path. 
+            If path is a directory, it is assumed to contains multiples scans of a single film.
+            If a directory contains scans of multiple films, then path should be a full path to a single image.
+            Files sharing the same filename but ending with _00x in this directory are assumed to be scans of the same film and will be averaged together to increse SNR.
+        """
         if os.path.isdir(path):
             folder = path
             files = os.listdir(folder)
@@ -95,7 +175,7 @@ class Gaf:
         else: self.img = load(path)
 
     def convert2dose(self, img_filt=0, lut_filt=35, fit_type='rational', k=3, ext=3, s=0):        
-        """ Performs the conversion to dose.
+        """ Performs the conversion of scanned image to dose [cGy].
         """
         
         img = self.img
@@ -155,13 +235,10 @@ class Gaf:
                 Db, Ab = lut.get_dose_and_derivative_from_spline(xdata[5,:], ydata, row[:,2], k=k, ext=ext, s=s)
             
             # Remove unphysical values
-            Dm[Dm < 0] = 0
-            Dr[Dr < 0] = 0
-            Dg[Dg < 0] = 0
-            Db[Db < 0] = 0
-            Dave = (Dr + Dg + Db) / 3
-            
+            Dm[Dm < 0], Dr[Dr < 0], Dg[Dg < 0], Db[Db < 0] = 0, 0, 0, 0
+             
             # Store single channel doses
+            Dave = (Dr + Dg + Db) / 3
             dose_m[i,:] = Dm
             dose_r[i,:] = Dr
             dose_g[i,:] = Dg
@@ -209,6 +286,8 @@ class Gaf:
         self.dose_consistency = load(((dose_r-dose_g)**2 + (dose_r-dose_b)**2 + (dose_b-dose_g)**2)**0.5, dpi=self.img.dpi)  
         
     def show_results(self):
+        """ Display a figure with the different converted dose maps and metrics.
+        """
         max_dose_m = np.percentile(self.dose_m.array,[99.9])[0].round(decimals=-1)
         max_dose_opt = np.percentile(self.dose_opt.array,[99.9])[0].round(decimals=-1)
         clim = [0, max(max_dose_m, max_dose_opt)]   
@@ -256,6 +335,9 @@ class Gaf:
         notes : str, list of strings, optional
             If a string, adds it as a line of text in the PDf report.
             If a list of strings, each string item is printed on its own line. Useful for writing multiple sentences.
+        open_file : bool, optional
+            Wether or not to open the PDF file after it is created.
+            Default is False.
         """
         if filename is None:
             filename = os.path.join(self.path, 'Report.pdf')
@@ -292,71 +374,71 @@ class Gaf:
         if open_file:
             webbrowser.open(filename)
     
-    def apply_factor_from_roi(self, norm_dose = None):
-        """ Define an ROI on an unexposed film to correct for scanner response. """
+    # def apply_factor_from_roi(self, norm_dose = None):
+    #     """ Define an ROI on an unexposed film to correct for scanner response. """
         
-        msg = 'Factor from ROI: Click and drag to draw an ROI manually. Press ''enter'' when finished.'
-        self.roi_xmin = []
-        self.roi_xmax = []
-        self.roi_ymin = []
-        self.roi_ymax = []
+    #     msg = 'Factor from ROI: Click and drag to draw an ROI manually. Press ''enter'' when finished.'
+    #     self.roi_xmin = []
+    #     self.roi_xmax = []
+    #     self.roi_ymin = []
+    #     self.roi_ymax = []
         
-        self.fig = plt.figure()
-        ax = plt.gca()  
-        self.img.plot(ax=ax)  
-        ax.plot((0,self.img.shape[1]),(self.img.center.y,self.img.center.y),'k--')
-        ax.set_xlim(0, self.img.shape[1])
-        ax.set_ylim(self.img.shape[0],0)
-        ax.set_title(msg)
-        print(msg)
+    #     self.fig = plt.figure()
+    #     ax = plt.gca()  
+    #     self.img.plot(ax=ax)  
+    #     ax.plot((0,self.img.shape[1]),(self.img.center.y,self.img.center.y),'k--')
+    #     ax.set_xlim(0, self.img.shape[1])
+    #     ax.set_ylim(self.img.shape[0],0)
+    #     ax.set_title(msg)
+    #     print(msg)
         
-        def select_box(eclick, erelease):
-            ax = plt.gca()
-            x1, y1 = int(eclick.xdata), int(eclick.ydata)
-            x2, y2 = int(erelease.xdata), int(erelease.ydata)
-            rect = plt.Rectangle( (min(x1,x2),min(y1,y2)), np.abs(x1-x2), np.abs(y1-y2), Fill=False )
-            ax.add_patch(rect)           
-            self.roi_xmin = min(x1,x2)
-            self.roi_xmax = max(x1,x2)
-            self.roi_ymin = min(y1,y2)
-            self.roi_ymax = max(y1,y2)
+    #     def select_box(eclick, erelease):
+    #         ax = plt.gca()
+    #         x1, y1 = int(eclick.xdata), int(eclick.ydata)
+    #         x2, y2 = int(erelease.xdata), int(erelease.ydata)
+    #         rect = plt.Rectangle( (min(x1,x2),min(y1,y2)), np.abs(x1-x2), np.abs(y1-y2), Fill=False )
+    #         ax.add_patch(rect)           
+    #         self.roi_xmin = min(x1,x2)
+    #         self.roi_xmax = max(x1,x2)
+    #         self.roi_ymin = min(y1,y2)
+    #         self.roi_ymax = max(y1,y2)
         
-        self.rs = RectangleSelector(ax, select_box, drawtype='box', useblit=False, button=[1], 
-                                    minspanx=5, minspany=5, spancoords='pixels', interactive=True)    
-        self.cid = self.fig.canvas.mpl_connect('key_press_event', self.apply_factor_from_roi_press_enter)
+    #     self.rs = RectangleSelector(ax, select_box, drawtype='box', useblit=False, button=[1], 
+    #                                 minspanx=5, minspany=5, spancoords='pixels', interactive=True)    
+    #     self.cid = self.fig.canvas.mpl_connect('key_press_event', self.apply_factor_from_roi_press_enter)
         
-        self.wait = True
-        while self.wait: plt.pause(5)
-        return
+    #     self.wait = True
+    #     while self.wait: plt.pause(5)
+    #     return
         
-    def apply_factor_from_roi_press_enter(self, event):
-        """ Continue when ''enter'' is pressed. """      
-        if event.key == 'enter':
-            # Get ROIs values
-            roi_R = np.median(self.img.array[self.roi_ymin:self.roi_ymax, self.roi_xmin:self.roi_xmax, 0])
-            roi_G = np.median(self.img.array[self.roi_ymin:self.roi_ymax, self.roi_xmin:self.roi_xmax, 1])
-            roi_B = np.median(self.img.array[self.roi_ymin:self.roi_ymax, self.roi_xmin:self.roi_xmax, 2])
+    # def apply_factor_from_roi_press_enter(self, event):
+    #     """ Continue when ''enter'' is pressed. """      
+    #     if event.key == 'enter':
+    #         # Get ROIs values
+    #         roi_R = np.median(self.img.array[self.roi_ymin:self.roi_ymax, self.roi_xmin:self.roi_xmax, 0])
+    #         roi_G = np.median(self.img.array[self.roi_ymin:self.roi_ymax, self.roi_xmin:self.roi_xmax, 1])
+    #         roi_B = np.median(self.img.array[self.roi_ymin:self.roi_ymax, self.roi_xmin:self.roi_xmax, 2])
             
-            # Unexposed film from calibration
-            calib_R = self.lut.channel_R[0]
-            calib_G = self.lut.channel_G[0]
-            calib_B = self.lut.channel_B[0]
+    #         # Unexposed film from calibration
+    #         calib_R = self.lut.channel_R[0]
+    #         calib_G = self.lut.channel_G[0]
+    #         calib_B = self.lut.channel_B[0]
             
-            # Compute factors
-            self.scale_R = calib_R / roi_R
-            self.scale_G = calib_G / roi_G
-            self.scale_B = calib_B / roi_B
+    #         # Compute factors
+    #         self.scale_R = calib_R / roi_R
+    #         self.scale_G = calib_G / roi_G
+    #         self.scale_B = calib_B / roi_B
             
-            # Apply scaling
-            self.img.array[:,:,0] = self.img.array[:,:,0] * self.scale_R
-            self.img.array[:,:,1] = self.img.array[:,:,1] * self.scale_G
-            self.img.array[:,:,2] = self.img.array[:,:,2] * self.scale_B
+    #         # Apply scaling
+    #         self.img.array[:,:,0] = self.img.array[:,:,0] * self.scale_R
+    #         self.img.array[:,:,1] = self.img.array[:,:,1] * self.scale_G
+    #         self.img.array[:,:,2] = self.img.array[:,:,2] * self.scale_B
             
-            del self.rs                
-            self.fig.canvas.mpl_disconnect(self.cid)
-            plt.close(self.fig)   
-            self.wait = False
-            return
+    #         del self.rs                
+    #         self.fig.canvas.mpl_disconnect(self.cid)
+    #         plt.close(self.fig)   
+    #         self.wait = False
+    #         return
 
 def rational_func(x, a, b, c):
     return -c + b/(x-a)
