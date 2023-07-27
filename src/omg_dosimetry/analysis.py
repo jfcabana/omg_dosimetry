@@ -1,21 +1,19 @@
 # -*- coding: utf-8 -*-
 """
+OMG Dosimetry analysis module.
+
 The dose analysis module performs in-depth comparison from film dose to reference dose image from treatment planning system.
 
 Features:
-    - Perform registration by identifying fiducial markers to set isocenter
+    - Perform registration by identifying fiducial markers on the film,
     - Interactive display of analysis results (gamma map, relative error, dose profiles)
-    - Gammap analysis: display gamma map, pass rate, histogram, pass rate vs dose bar graph,
+    - Gamma analysis: display gamma map, pass rate, histogram, pass rate vs dose bar graph,
       pass rate vs distance to agreement (fixed dose to agreement),
       pass rate vs dose to agreement (fixed distance to agreement)
     - Publish PDF report
     
-Requirements:
-    This module is built as an extension to pylinac package.
-    Tested with pylinac 2.0.0, which is compatible with python 3.5.
-    
 Written by Jean-Francois Cabana
-Version 2023-03-08
+Version 2023-07-27
 """
 
 import numpy as np
@@ -39,7 +37,47 @@ import bz2
 import time
 
 class DoseAnalysis(): 
-    
+    """Base class for analysis film dose vs reference dose.
+
+    Usage : film = analysis.DoseAnalysis(film_dose=file_doseFilm, ref_dose=ref_dose)
+
+    Attributes
+    ----------
+    path : str
+        File path of scanned tif images of film to convert to dose.
+        Multiple scans of the same films should be named (someName)_00x.tif
+        These files will be averaged together to increase SNR.
+
+    film_dose : str
+        File path of planar dose image of the scanned film converted to dose (using tiff2dose module).
+
+    ref_dose : str
+        File path of the reference dose (from TPS).
+
+    film_dose_factor : float, optional
+        Scaling factor to apply to the film dose.
+        Default is 1.
+
+    ref_dose_factor : float, optional
+        Scaling factor to apply to the reference dose.
+        Default is 1.
+
+    flipLR : bool, optional
+        Whether or not to flip the film dose horizontally (to match reference dose orientation).
+        Default is False.
+
+    flipUD : bool, optional
+        Whether or not to flip the film dose vertically (to match reference dose orientation).
+        Default is False.
+
+    rot90 : int, optional
+        If not 0, number of 90 degrees rotation to apply to the film (to match reference dose orientation).
+
+    ref_dose_sum : bool, optional
+        If True, all all planar dose files found in the ref_dose folder will be summed together.
+        
+    """
+
     def __init__(self, film_dose=None, ref_dose=None, film_dose_factor=1, ref_dose_factor=1, flipLR=False, flipUD=False, rot90=0, ref_dose_sum=False): 
         if film_dose is not None: self.film_dose = load(film_dose)
         if rot90: self.film_dose.array = np.rot90(self.film_dose.array, k=rot90)
@@ -81,7 +119,11 @@ class DoseAnalysis():
             print("Applied ref dose normalisation factor = {}".format(self.ref_dose_factor))
 
     def apply_factor_from_isodose(self, norm_isodose = 0):
-        """ Apply film normalisation factor from a reference dose isodose. """
+        """ Apply film normalisation factor from a reference dose isodose [cGy].
+            Mean dose inside regions where ref_dose > norm_isodose will be compared
+            between film and ref_dose. A factor is computed and applied to film dose
+            so that average dose in this region is the same for both.
+        """
         print("Computing normalisation factor from doses > {} cGy.".format(norm_isodose))
         self.norm_dose = norm_isodose        
         indices = np.where(self.ref_dose.array > self.norm_dose)
@@ -90,7 +132,12 @@ class DoseAnalysis():
         self.apply_film_factor(film_dose_factor = mean_ref / mean_film )
         
     def apply_factor_from_roi(self, norm_dose = None):
-        """ Apply film normalisation factor from a rectangle ROI. """
+        """ Apply film normalisation factor from a rectangle ROI.
+            Brings up an interactive plot, where the user must define a rectangle ROI
+            that will be used to compute a film normalisation factor.
+            Median dose inside this rectangle will be used to scale the film dose to match
+            that of the reference.
+        """
         
         self.norm_dose = norm_dose      
         msg = 'Factor from ROI: Click and drag to draw an ROI manually. Press ''enter'' when finished.'
@@ -119,7 +166,7 @@ class DoseAnalysis():
         return
         
     def apply_factor_from_roi_press_enter(self, event):
-        """ Continue when ''enter'' is pressed. """      
+        """ Function called from apply_factor_from_roi() when ''enter'' is pressed. """      
         if event.key == 'enter':
             roi_film = np.median(self.film_dose.array[self.roi_ymin:self.roi_ymax, self.roi_xmin:self.roi_xmax])
             
@@ -138,7 +185,7 @@ class DoseAnalysis():
             return
 
     def apply_factor_from_norm_film(self, norm_dose = None, norm_roi_size = 10):
-        """ Define an ROI of norm_roi_size mm x norm_roi_size mm to compute dose factor from normalisation film. """
+        """ Define an ROI of norm_roi_size mm x norm_roi_size mm to compute dose factor from a normalisation film. """
         
         self.norm_dose = norm_dose
         self.norm_roi_size = norm_roi_size
@@ -176,7 +223,9 @@ class DoseAnalysis():
             plt.gcf().canvas.draw_idle()
 
     def crop_film(self):
-        """ Define an ROI to crop film. """     
+        """  Brings up an interactive plot, where the user must define 
+             a rectangle ROI that will be used to crop the film.
+        """     
         msg = 'Crop film: Click and drag to draw an ROI. Press ''enter'' when finished.'
         
         self.fig = plt.figure()
@@ -201,7 +250,7 @@ class DoseAnalysis():
         return
         
     def crop_film_press_enter(self, event):
-        """ Continue when ''enter'' is pressed. """      
+        """ Function called from crop_film() when ''enter'' is pressed. """      
         if event.key == 'enter':
             del self.rs                
             left = self.roi_xmin
@@ -219,7 +268,48 @@ class DoseAnalysis():
             return
         
     def gamma_analysis(self, film_filt=0, doseTA=3.0, distTA=3.0, threshold=0.1, norm_val='max', local_gamma=False, max_gamma=None, random_subset=None):
-        """ Perform Gamma analysis """
+        """ Perform Gamma analysis between registered film_dose and ref_dose.
+            Gamma computation is performed using pymedphys.gamma.
+            
+            Parameters
+            ----------
+            film_filt : int, optional
+                Kernel size of median filter to apply to film dose before performing gamma analysis (for noise reduction).
+                Default is 0.
+
+            doseTA : float, optional
+                Dose to agreement threshold [%].
+                Default is 3.0.
+
+            distTA : float, optional
+                Distance to agreement threshold [mm]¸.
+                Default is 3.0.
+
+            threshold : float, optional (>=0, <=1.0)
+                The percent lower dose cutoff below which gamma will not be calculated.
+                Default is 0.1.
+
+            norm_val : float or 'max', optional
+                Normalisation value [cGy] of reference dose, used to calculate the
+                dose to agreement threshold and lower dose threshold.
+                If 'max', the maximum dose from the reference distribution will be used.
+                Default is 'max'.
+
+            local_gamma : bool, optional
+                Whether or not local gamma should be used instead of global.
+                Default is False.
+
+            max_gamma : float, optional
+                The maximum gamma searched for. This can be used to speed up
+                calculation, once a search distance is reached that would give gamma
+                values larger than this parameter, the search stops.
+                Default is None.
+
+            random_subset : float (>=0, <=1), optional
+                Used to only calculate a random subset fraction of the reference grid, to speed up calculation.
+                Default is None
+
+        """
         self.doseTA, self.distTA = doseTA, distTA
         self.film_filt, self.threshold, self.norm_val = film_filt, threshold, norm_val        
         start_time = time.time()
@@ -228,7 +318,18 @@ class DoseAnalysis():
         self.computeDiff()
     
     def computeHDmedianDiff(self, threshold=0.8, ref = 'max'):
-        """ Compute median difference between film and reference doses in high dose region. """
+        """ Compute median difference between film and reference doses in high dose region.
+            
+            Parameters
+            ----------
+            threshold : float, optional (>=0, <=1.0)
+                The relative threshold (with respect to 'ref') used
+                to determine the high dose region.
+
+            ref : 'max' or float
+                If given a number, the dose [cGy] used as a reference for threshold.
+                If 'max', the maximum dose in ref_dose will be used.
+        """
         if ref == 'max': HDthreshold = threshold * self.ref_dose.array.max()
         else:  HDthreshold = threshold * ref
         film_HD = self.film_dose.array[self.ref_dose.array > HDthreshold]

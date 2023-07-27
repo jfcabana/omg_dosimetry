@@ -336,7 +336,7 @@ class Gaf:
             If a string, adds it as a line of text in the PDf report.
             If a list of strings, each string item is printed on its own line. Useful for writing multiple sentences.
         open_file : bool, optional
-            Wether or not to open the PDF file after it is created.
+            Whether or not to open the PDF file after it is created.
             Default is False.
         """
         if filename is None:
