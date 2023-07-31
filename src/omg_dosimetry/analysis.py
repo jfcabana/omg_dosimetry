@@ -346,7 +346,7 @@ class DoseAnalysis():
         self.DiffMap.RMSE = self.DiffMap.MSE**0.5    
     
     def computeGamma(self, doseTA=2, distTA=2, threshold=0.1, norm_val=None, local_gamma=False, max_gamma=None, random_subset=None):
-        """Comput Gamma (using pymedphys.gamma) """
+        """Compute Gamma (using pymedphys.gamma) """
         print("Computing {}% {} mm Gamma...".format(doseTA, distTA))
 #       # error checking
         if not is_close(self.film_dose.dpi, self.ref_dose.dpi, delta=3):
@@ -402,7 +402,24 @@ class DoseAnalysis():
         return GammaMap
                     
     def plot_gamma_varDoseTA(self, ax=None, start=0.5, stop=4, step=0.5): 
-        """ Plot graph of Gamma pass rate vs variable doseTA """
+        """ Plot graph of Gamma pass rate vs variable doseTA.
+            Note: values of distTA, threshold and norm_val will be taken as those 
+            from the previous "standard" gamma analysis.
+            
+            Parameters
+            ----------
+            start : float, optional
+                Minimum value of dose to agreement threshold [%]
+                Default is 0.5 %
+
+            stop : float, optional
+                Maximum value of dose to agreement threshold [%]
+                Default is 4.0 %
+
+            step : float, optional
+                Increment of dose to agreement value between start and stop values [%]
+                Default is 0.5 %
+        """
         distTA, threshold, norm_val = self.distTA, self.threshold, self.norm_val
         values = np.arange(start,stop,step)
         GammaVarDoseTA = np.zeros((len(values),2))
@@ -422,7 +439,25 @@ class DoseAnalysis():
         ax.set_ylabel('Gamma pass rate (%)')
         
     def plot_gamma_varDistTA(self, ax=None, start=0.5, stop=4, step=0.5): 
-        """ Plot graph of Gamma pass rate vs variable distTA """
+        """ Plot graph of Gamma pass rate vs variable distTA
+            Note: values of doseTA, threshold and norm_val will be taken as those 
+            from the previous "standard" gamma analysis.
+            
+            Parameters
+            ----------
+            start : float, optional
+                Minimum value of dist to agreement threshold [mm]
+                Default is 0.5 mm
+
+            stop : float, optional
+                Maximum value of dist to agreement threshold [mm]
+                Default is 4.0 mm
+
+            step : float, optional
+                Increment of dist to agreement value between start and stop values [mm]
+                Default is 0.5 mm
+        """
+
         doseTA = self.doseTA
         threshold = self.threshold
         norm_val = self.norm_val
@@ -447,6 +482,24 @@ class DoseAnalysis():
         ax.set_ylabel('Gamma pass rate (%)')      
         
     def plot_gamma_hist(self, ax=None, bins='auto', range=[0,3]):
+        """ Plot a histogram of gamma map values.
+
+            Parameters
+            ----------
+            ax : matplotlib.pyplot axe object, optional
+                Axis in which to plot the graph.
+                If None, a new plot is made.
+                Default is None 
+
+            bins : Determines the number of bins in the histogram.
+                The argument passed to matplotlib.pyplot.hist.
+                Default is 'auto'
+
+            range : Determines the range of values showed in the histogram.
+                The argument passed to matplotlib.pyplot.hist.
+                Default is [0,3]
+        """
+
         if ax is None:
             fig, ax = plt.subplots()
         ax.hist(self.GammaMap.array[np.isfinite(self.GammaMap.array)], bins=bins, range=range)
@@ -455,6 +508,21 @@ class DoseAnalysis():
         ax.set_title("Gamma map histogram")
         
     def plot_gamma_pass_hist(self, ax=None, bin_size = 50):
+        """ Plot a histogram of gamma map pass rate vs dose.
+
+            Parameters
+            ----------
+            ax : matplotlib.pyplot axe object, optional
+                Axis in which to plot the graph.
+                If None, a new plot is made.
+                Default is None 
+
+            bin_size : float, optional
+                Determines the size of bins in the histogram [cGy].
+                The number of bins is determined from the maximum dose in reference dose, and the bin_size.
+                Default is 50 cGy
+        """
+
         if ax is None:
             fig, ax = plt.subplots()
         analyzed = np.isfinite(self.GammaMap.array)
@@ -478,6 +546,13 @@ class DoseAnalysis():
         ax.set_xticks(bins)
         
     def plot_gamma_stats(self, figsize=(10, 10), show_hist=True, show_pass_hist=True, show_varDistTA=True, show_var_DoseTA=True):
+        """ Displays a figure with 4 subplots showing gamma analysis statistics:
+            1- Gamma map histogram, 
+            2- Gamma pass rate vs dose histogram
+            3- Gamma pass rate vs variable distance to agreement threshold
+            4- Gamma pass rate vs variable dose to agreement threshold
+        """
+
         fig, ((ax1,ax2),(ax3,ax4)) = plt.subplots(2,2, figsize=figsize)
         
         axes = (ax1,ax2,ax3,ax4)
@@ -496,6 +571,41 @@ class DoseAnalysis():
             self.plot_gamma_varDoseTA(ax=axes[i])
         
     def plot_profile(self, ax=None, profile='x', position=None, title=None, diff=False, offset=0):
+        """ Plot a line profile of reference dose and film dose at a given position.
+
+            Parameters
+            ----------
+            ax : matplotlib.pyplot axe object, optional
+                Axis in which to plot the graph.
+                If None, a new plot is made.
+                Default is None
+
+            profile : 'x' or 'y'
+                The orientation of the profile to plot (x: horizontal, y: vertical)
+                Default is 'x'
+
+            position : int, optional
+                The position of the profile to plot, in pixels, in the direction perpendicular to the profile.
+                eg. if profile='x' and position=400, a profile in the x direction is showed, at position y=400.
+                If None, position is set to the center of the reference dose.
+                Default is None
+
+            title : str, optional
+                The title to display on the graph.
+                If None, the tile is set automatically to display profile direction and position
+                Default is None
+
+            diff : bool, optional
+                If True, the difference in profiles (film - reference) is displayed
+                Default is False
+
+            offset : int, optional
+                If a known offset exists between the film and the reference dose, the plotted profile can be shifted
+                to account for this offset. For example, a film exposed at a fixed gantry angle coud have a known 
+                offset due to gantry sag, and you could want to correct for it on the profile.
+                Default is 0 mm
+        """        
+
         film = self.film_dose.array
         ref = self.ref_dose.array
         if profile == 'x':
