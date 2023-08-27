@@ -52,6 +52,7 @@ from pathlib import Path
 import webbrowser
 from .imageRGB import load, load_folder, stack_images
 import bz2
+from .i_o import retrieve_demo_file
 
 class LUT:
     """ Class for performing gafchromic calibration.
@@ -217,7 +218,61 @@ class LUT:
             self.detect_film()                              
         else:                           # or select ROI manually  
             self.select_film()
+
+    @staticmethod
+    def run_demo() -> None:
+        """Run the LUT demo by loading the demo images and print results."""
+
+        info = dict(author = 'Demo Physicist',
+            unit = 'Demo Linac',
+            film_lot = 'XD_1',
+            scanner_id = 'Epson 72000XL',
+            date_exposed = '2023-01-24 16h',
+            date_scanned = '2023-01-25 16h',
+            wait_time = '24 hours',
+            notes = 'Transmission mode, @300ppp and 16 bits/channel'
+           )
         
+        retrieve_demo_file("C14_calib-18h-1_001.tif")
+        retrieve_demo_file("C14_calib-18h-2_001.tif")
+
+        demo_path = Path(__file__).parent / "demo_files"
+        outname = 'Demo_calib'                                 ## Name of the calibration file to produce
+
+        #%% Set calibration parameters
+        #### Dose
+        doses = [0.0, 100.0, 200.0, 400.0, 650.0, 950.0]      ## Nominal doses [cGy] imparted to the films
+        output = 1.0                                          ## If necessary, correction for the daily output of the machine
+
+        ### Lateral correction
+        lateral_correction = True                             ## True to perform a calibration with lateral correction of the scanner (requires long strips of film)
+                                                                # or False for calibration without lateral correction
+        beam_profile = retrieve_demo_file("BeamProfile.txt")  ## None to not correct for the shape of the dose profile,
+                                                                # or path to a text file containing the shape profile
+
+        ### Film detection
+        film_detect = True      ## True to attempt automatic film detection, or False to make a manual selection
+        crop_top_bottom = 650   ## If film_detect = True: Number of pixels to crop in the top and bottom of the image.
+                                # May be required for auto-detection if the glass on the scanner is preventing detection
+        roi_size = 'auto'       ## If film_detect = True: 'auto' to define the size of the ROIs according to the films,
+                                # or [width, height] (mm) to define a fixed size.
+        roi_crop = 3            ## If film_detect = True and roi_size = 'auto': Margin size [mm] to apply on each side
+                                # films to define the ROI.
+
+        ### Image filtering
+        filt = 3                ## Median filter kernel size to apply on images for noise reduction
+
+        #%% Produce the LUT
+        lut = LUT(path=demo_path, doses=doses, output=output, lateral_correction=lateral_correction, beam_profile=beam_profile,
+                                film_detect=film_detect, roi_size=roi_size, roi_crop=roi_crop, filt=filt, info=info, crop_top_bottom = crop_top_bottom)
+
+        #%% View results and save LUT
+        #LUT.plot_roi()  # To display films and ROIs used for calibration
+        #LUT.plot_fit()  # To display a plot of the calibration curve and the fitted algebraic function
+        lut.publish_pdf(filename=os.path.join(demo_path, outname +'_report.pdf'), open_file=True)            # Generate a PDF report
+        save_lut(lut, filename=os.path.join(demo_path, outname + '.pkl'), use_compression=True)  # Save the LUT file. use_compression allows a reduction  
+                                                                                                        # in file size by a factor of ~10, but slows down the operation.
+
     def load_images(self,path,filt):
         """ Load all images in a folder. Average multiple copies of same image
             together and stack multiple scans side-by-side.
@@ -849,7 +904,3 @@ def save_lut(lut, filename, use_compression=True):
     pickle.dump(lut, file, pickle.HIGHEST_PROTOCOL)
     file.close()
 
-
-
-
-         
