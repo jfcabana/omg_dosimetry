@@ -659,6 +659,7 @@ class LUT:
         """ Display a summary of the results.
         """
         fig = plt.figure(figsize=(8, 8))
+        plt.ion()
         if self.lateral_correction:
             ax1 = plt.subplot2grid((3, 6), (0, 0), colspan=3)
             ax2 = plt.subplot2grid((3, 6), (0, 3), colspan=3)
