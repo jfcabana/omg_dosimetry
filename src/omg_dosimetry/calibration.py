@@ -233,10 +233,11 @@ class LUT:
             notes = 'Transmission mode, @300ppp and 16 bits/channel'
            )
         
+        # Download demo tif files and save it on demo_files folder.
         retrieve_demo_file("C14_calib-18h-1_001.tif")
         retrieve_demo_file("C14_calib-18h-2_001.tif")
 
-        demo_path = Path(__file__).parent / "demo_files"
+        demo_path = Path(__file__).parent / "demo_files"       # Folder containing scanned images
         outname = 'Demo_calib'                                 ## Name of the calibration file to produce
 
         #%% Set calibration parameters
