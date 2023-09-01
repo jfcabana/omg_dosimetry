@@ -37,7 +37,7 @@ gaf1 = tiff2dose.Gaf(path=path_scan, lut_file=lut_file, fit_type=fit_type, info=
 
 #%% Save dose and PDF report
 filename_tif = os.path.join(path, outname+'.tif')
-gaf1.dose_opt.save(filename_tif)                    # We save the optimized dose (dose_opt). Other options include individual channgels (dose_r, dose_g, dose_b) and individual channels doses average (dose_ave).
+gaf1.dose_opt.save(filename_tif)                    # We save the optimized dose (dose_opt). Other options include individual channels (dose_r, dose_g, dose_b) and individual channels doses average (dose_ave).
 
 filename_pdf = os.path.join(path, outname+'.pdf')
 gaf1.publish_pdf(filename_pdf, open_file=True)

@@ -19,22 +19,22 @@ file_doseFilm = os.path.join(os.path.dirname(__file__), "files", "tiff2dose", "D
 filebase = 'Demo_analysis'                                                                     # File name of the output PDF report
 
 #%% Define analysis parameters
-#### Normalisation factors
-ref_dose_factor = 1.0   # Normalisation factor to apply to reference dose
-film_dose_factor = 1.0  # Normalisation factor to apply to film dose
+#### Normalization factors
+ref_dose_factor = 1.0   # Normalization factor to apply to reference dose
+film_dose_factor = 1.0  # Normalization factor to apply to film dose
 prescription = 300      # Prescription dose [cGy]
 
 #### Paramètres de recalage 
 flipLR = True           # True/False: apply an horizontal mirror transformation to film dose
 flipUD = False          # True/False: apply a vertical mirror transformation to film dose
-rot90 = 1               # int: numver of 90 degrees rotation to apply to film dose
+rot90 = 1               # int: number of 90 degrees rotation to apply to film dose
 shift_x = 0.0           # float [mm]: If necessary, apply a known shift to the film in the X direction
 shift_y = -0.8          # float [mm]: If necessary, apply a known shift to the film in the Y direction
 markers_center = [0.8, 1.2, 233.3]  # Coordinates [mm] in the reference dose corresponding to the marks intersection on the film (R-L, I-S, P-A)
 
 #### Gamma analysis parameters
-threshold = 0.20         # Low dose threshold (e.g. 0.2: don't consider dose < 20% of normalisation dose)
-norm_val = prescription  # Normalisation dose [cGy], or 'max' to normalise with respect to reference dose maximum
+threshold = 0.20         # Low dose threshold (e.g. 0.2: don't consider dose < 20% of normalization dose)
+norm_val = prescription  # Normalization dose [cGy], or 'max' to normalise with respect to reference dose maximum
 doseTA = 5               # Dose to agreement threshold [%]
 distTA = 1               # Distance to agreement threshold [mm]
 film_filt = 3            # Size of median filter kernel to apply to film dose for noise reduction
@@ -52,7 +52,7 @@ film.crop_film()
 film.register(shift_x=shift_x, shift_y=shift_y, threshold=10,
               register_using_gradient=True, markers_center=markers_center)
 
-# We can define an ROI on the film to compute a normalisation factor to match to reference dose
+# We can define an ROI on the film to compute a normalization factor to match to reference dose
 film.apply_factor_from_roi()
 
 #%% Get high dose deviation
