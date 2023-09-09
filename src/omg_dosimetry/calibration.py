@@ -1,37 +1,27 @@
 # -*- coding: utf-8 -*-
 """
-Gafchromic calibration module.
+OMG Dosimetry calibration module.
 
 The calibration module computes multichannel calibration curves from scanned films. 
+
 Scanned films are automatically detected and selected, or ROIs can be drawn manually.
 
-The lateral scanner response effect (inhomogeneous response of the scanner along
-the detector array) is accounted for by creating separate calibration curves for
-each pixel along the array. This requires exposing long film strips and scanning
-them perpendicular to the scan direction (see demonstration files). 
-
-To account for non-flat beam profiles, the output from an ICProfiler acquired
-at the same time as film exposure can be given as input to correct for beam shape.
-Alternatively, the lateral scanner response correction can be turned off, then
-a single calibration curve is computed for all pixels.
+The lateral scanner response effect (inhomogeneous response of the scanner along the detector array) can be accounted for by creating separate calibration curves for each pixel along the array.
+This requires exposing long film strips and scanning them perpendicular to the scan direction (see demonstration files). 
+To account for non-flat beam profiles, a text file containing the relative beam profile shape along the film strips can be given as input to correct for non-uniform dose on the film.
+Alternatively, the lateral scanner response correction can be turned off, then a single calibration curve is computed for all pixels. This simpler calibration is adequate if scanning only small films at a reproducible location on the scanner.
 
 Features:
-    - Automatically loads multiple images in a folder, average multiple copies
-      of same image and stack different scans together.
-    - Automatically detect film strips position and size, and define ROIs
-      inside these film strips.
-    - Daily output correction
-    - Beam profile correction
-    - Lateral scanner response correction
-    - Save/Load LUt files
-    - Publish PDF report
-    
-Requirements:
-    This module is built as an extension to pylinac package.
-    Tested with pylinac 2.0.0 and python 3.5.
+- Automatically loads multiple images in a folder, average multiple copies of same image and stack different scans together.
+- Automatically detect films position and size, and define ROIs inside these films.
+- Daily output correction
+- Beam profile correction
+- Lateral scanner response correction
+- Save/Load LUt files
+- Publish PDF report
     
 Written by Jean-Francois Cabana, copyright 2018
-version 2023-02-28
+version 2023-07-25
 """
 
 from pylinac.core.profile import SingleProfile
@@ -87,11 +77,12 @@ class LUT:
         Multiple scans of the same films should be named (someName)_00x.tif
         These files will be averaged together to increase SNR.
         Files with different basename ('someName1_00x.tif', 'someName2_00x.tif', ...)
-        will be stacked side by side. This is to allow scanning multiple films 
-        that can't fit on the scanner bed in one image.
+        will be stacked side by side. This is to allow scanning films seperately,
+        either because they don't fit on the scanner bed all at once, or to have
+        the films scanned at the same location to mitigate scanner response inhomogeneities.
         
     doses : list of floats
-        List of nominal doses values that were used to expose films.
+        List of nominal doses values that were delivered on the films.
         
     output : float
         Daily output factor when films were exposed.
@@ -103,24 +94,21 @@ class LUT:
         False: A single LUT is computed for the scanner.
         
         As currently implemented, lateral correction is performed by exposing
-        long strips of calibration films to a large uniform field. By scanning
+        long strips of calibration films with a large uniform field. By scanning
         the strips perpendicular to the scanner direction, a LUT is computed
         for each pixel in the scanner lateral direction. If this method is
         used, it is recommended that beam profile correction be applied also,
-        so as to remove the contribution of beam inhomogeneity. As currently
-        implemenented, this requires an acqusition using an ICProfiler.
+        so as to remove the contribution of beam inhomogeneity.
         
     beam_profile : str
-        Full path to beam profile file from an ICprofiler, as obtained during
-        calibration films exposition. Used to correct the nominal doses at each
-        pixel position.
+        Full path to beam profile text file that will be used to correct the doses at each pixel position.
 
         The text file has to be tab seperated containing the position and relative profile value.
-        First column should be a position, given in mm.
+        First column should be a position, given in mm, with 0 being at center.
         Second column should be the measured profile relative value [%], normalised to 100 in the center.
         
         Corrected doses are defined as dose_corr(y) = dose * profile(y),
-        where profile(y) is the beam profile, normalized to 1.0 at beam center
+        where profile(y) is the beam profile, normalized to 100% at beam center
         axis, which is assumed to be aligned with scanner center.
         
         If set to 'None', the beam profile is assumed to be flat.
@@ -131,7 +119,7 @@ class LUT:
         
         This feature might affect the automatic detection of film strips if
         they are not separated by a large enough gap. In this case, you can
-        either use manual ROIs selection, or apply filting to the LUT during
+        either use manual ROIs selection, or apply filtering to the LUT during
         the conversion to dose (see tiff2dose module).
         
     film_detect : boolean
@@ -147,35 +135,31 @@ class LUT:
         
         'auto': The ROIs are defined automatically by the detected film strips.
         [width, length]: Size (in mm) of the ROIs. The ROIs are set to a fixed
-                         size at the center of the detectec film strips.
+                         size at the center of the detected film strips.
                 
     roi_crop : float
-        Margins (in mm) to apply to the detected film to define the ROIs.
+        Margins [mm] to apply to the detected film to define the ROIs.
         Used only when both film_detect and roi_size are set to 'auto'.
+
+    crop_top_bottom : float
+        Number of pixels to crop in the top and bottom of the image.
+        Used only when film_detect is set 'auto'. 
+        May be required for correct detection of films if a glass plate is placed on top of the films and is preventing detection.
+
+    info : dictionary
+        Used to store information about the calibration that will be shown on the calibration report.
+        key:value pairs must include "author", "unit", "film_lot", "scanner_id", date_exposed", "date_scanned", "wait_time", "notes"
     """
 
-    def __init__(self,
-                 path=None,
-                 doses=None,
-                 output=1.0,
-                 lateral_correction=False,
-                 beam_profile=None,
-                 filt=0,
-                 film_detect=True,
-                 roi_size='auto',
-                 roi_crop=2.0,
-                 info=None,
-                 baseline=None,
-                 crop_top_bottom=None
-                ):
+    def __init__(self, path=None, doses=None, output=1.0, lateral_correction=False, beam_profile=None,
+                 filt=0, film_detect=True, roi_size='auto', roi_crop=2.0, info=None, crop_top_bottom=None):
         
         if path is None:
             raise ValueError("You need to provide a path to a folder containing scanned calibration films!")
         if doses is None:
             raise ValueError("You need to provide nominal doses!")
         if info is None:
-            info = dict(author = '', unit = '', film_lot = '', scanner_id = '',
-                        date_exposed = '', date_scanned = '', wait_time = '', notes = '')
+            info = dict(author='', unit='', film_lot='', scanner_id='', date_exposed='', date_scanned='', wait_time='', notes='')
         
         # Store settings
         self.path = path
@@ -190,15 +174,6 @@ class LUT:
         self.info = info
         self.crop_top_bottom = crop_top_bottom
         
-        self.baseline = baseline
-        if baseline is not None:
-            if os.path.isdir(baseline):
-                images = load_folder(baseline)     
-                img = stack_images(images, axis=1)
-            elif os.path.isfile(baseline):
-                img = load(baseline)
-            self.base = img
-
         # Initialize some things
         self.lut = []
         self.profile = None  
@@ -209,10 +184,10 @@ class LUT:
             self.img.pad_rgb(pixels=crop_top_bottom, value=1, edges=('top','bottom'))
             
         self.get_longi_profile()        # get the longitudinal profile at the center of scanner
-        self.compute_latpos()           # compute absolute position (mm) of pixels in the y direciton, with 0 at scanner center
+        self.compute_latpos()           # compute absolute position [mm] of pixels in the y direciton, with 0 at scanner center
 
-        if beam_profile is not None:                    # if an IC Profiler .txt profile file is given
-            self.profile = get_profile(beam_profile)    # load the profile
+        if beam_profile is not None:                    # if a beam profile text file is given
+            self.profile = get_profile(beam_profile)    # load and store the profile
             
         if film_detect:                 # Detect the films position automatically...
             self.detect_film()                              
@@ -301,7 +276,6 @@ class LUT:
         sect = np.mean(self.img.array[int(self.img.center.y)-size:int(self.img.center.y)+size,:,:], axis=-1)
         row = np.mean(sect, axis=0)
         bined = np.where(row > max(row) * thresh, 0, 1)    # binarize the profile for improved detectability of peaks
-        # prof = MultiProfile(bined)
         prof = profile.find_peaks(bined)
         self.longitudinal_profile = prof
         
@@ -338,9 +312,7 @@ class LUT:
             
         # Define ROIs by cropping the film strips...
         if self.roi_size == 'auto':
-            # longi_profiles = self.longitudinal_profile.subdivide()
             width = []
-            # for p in longi_profiles:
             for i in range(0,n):
                 w = data_longi["right_bases"][i] - data_longi["left_bases"][i]
                 width.append(w)
@@ -373,14 +345,10 @@ class LUT:
     def select_film(self):
         """ Define ROIs manually by drawing rectangles on the image. """
         
-        self.roi_xpos = []
-        self.roi_ypos = []
-        self.roi_xmin = []
-        self.roi_xmax =[]
-        self.roi_ymin = []
-        self.roi_ymax = []
-        self.roi_width = []
-        self.roi_length = []
+        self.roi_xpos, self.roi_ypos = [], []
+        self.roi_xmin, self.roi_xmax = [], []
+        self.roi_ymin, self.roi_ymax = [], []
+        self.roi_width, self.roi_length = [], []
         
         plt.ion()
         plt.figure()
@@ -475,10 +443,11 @@ class LUT:
         if self.lateral_correction:
             # correct doses for machine daily output
             self.doses_corr =  np.asarray([self.doses * self.output] * self.npixel).transpose() 
+            # correct doses for beam profile (if given)
             if self.profile is not None:
                 for i in range(self.npixel):
                     dose = self.doses_corr[:,i]
-                    # correct doses for beam profile
+                    # interpolate beam profile at each pixel location
                     profile = np.interp(self.lat_pos[i], self.profile[:,0], self.profile[:,1]) / 100  
                     dose_corr = dose * profile
                     self.doses_corr[:,i] = dose_corr
@@ -491,6 +460,7 @@ class LUT:
             self.channel_B = arr[order,:,2]
             
             # Replace uncalibrated regions with median values of calibrated pixels
+            # This will be used to compute dose outside of calibrated region, but films should never be placed there.
             for i in range(nDose):
                 self.channel_mean[i,np.where(self.calibrated == 0)] = np.median(self.channel_mean[i,np.where(self.calibrated == 1)])
                 self.channel_R[i,np.where(self.calibrated == 0)] = np.median(self.channel_R[i,np.where(self.calibrated == 1)])
@@ -571,8 +541,8 @@ class LUT:
         """ Plots the LUT calibration curves.
             
             mode: str ('mean', 'all' or 'both')
-                  Defines wether to plot mean curves over all pixels, plot 
-                  a single curve for each pixel, or both.
+                  Defines wether to plot mean curves over all pixels, plot a single curve for each pixel, or both.
+                  Only applies when lateral correction is used.
         """
         if ax is None:
             plt.figure()
@@ -581,9 +551,7 @@ class LUT:
             if mode == 'all' or mode == 'both':
                 x = np.mean(self.doses_corr, axis=-1)
                 mean = self.channel_mean
-                R = self.channel_R
-                G = self.channel_G
-                B = self.channel_B
+                R, G, B = self.channel_R, self.channel_G, self.channel_B
                 ax.plot(x,mean,color=(0.6,0.6,0.6),linewidth=1)
                 ax.plot(x,R,color=(1,0.6,0.6),linewidth=1)
                 ax.plot(x,G,color=(0.6,1,0.6),linewidth=1)
@@ -591,22 +559,30 @@ class LUT:
             if mode == 'mean' or mode == 'both':
                 x = np.mean(self.doses_corr, axis=-1)
                 mean = np.mean(self.channel_mean, axis=-1)
-                R = np.mean(self.channel_R, axis=-1)
-                G = np.mean(self.channel_G, axis=-1)
-                B = np.mean(self.channel_B, axis=-1)
+                R, G, B = np.mean(self.channel_R, axis=-1), np.mean(self.channel_G, axis=-1), np.mean(self.channel_B, axis=-1)
                 ax.plot(x,mean,'k', x,R,'r', x,G,'g', x,B,'b', linewidth=3.0)
         else:
             x = self.doses_corr
             mean = self.channel_mean
-            R = self.channel_R
-            G = self.channel_G
-            B = self.channel_B
+            R, G, B = self.channel_R, self.channel_G, self.channel_B
             ax.plot(x,mean,'k', x,R,'r', x,G,'g', x,B,'b', linewidth=3.0)
         ax.set_title('Calibration curves')
         ax.set_xlabel('Dose (cGy)')
         ax.set_ylabel('Normalized pixel value')
             
     def plot_fit(self, ax=None, i=None, show_derivative=False, fit_type='rational', k=3, ext=3, s=0):
+        """ Plots the fitted function curve.
+
+            show_derivative : boolean
+                In addition to the function curve, the first derivative of the function is displayed.
+
+            fit_type : 'rational' or 'spline'
+                Determines the type of function used for fitting.
+                'rational' : y = -c + b/(x-a)
+                'spline' : Uses the function UnivariateSpline from scipy.interpolate
+                           'k', 'ext', and 's' are parameters to the UnivariateSpline
+        """
+
         colors = ['k','r','g','b']
         if i is None:
             i = randint(0,self.npixel)
@@ -849,28 +825,10 @@ class LUT:
 
 ########################### End class LUT ############################## 
 
-
-def get_profiler(file):
-    """ Load an ICProfler txt file and return the profile over the diagonal
-        for the maximum field size. If films were not exposed over the beam
-        diagonal, this should be changed here.
-    """
-    with open(file, 'r') as f:
-      reader = csv.reader(f,delimiter='\t')
-      content = list(reader)    
-    string = ['Detector ID', 'Positive Diagonal Position(cm)', 'Set 1']
-    line = content.index(string)
-    profile = np.empty((len(content[line+1:]), 2))  
-    for i in range(len(content[line+1:])):
-        profile[i,0] = float(content[i+line+1][1].replace(',','.')) * 10 # Change from cm to mm  and change sign to correspond to img orientation.
-        profile[i,1] = float(content[i+line+1][2].replace(',','.'))      
-    return profile
-
 def get_profile(file):
     """ Load tab seperated txt file containing the position and relative profile value.
-        First column should be a position, given in mm.
+        First column should be a position, given in mm, with 0 being at center.
         Second column is the measured profile relative value [%], normalised to 100 in the center.
-        Position is relative to scanner center, starting negative from pixel 0.
     """
     with open(file, 'r') as f:
       reader = csv.reader(f,delimiter='\t')
@@ -889,6 +847,8 @@ def save_lut_array(arr, filename):
     np.save(filename, arr)
     
 def load_lut(filename):
+    """ Load a saved LUT file.
+    """
     print("Loading LUT file {}...".format(filename))
     try:
         file = bz2.open(filename, 'rb')
@@ -900,6 +860,13 @@ def load_lut(filename):
     return lut
 
 def save_lut(lut, filename, use_compression=True):
+    """ Save a LUT to file.
+
+        filename : str
+            Complete path to file
+        use_compression : boolean
+            Wether or not to use bz2 compression to reduce file size
+    """
     print("Saving LUT file as {}...".format(filename))
     if use_compression:
         file = bz2.open(filename, 'wb')
