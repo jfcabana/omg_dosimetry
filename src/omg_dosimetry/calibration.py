@@ -195,8 +195,14 @@ class LUT:
             self.select_film()
 
     @staticmethod
-    def run_demo() -> None:
-        """Run the LUT demo by loading the demo images and print results."""
+    def run_demo(film_detect = True) -> None:
+        """Run the LUT demo by loading the demo images and print results.
+        
+        Parameters
+        ----------
+        film_detect : bool
+            True to attempt automatic film detection, or False to make a manual selection.
+        """
 
         info = dict(author = 'Demo Physicist',
             unit = 'Demo Linac',
@@ -227,7 +233,7 @@ class LUT:
                                                                 # or path to a text file containing the shape profile
 
         ### Film detection
-        film_detect = False      ## True to attempt automatic film detection, or False to make a manual selection
+        
         crop_top_bottom = 650   ## If film_detect = True: Number of pixels to crop in the top and bottom of the image.
                                 # May be required for auto-detection if the glass on the scanner is preventing detection
         roi_size = 'auto'       ## If film_detect = True: 'auto' to define the size of the ROIs according to the films,
@@ -350,10 +356,9 @@ class LUT:
         self.roi_ymin, self.roi_ymax = [], []
         self.roi_width, self.roi_length = [], []
         
-        plt.ion()
         plt.figure()
         ax = plt.gca()  
-        self.img.plot(ax=ax)  
+        self.img.plot(ax=ax, show = False)  
         ax.plot((0,self.img.shape[1]),(self.img.center.y,self.img.center.y),'k--')
         ax.set_xlim(0, self.img.shape[1])
         ax.set_ylim(self.img.shape[0],0)
@@ -380,14 +385,14 @@ class LUT:
         self.rs = RectangleSelector(ax, select_box, useblit=True, button=[1], minspanx=5, minspany=5, spancoords='pixels', interactive=True)
         plt.gcf().canvas.mpl_connect('key_press_event', self.press_enter)
         self.wait = True
-        while self.wait:
+        plt.show()  
+        while self.wait:    # This while is ejecuted only in interactive mode. press_enter changes self.wait to False 
             plt.pause(5)
         
     def press_enter(self, event):
         """ Continue LUT creation when ''enter'' is pressed. """
         
         if event.key == 'enter':
-            plt.ioff()
             plt.close(plt.gcf())
             del self.rs
             self.get_rois()
