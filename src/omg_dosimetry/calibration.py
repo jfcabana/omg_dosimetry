@@ -519,13 +519,13 @@ class LUT:
         ax.set_ylabel('Channel value')
         ax.set_title('Scanned films peaks profile')
             
-    def plot_roi(self, ax=None):      
+    def plot_roi(self, ax=None, show=False):      
         """ Plots the scanned films image overlaid by the ROIs.
         """
         if ax is None:
             plt.figure()
             ax = plt.gca()
-        self.img.plot(ax=ax)  
+        self.img.plot(ax=ax, show=show)  
 
         for i in range(self.nfilm):
             p = plt.Rectangle( (self.roi_xmin[i],self.roi_ymin[i]), self.roi_width[i], self.roi_length[i], color='r', fill=False ) 
@@ -643,7 +643,7 @@ class LUT:
         """ Display a summary of the results.
         """
         fig = plt.figure(figsize=(8, 8))
-        plt.ion()
+        fig.suptitle('Close this to continue...', fontsize=10)
         if self.lateral_correction:
             ax1 = plt.subplot2grid((3, 6), (0, 0), colspan=3)
             ax2 = plt.subplot2grid((3, 6), (0, 3), colspan=3)
