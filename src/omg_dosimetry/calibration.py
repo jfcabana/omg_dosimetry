@@ -42,6 +42,7 @@ from pathlib import Path
 import webbrowser
 from .imageRGB import load, load_folder, stack_images
 import bz2
+from .i_o import retrieve_demo_file
 
 class LUT:
     """ Class for performing gafchromic calibration.
@@ -192,7 +193,68 @@ class LUT:
             self.detect_film()                              
         else:                           # or select ROI manually  
             self.select_film()
+
+    @staticmethod
+    def run_demo(film_detect = True) -> None:
+        """Run the LUT demo by loading the demo images and print results.
         
+        Parameters
+        ----------
+        film_detect : bool
+            True to attempt automatic film detection, or False to make a manual selection.
+        """
+
+        info = dict(author = 'Demo Physicist',
+            unit = 'Demo Linac',
+            film_lot = 'XD_1',
+            scanner_id = 'Epson 72000XL',
+            date_exposed = '2023-01-24 16h',
+            date_scanned = '2023-01-25 16h',
+            wait_time = '24 hours',
+            notes = 'Transmission mode, @300ppp and 16 bits/channel'
+           )
+        
+        # Download demo tif files and save it on demo_files folder.
+        retrieve_demo_file("C14_calib-18h-1_001.tif")
+        retrieve_demo_file("C14_calib-18h-2_001.tif")
+
+        demo_path = Path(__file__).parent / "demo_files"       # Folder containing scanned images
+        outname = 'Demo_calib'                                 ## Name of the calibration file to produce
+
+        #%% Set calibration parameters
+        #### Dose
+        doses = [0.0, 100.0, 200.0, 400.0, 650.0, 950.0]      ## Nominal doses [cGy] imparted to the films
+        output = 1.0                                          ## If necessary, correction for the daily output of the machine
+
+        ### Lateral correction
+        lateral_correction = True                             ## True to perform a calibration with lateral correction of the scanner (requires long strips of film)
+                                                                # or False for calibration without lateral correction
+        beam_profile = retrieve_demo_file("BeamProfile.txt")  ## None to not correct for the shape of the dose profile,
+                                                                # or path to a text file containing the shape profile
+
+        ### Film detection
+        
+        crop_top_bottom = 650   ## If film_detect = True: Number of pixels to crop in the top and bottom of the image.
+                                # May be required for auto-detection if the glass on the scanner is preventing detection
+        roi_size = 'auto'       ## If film_detect = True: 'auto' to define the size of the ROIs according to the films,
+                                # or [width, height] (mm) to define a fixed size.
+        roi_crop = 3            ## If film_detect = True and roi_size = 'auto': Margin size [mm] to apply on each side
+                                # films to define the ROI.
+
+        ### Image filtering
+        filt = 3                ## Median filter kernel size to apply on images for noise reduction
+
+        #%% Produce the LUT
+        lut = LUT(path=demo_path, doses=doses, output=output, lateral_correction=lateral_correction, beam_profile=beam_profile,
+                                film_detect=film_detect, roi_size=roi_size, roi_crop=roi_crop, filt=filt, info=info, crop_top_bottom = crop_top_bottom)
+
+        #%% View results and save LUT
+        #LUT.plot_roi()  # To display films and ROIs used for calibration
+        #LUT.plot_fit()  # To display a plot of the calibration curve and the fitted algebraic function
+        lut.publish_pdf(filename=os.path.join(demo_path, outname +'_report.pdf'), open_file=True)            # Generate a PDF report
+        save_lut(lut, filename=os.path.join(demo_path, outname + '.pkl'), use_compression=True)  # Save the LUT file. use_compression allows a reduction  
+                                                                                                        # in file size by a factor of ~10, but slows down the operation.
+
     def load_images(self,path,filt):
         """ Load all images in a folder. Average multiple copies of same image
             together and stack multiple scans side-by-side.
@@ -296,7 +358,7 @@ class LUT:
         
         plt.figure()
         ax = plt.gca()  
-        self.img.plot(ax=ax)  
+        self.img.plot(ax=ax, show = False)  
         ax.plot((0,self.img.shape[1]),(self.img.center.y,self.img.center.y),'k--')
         ax.set_xlim(0, self.img.shape[1])
         ax.set_ylim(self.img.shape[0],0)
@@ -323,7 +385,8 @@ class LUT:
         self.rs = RectangleSelector(ax, select_box, useblit=True, button=[1], minspanx=5, minspany=5, spancoords='pixels', interactive=True)
         plt.gcf().canvas.mpl_connect('key_press_event', self.press_enter)
         self.wait = True
-        while self.wait:
+        plt.show()  
+        while self.wait:    # This while is ejecuted only in interactive mode. press_enter changes self.wait to False 
             plt.pause(5)
         
     def press_enter(self, event):
@@ -456,13 +519,13 @@ class LUT:
         ax.set_ylabel('Channel value')
         ax.set_title('Scanned films peaks profile')
             
-    def plot_roi(self, ax=None):      
+    def plot_roi(self, ax=None, show=False):      
         """ Plots the scanned films image overlaid by the ROIs.
         """
         if ax is None:
             plt.figure()
             ax = plt.gca()
-        self.img.plot(ax=ax)  
+        self.img.plot(ax=ax, show=show)  
 
         for i in range(self.nfilm):
             p = plt.Rectangle( (self.roi_xmin[i],self.roi_ymin[i]), self.roi_width[i], self.roi_length[i], color='r', fill=False ) 
@@ -580,6 +643,7 @@ class LUT:
         """ Display a summary of the results.
         """
         fig = plt.figure(figsize=(8, 8))
+        fig.suptitle('Close this to continue...', fontsize=10)
         if self.lateral_correction:
             ax1 = plt.subplot2grid((3, 6), (0, 0), colspan=3)
             ax2 = plt.subplot2grid((3, 6), (0, 3), colspan=3)
@@ -816,7 +880,3 @@ def save_lut(lut, filename, use_compression=True):
     pickle.dump(lut, file, pickle.HIGHEST_PROTOCOL)
     file.close()
 
-
-
-
-         
