@@ -67,3 +67,6 @@ __pycache__/
 
 # Builded web page with sphinx
 docs/build
+
+# Demo files
+demo_files
