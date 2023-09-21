@@ -11,6 +11,10 @@ With OMG Dosimetry, you can easily perform film calibration, film-to-dose conver
 Demonstration files are provided for each module to get you started quickly. 
 Code is heavily commented so you can follow along and andapt it for your personnal usage.
 
+Documentation
+-------------
+
+To get started, install the package, view the API docs, visit the `Full Documentation <https://omg-dosimetry.readthedocs.io/en/latest/>`_ on Read The Docs.
 
 Gafchromic calibration module
 -----------------------------

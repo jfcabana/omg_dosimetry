@@ -6,14 +6,14 @@
 # -- Project information -----------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
-project = 'OMG dosimetry (beta)'
+project = 'OMG dosimetry'
 copyright = '2023, Jean-François Cabana and Luis Alfonso Olivares Jiménez'
 author = 'Jean-François Cabana and Luis Alfonso Olivares Jiménez'
 
 # The short X.Y version.
-version = "1.4"
+version = "1.5"
 # The full version, including alpha/beta/rc tags.
-release = "1.4.2"
+release = "1.5.0"
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
 
