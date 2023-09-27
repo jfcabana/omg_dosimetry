@@ -9,7 +9,7 @@ from datetime import datetime
 from io import BytesIO
 import os.path as osp
 import os
-import imageio
+import imageio.v3 as imageio
 
 import pydicom
 from pydicom.errors import InvalidDicomError
