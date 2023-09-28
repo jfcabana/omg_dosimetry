@@ -23,6 +23,7 @@ extensions = [
     'sphinx.ext.autosummary',
     'sphinx.ext.napoleon',
     'sphinx_copybutton',
+    "matplotlib.sphinxext.plot_directive",
 ]
 
 templates_path = ['_templates']

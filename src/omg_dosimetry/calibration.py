@@ -20,8 +20,8 @@ Features:
 - Save/Load LUt files
 - Publish PDF report
     
-Written by Jean-Francois Cabana, copyright 2018
-version 2023-07-25
+Written by Jean-Francois Cabana and Luis Alfonso Olivares Jimenez, copyright 2018
+version 2023-09-27
 """
 
 from pylinac.core.profile import SingleProfile
@@ -60,15 +60,15 @@ class LUT:
             by taking the median values over the ROIs, instead of one LUT for each scanner pixel.
             
     LUT.channel_mean: 2D array of size (nDoses, nPixel)
-                      Contains the average RGB value for each dose, at each pixel location.
+        Contains the average RGB value for each dose, at each pixel location.
     LUT.channel_R:    2D array of size (nDoses, nPixel)
-                      Contains the Red channel value for each dose, at each pixel location.
+        Contains the Red channel value for each dose, at each pixel location.
     LUT.channel_G:    2D array of size (nDoses, nPixel)
-                      Contains the Gren channel value for each dose, at each pixel location.
+        Contains the Gren channel value for each dose, at each pixel location.
     LUT.channel_B:    2D array of size (nDoses, nPixel)
-                      Contains the Blue channel value for each dose, at each pixel location.
+        Contains the Blue channel value for each dose, at each pixel location.
     LUT.doses_corr:   2D array of size (nDoses, nPixel)
-                      Contains the output and beam profile corrected doses, at each pixel location.
+        Contains the output and beam profile corrected doses, at each pixel location.
 
     Attributes
     ----------
@@ -125,8 +125,7 @@ class LUT:
     film_detect : boolean
         Define if automatic film position detection is performed.
         
-        True:  The film positions on the image are detected automatically,
-               by finding peaks in the longitudinal and lateral directions.
+        True:  The film positions on the image are detected automatically, by finding peaks in the longitudinal and lateral directions.
         False: The user must manually draw the ROIs over the films.
         
     roi_size : str ('auto') or list of floats ([width, length])
@@ -135,7 +134,7 @@ class LUT:
         
         'auto': The ROIs are defined automatically by the detected film strips.
         [width, length]: Size (in mm) of the ROIs. The ROIs are set to a fixed
-                         size at the center of the detected film strips.
+        size at the center of the detected film strips.
                 
     roi_crop : float
         Margins [mm] to apply to the detected film to define the ROIs.
@@ -251,9 +250,10 @@ class LUT:
         #%% View results and save LUT
         #LUT.plot_roi()  # To display films and ROIs used for calibration
         #LUT.plot_fit()  # To display a plot of the calibration curve and the fitted algebraic function
-        lut.publish_pdf(filename=os.path.join(demo_path, outname +'_report.pdf'), open_file=True)            # Generate a PDF report
+        #lut.publish_pdf(filename=os.path.join(demo_path, outname +'_report.pdf'), open_file=True)            # Generate a PDF report
         save_lut(lut, filename=os.path.join(demo_path, outname + '.pkl'), use_compression=True)  # Save the LUT file. use_compression allows a reduction  
                                                                                                         # in file size by a factor of ~10, but slows down the operation.
+        lut.show_results(io.BytesIO())
 
     def load_images(self,path,filt):
         """ Load all images in a folder. Average multiple copies of same image
@@ -585,7 +585,7 @@ class LUT:
                 Determines the type of function used for fitting.
                 'rational' : y = -c + b/(x-a)
                 'spline' : Uses the function UnivariateSpline from scipy.interpolate
-                           'k', 'ext', and 's' are parameters to the UnivariateSpline
+                'k', 'ext', and 's' are parameters to the UnivariateSpline
         """
 
         colors = ['k','r','g','b']
@@ -643,7 +643,7 @@ class LUT:
         """ Display a summary of the results.
         """
         fig = plt.figure(figsize=(8, 8))
-        fig.suptitle('Close this to continue...', fontsize=10)
+        fig.suptitle('Close this figure to continue...', fontsize=10)
         if self.lateral_correction:
             ax1 = plt.subplot2grid((3, 6), (0, 0), colspan=3)
             ax2 = plt.subplot2grid((3, 6), (0, 3), colspan=3)
@@ -854,6 +854,7 @@ def save_lut_array(arr, filename):
 def load_lut(filename):
     """ Load a saved LUT file.
     """
+
     print("Loading LUT file {}...".format(filename))
     try:
         file = bz2.open(filename, 'rb')
@@ -872,6 +873,7 @@ def save_lut(lut, filename, use_compression=True):
         use_compression : boolean
             Wether or not to use bz2 compression to reduce file size
     """
+    
     print("Saving LUT file as {}...".format(filename))
     if use_compression:
         file = bz2.open(filename, 'wb')

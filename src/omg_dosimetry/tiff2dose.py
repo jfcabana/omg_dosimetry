@@ -13,8 +13,7 @@ Features:
     - Lateral scanner response is accounted for if this feature was turned on during calibration
     - Calibration curves interpolation performed by fitting either a rational function or spline curve
     - Output individual channels dose (R/G/B), as well as optimized dose, mean channel dose and average dose
-    - Output metrics for evaluation of dose conversion quality:
-         disturbance map, residual error, consistency map
+    - Output metrics for evaluation of dose conversion quality: disturbance map, residual error, consistency map
     - Publish PDF report
         
 Written by Jean-Francois Cabana, copyright 2018
@@ -52,6 +51,7 @@ class Gaf:
 
     Attributes
     ----------
+
     path : str
         File path of scanned tif images of film to convert to dose.
         Multiple scans of the same films should be named (someName)_00x.tif
@@ -59,7 +59,7 @@ class Gaf:
 
     lut_file : str
         File path to LUT film to use for dose conversion.
-    
+
     img_filt : int, optional
         Kernel size of median filter to apply to image before conversion to dose.
         Default is 0.
@@ -72,10 +72,9 @@ class Gaf:
     fit_type : 'rational' or 'spline'
         Function type used for fitting calibration curve.
         Default is 'rational'.
+        If fit_type = "spline", the fitted function is UnivariateSpline from scipy.interpolate.
+        'k', 'ext', and 's' are parameters to pass to this function.
 
-    If fit_type = "spline", the fitted function is UnivariateSpline from scipy.interpolate.
-    'k', 'ext', and 's' are parameters to pass to this function.
-    
     k : int, optional
         Degree of the smoothing spline.  Must be 1 <= `k` <= 5.
         ``k = 3`` is a cubic spline. Default is 3.
@@ -83,7 +82,7 @@ class Gaf:
     s : float or None, optional
         Positive smoothing factor used to choose the number of knots.  Number
         of knots will be increased until the smoothing condition is satisfied::
-            sum((w[i] * (y[i]-spl(x[i])))**2, axis=0) <= s
+        sum((w[i] * (y[i]-spl(x[i])))**2, axis=0) <= s
         If `s` is None, ``s = len(w)`` which should be a good value if
         ``1/w[i]`` is an estimate of the standard deviation of ``y[i]``.
         If 0, spline will interpolate through all data points. Default is None.
@@ -114,7 +113,6 @@ class Gaf:
     rot90 : int, optional
         Number of 90 degrees rotations to apply to the image.
         Default is 0.
-
     """
 
     def __init__(self, path='', lut_file='', img_filt=0, lut_filt=35, fit_type='rational', k=3, ext=3, s=None, info=None, crop_edges=0, clip=None, rot90=0):   
@@ -151,6 +149,7 @@ class Gaf:
             If a directory contains scans of multiple films, then path should be a full path to a single image.
             Files sharing the same filename but ending with _00x in this directory are assumed to be scans of the same film and will be averaged together to increse SNR.
         """
+
         if os.path.isdir(path):
             folder = path
             files = os.listdir(folder)
@@ -288,6 +287,7 @@ class Gaf:
     def show_results(self):
         """ Display a figure with the different converted dose maps and metrics.
         """
+
         max_dose_m = np.percentile(self.dose_m.array,[99.9])[0].round(decimals=-1)
         max_dose_opt = np.percentile(self.dose_opt.array,[99.9])[0].round(decimals=-1)
         clim = [0, max(max_dose_m, max_dose_opt)]   
@@ -315,6 +315,7 @@ class Gaf:
         kwargs
             Keyword arguments are passed to plt.savefig().
         """
+        
         self.show_results()
         fig = plt.gcf()
         fig.savefig(filename)
@@ -339,6 +340,7 @@ class Gaf:
             Whether or not to open the PDF file after it is created.
             Default is False.
         """
+
         if filename is None:
             filename = os.path.join(self.path, 'Report.pdf')
         title='Film-to-Dose Report'
