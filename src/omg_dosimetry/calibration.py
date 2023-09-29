@@ -151,7 +151,7 @@ class LUT:
     """
 
     def __init__(self, path=None, doses=None, output=1.0, lateral_correction=False, beam_profile=None,
-                 filt=0, film_detect=True, roi_size='auto', roi_crop=2.0, info=None, crop_top_bottom=None):
+                 filt=3, film_detect=True, roi_size='auto', roi_crop=3.0, info=None, crop_top_bottom=None):
         
         if path is None:
             raise ValueError("You need to provide a path to a folder containing scanned calibration films!")
@@ -882,3 +882,9 @@ def save_lut(lut, filename, use_compression=True):
     pickle.dump(lut, file, pickle.HIGHEST_PROTOCOL)
     file.close()
 
+def from_demo_image() -> Path:
+    """Load the demo images and return the path to the content folder."""
+
+    img = retrieve_demo_file("C14_calib-18h-1_001.tif")
+    retrieve_demo_file("C14_calib-18h-2_001.tif")
+    return img.parent

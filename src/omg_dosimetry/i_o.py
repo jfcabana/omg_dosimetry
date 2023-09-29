@@ -23,7 +23,7 @@ def retrieve_demo_file(name: str, force: bool = False) -> Path:
         "BeamProfile.txt": r"https://raw.githubusercontent.com/jfcabana/omg_dosimetry/OMG_master/scripts/demo/files/calibration/"
         }
     
-    url = urls[name] + name #r"https://storage.googleapis.com/pylinac_demo_files/" + name
+    url = urls[name] + name
     demo_path = Path(__file__).parent / "demo_files" / name
     
     demo_dir = demo_path.parent
