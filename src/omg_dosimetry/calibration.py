@@ -12,13 +12,14 @@ To account for non-flat beam profiles, a text file containing the relative beam 
 Alternatively, the lateral scanner response correction can be turned off, then a single calibration curve is computed for all pixels. This simpler calibration is adequate if scanning only small films at a reproducible location on the scanner.
 
 Features:
-- Automatically loads multiple images in a folder, average multiple copies of same image and stack different scans together.
-- Automatically detect films position and size, and define ROIs inside these films.
-- Daily output correction
-- Beam profile correction
-- Lateral scanner response correction
-- Save/Load LUt files
-- Publish PDF report
+
+* Automatically loads multiple images in a folder, average multiple copies of same image and stack different scans together.
+* Automatically detect films position and size, and define ROIs inside these films.
+* Daily output correction
+* Beam profile correction
+* Lateral scanner response correction
+* Save/Load LUt files
+* Publish PDF report
     
 Written by Jean-Francois Cabana and Luis Alfonso Olivares Jimenez, copyright 2018
 version 2023-09-27

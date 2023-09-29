@@ -18,7 +18,7 @@ To run the demo, import the main class and run the demo method:
 
     from omg_dosimetry import LUT
 
-    LUT.run_demo()
+    #LUT.run_demo()
 
 Usage
 -----
@@ -61,7 +61,6 @@ To display films and ROIs used for calibration
 
 .. code-block:: python
 
-    lut = LUT(my_path, doses, crop_top_bottom = 650) # Crop needed because a glass on the scanner
     lut.plot_roi(show = True)
 
 .. plot::
