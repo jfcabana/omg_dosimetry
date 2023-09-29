@@ -18,7 +18,7 @@ Features:
 * Daily output correction
 * Beam profile correction
 * Lateral scanner response correction
-* Save/Load LUt files
+* Save/Load LUT files
 * Publish PDF report
     
 Written by Jean-Francois Cabana and Luis Alfonso Olivares Jimenez, copyright 2018
@@ -48,7 +48,8 @@ from .i_o import retrieve_demo_file
 class LUT:
     """ Class for performing gafchromic calibration.
     
-    Usage : LUT = calibration.LUT(path='path/to/scanned/tiff/images', doses=[dose1, dose2, ...])
+    Attributes
+    ----------
             
     LUT.lut: numpy array
         When lateral correction is applied:
@@ -71,89 +72,105 @@ class LUT:
     LUT.doses_corr:   2D array of size (nDoses, nPixel)
         Contains the output and beam profile corrected doses, at each pixel location.
 
-    Attributes
-    ----------
-    path : str
-        Path to folder containing scanned tif images of calibration films.
-        Multiple scans of the same films should be named (someName)_00x.tif
-        These files will be averaged together to increase SNR.
-        Files with different basename ('someName1_00x.tif', 'someName2_00x.tif', ...)
-        will be stacked side by side. This is to allow scanning films seperately,
-        either because they don't fit on the scanner bed all at once, or to have
-        the films scanned at the same location to mitigate scanner response inhomogeneities.
-        
-    doses : list of floats
-        List of nominal doses values that were delivered on the films.
-        
-    output : float
-        Daily output factor when films were exposed.
-        Doses will be corrected as : doses_corr = doses * output
+    Example
+    -------
 
-    lateral_correction : boolean
-        Define if lateral scanner response correction is applied.
-        True: A LUT is computed for every pixel in the scanner lateral direction
-        False: A single LUT is computed for the scanner.
-        
-        As currently implemented, lateral correction is performed by exposing
-        long strips of calibration films with a large uniform field. By scanning
-        the strips perpendicular to the scanner direction, a LUT is computed
-        for each pixel in the scanner lateral direction. If this method is
-        used, it is recommended that beam profile correction be applied also,
-        so as to remove the contribution of beam inhomogeneity.
-        
-    beam_profile : str
-        Full path to beam profile text file that will be used to correct the doses at each pixel position.
-
-        The text file has to be tab seperated containing the position and relative profile value.
-        First column should be a position, given in mm, with 0 being at center.
-        Second column should be the measured profile relative value [%], normalised to 100 in the center.
-        
-        Corrected doses are defined as dose_corr(y) = dose * profile(y),
-        where profile(y) is the beam profile, normalized to 100% at beam center
-        axis, which is assumed to be aligned with scanner center.
-        
-        If set to 'None', the beam profile is assumed to be flat.
-        
-    filt : int (must be odd)
-        If filt > 0, a median filter of size (filt,filt) is applied to 
-        each channel of the scanned image prior to LUT creation.
-        
-        This feature might affect the automatic detection of film strips if
-        they are not separated by a large enough gap. In this case, you can
-        either use manual ROIs selection, or apply filtering to the LUT during
-        the conversion to dose (see tiff2dose module).
-        
-    film_detect : boolean
-        Define if automatic film position detection is performed.
-        
-        True:  The film positions on the image are detected automatically, by finding peaks in the longitudinal and lateral directions.
-        False: The user must manually draw the ROIs over the films.
-        
-    roi_size : str ('auto') or list of floats ([width, length])
-        Define the size of the region of interest over the calibration films.
-        Used only when film_detect is set 'auto'. 
-        
-        'auto': The ROIs are defined automatically by the detected film strips.
-        [width, length]: Size (in mm) of the ROIs. The ROIs are set to a fixed
-        size at the center of the detected film strips.
-                
-    roi_crop : float
-        Margins [mm] to apply to the detected film to define the ROIs.
-        Used only when both film_detect and roi_size are set to 'auto'.
-
-    crop_top_bottom : float
-        Number of pixels to crop in the top and bottom of the image.
-        Used only when film_detect is set 'auto'. 
-        May be required for correct detection of films if a glass plate is placed on top of the films and is preventing detection.
-
-    info : dictionary
-        Used to store information about the calibration that will be shown on the calibration report.
-        key:value pairs must include "author", "unit", "film_lot", "scanner_id", date_exposed", "date_scanned", "wait_time", "notes"
+    lut = calibration.LUT(path='path/to/scanned/tiff/images', doses=[dose1, dose2, ...])
     """
 
-    def __init__(self, path=None, doses=None, output=1.0, lateral_correction=False, beam_profile=None,
-                 filt=3, film_detect=True, roi_size='auto', roi_crop=3.0, info=None, crop_top_bottom=None):
-        
+    def __init__(
+            self, 
+            path=None, 
+            doses=None, 
+            output=1.0, 
+            lateral_correction=False, 
+            beam_profile=None,
+            filt=3, 
+            film_detect=True, 
+            roi_size='auto', 
+            roi_crop=3.0, 
+            info=None, 
+            crop_top_bottom=None
+            ):
+        """
+        path : str
+            Path to folder containing scanned tif images of calibration films.
+            Multiple scans of the same films should be named (someName)_00x.tif
+            These files will be averaged together to increase SNR.
+            Files with different basename ('someName1_00x.tif', 'someName2_00x.tif', ...)
+            will be stacked side by side. This is to allow scanning films seperately,
+            either because they don't fit on the scanner bed all at once, or to have
+            the films scanned at the same location to mitigate scanner response inhomogeneities.
+            
+        doses : list of floats
+            List of nominal doses values that were delivered on the films.
+            
+        output : float
+            Daily output factor when films were exposed.
+            Doses will be corrected as : doses_corr = doses * output
+
+        lateral_correction : boolean
+            Define if lateral scanner response correction is applied.
+            True: A LUT is computed for every pixel in the scanner lateral direction
+            False: A single LUT is computed for the scanner.
+            
+            As currently implemented, lateral correction is performed by exposing
+            long strips of calibration films with a large uniform field. By scanning
+            the strips perpendicular to the scanner direction, a LUT is computed
+            for each pixel in the scanner lateral direction. If this method is
+            used, it is recommended that beam profile correction be applied also,
+            so as to remove the contribution of beam inhomogeneity.
+            
+        beam_profile : str
+            Full path to beam profile text file that will be used to correct the doses at each pixel position.
+
+            The text file has to be tab seperated containing the position and relative profile value.
+            First column should be a position, given in mm, with 0 being at center.
+            Second column should be the measured profile relative value [%], normalised to 100 in the center.
+            
+            Corrected doses are defined as dose_corr(y) = dose * profile(y),
+            where profile(y) is the beam profile, normalized to 100% at beam center
+            axis, which is assumed to be aligned with scanner center.
+            
+            If set to 'None', the beam profile is assumed to be flat.
+            
+        filt : int (must be odd)
+            If filt > 0, a median filter of size (filt,filt) is applied to 
+            each channel of the scanned image prior to LUT creation.
+            
+            This feature might affect the automatic detection of film strips if
+            they are not separated by a large enough gap. In this case, you can
+            either use manual ROIs selection, or apply filtering to the LUT during
+            the conversion to dose (see tiff2dose module).
+            
+        film_detect : boolean
+            Define if automatic film position detection is performed.
+            
+            True:  The film positions on the image are detected automatically, by finding peaks in the longitudinal and lateral directions.
+            False: The user must manually draw the ROIs over the films.
+            
+        roi_size : str ('auto') or list of floats ([width, length])
+            Define the size of the region of interest over the calibration films.
+            Used only when film_detect is set 'auto'. 
+            
+            'auto': The ROIs are defined automatically by the detected film strips.
+            [width, length]: Size (in mm) of the ROIs. The ROIs are set to a fixed
+            size at the center of the detected film strips.
+                    
+        roi_crop : float
+            Margins [mm] to apply to the detected film to define the ROIs.
+            Used only when both film_detect and roi_size are set to 'auto'.
+
+        crop_top_bottom : float
+            Number of pixels to crop in the top and bottom of the image.
+            Used only when film_detect is set 'auto'. 
+            May be required for correct detection of films if a glass plate is placed on top of the films and is preventing detection.
+
+        info : dictionary
+            Used to store information about the calibration that will be shown on the calibration report.
+            key:value pairs must include "author", "unit", "film_lot", "scanner_id", date_exposed", "date_scanned", "wait_time", "notes"
+        """
+
         if path is None:
             raise ValueError("You need to provide a path to a folder containing scanned calibration films!")
         if doses is None:

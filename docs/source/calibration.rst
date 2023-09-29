@@ -98,7 +98,119 @@ To display a plot of the calibration curve and the fitted algebraic function
 Analyze Options
 ---------------
 
-Define general information and set the folder containing **scanned images**
+Set calibration parameters
+==========================
+
+.. code-block:: python
+
+    from omg_dosimetry import LUT
+
+    lut = LUT(
+        path = my_path, 
+        doses = doses, 
+        output = output, 
+        lateral_correction = lateral_correction, 
+        beam_profile = beam_profile,
+        film_detect = film_detect, 
+        roi_size = roi_size, 
+        roi_crop = roi_crop, 
+        filt = filt, 
+        info = info, 
+        crop_top_bottom = crop_top_bottom
+        )
+
+Daily output factor
+^^^^^^^^^^^^^^^^^^^
+
+Daily output factor could be acounted for when films were exposed. Doses will be corrected as 
+doses_corrected = doses * output
+
+.. code-block:: python
+ 
+    from omg_dosimetry import LUT
+
+    lut = LUT(..., output = 1)                           
+
+Lateral correction
+^^^^^^^^^^^^^^^^^^
+
+Define if lateral scanner response correction is applied.
+
+* **True**: A LUT is computed for every pixel in the scanner lateral direction
+* **False**: A single LUT is computed for the scanner.
+
+.. code-block:: python
+
+    from omg_dosimetry import LUT
+
+    lut = LUT(..., lateral_correction = True)
+
+Beam profile correction 
+^^^^^^^^^^^^^^^^^^^^^^^
+
+**None** to not correct for the shape of the dose profile, 
+or path to a text file containing the shape profile
+
+.. code-block:: python
+
+    from omg_dosimetry import LUT
+
+    lut = LUT(..., beam_profile = Path(my_path, "BeamProfile.txt"))
+
+
+Film detection
+^^^^^^^^^^^^^^
+
+Define automatic o manual film detection
+
+.. code-block:: python
+
+    lut = LUT(..., film_detect = True)
+
+Crop
+^^^^
+
+If film_detect = True: Number of pixels to crop in the top and bottom of the image.
+May be required for auto-detection if the glass on the scanner is preventing detection
+
+.. code-block:: python
+
+    lut = LUT(..., crop_top_bottom = 650)
+
+ROI size
+^^^^^^^^
+
+Define the size of the region of interest over the calibration films.
+If film_detect = True: 'auto' to define the size of the ROIs according to the films,
+or [width, height] (mm) to define a fixed size.
+
+.. code-block:: python
+
+    lut = LUT(..., roi_size = 'auto')
+
+ROI crop
+^^^^^^^^
+
+If film_detect = True and roi_size = 'auto': Margin size [mm] to apply on each side
+films to define the ROI.
+
+.. code-block:: python
+
+    lut = LUT(..., roi_crop = 3)
+
+Filtering
+^^^^^^^^^
+
+For image filtering, median filter kernel size to apply on images for noise reduction.
+
+.. code-block:: python
+
+    lut = LUT(..., filt = 3)
+
+Metadata
+^^^^^^^^
+
+Define general information
 
 .. code-block:: python
 
@@ -111,65 +223,8 @@ Define general information and set the folder containing **scanned images**
                 wait_time = '24 hours',
                 notes = 'Transmission mode, @300ppp and 16 bits/channel'
             )
-    ## Name of the calibration file to produce
-    outname = "Demo_calib"  
-    ## Working directory
-    my_path = Path(r"C:/my/folder")
-
-Set calibration parameters
-
-.. code-block:: python
-
-    ## Nominal doses [cGy] imparted to the films
-    doses = [0.0, 100.0, 200.0, 400.0, 650.0, 950.0]
-    ## If necessary, correction for the daily output of the machine  
-    output = 1.0                                        
-
-
-
-    ### Lateral correction
-    lateral_correction = True   ## True to perform a calibration with lateral correction of the scanner (requires long strips of film)
-                                ## or False for calibration without lateral correction
-
-    beam_profile = Path(my_path, "BeamProfile.txt")  ## None to not correct for the shape of the dose profile,
-                                                         # or path to a text file containing the shape profile
-
-Define automatic o manual film detection
-
-.. code-block:: python
-
-    film_detect = True      ## True to attempt automatic film detection, or False to make a manual selection
-    crop_top_bottom = 650   ## If film_detect = True: Number of pixels to crop in the top and bottom of the image.
-                            # May be required for auto-detection if the glass on the scanner is preventing detection
-    roi_size = 'auto'       ## If film_detect = True: 'auto' to define the size of the ROIs according to the films,
-                            # or [width, height] (mm) to define a fixed size.
-    roi_crop = 3            ## If film_detect = True and roi_size = 'auto': Margin size [mm] to apply on each side
-                            # films to define the ROI.
-
-Image filtering
-
-.. code-block:: python
-
-    filt = 3                ## Median filter kernel size to apply on images for noise reduction
-
-Produce the LUT
-
-.. code-block:: python
-
-    lut = LUT(
-        path=path_scan, 
-        doses=doses, 
-        output=output, 
-        lateral_correction=lateral_correction, 
-        beam_profile=beam_profile,
-        film_detect=film_detect, 
-        roi_size=roi_size, 
-        roi_crop=roi_crop, 
-        filt=filt, 
-        info=info, 
-        crop_top_bottom = crop_top_bottom
-        )
-
+    
+    lut = LUT(..., info = info)
 
 API Documentation
 -----------------
