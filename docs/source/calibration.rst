@@ -95,32 +95,12 @@ To display a plot of the calibration curve and the fitted algebraic function
     lut.plot_fit()
     plt.show()
 
-Analyze Options
----------------
 
 Set calibration parameters
-==========================
-
-.. code-block:: python
-
-    from omg_dosimetry import LUT
-
-    lut = LUT(
-        path = my_path, 
-        doses = doses, 
-        output = output, 
-        lateral_correction = lateral_correction, 
-        beam_profile = beam_profile,
-        film_detect = film_detect, 
-        roi_size = roi_size, 
-        roi_crop = roi_crop, 
-        filt = filt, 
-        info = info, 
-        crop_top_bottom = crop_top_bottom
-        )
+--------------------------
 
 Daily output factor
-^^^^^^^^^^^^^^^^^^^
+===================
 
 Daily output factor could be acounted for when films were exposed. Doses will be corrected as 
 doses_corrected = doses * output
@@ -132,7 +112,7 @@ doses_corrected = doses * output
     lut = LUT(..., output = 1)                           
 
 Lateral correction
-^^^^^^^^^^^^^^^^^^
+==================
 
 Define if lateral scanner response correction is applied.
 
@@ -146,7 +126,7 @@ Define if lateral scanner response correction is applied.
     lut = LUT(..., lateral_correction = True)
 
 Beam profile correction 
-^^^^^^^^^^^^^^^^^^^^^^^
+=======================
 
 **None** to not correct for the shape of the dose profile, 
 or path to a text file containing the shape profile
@@ -159,7 +139,7 @@ or path to a text file containing the shape profile
 
 
 Film detection
-^^^^^^^^^^^^^^
+==============
 
 Define automatic o manual film detection
 
@@ -168,7 +148,7 @@ Define automatic o manual film detection
     lut = LUT(..., film_detect = True)
 
 Crop
-^^^^
+====
 
 If film_detect = True: Number of pixels to crop in the top and bottom of the image.
 May be required for auto-detection if the glass on the scanner is preventing detection
@@ -178,7 +158,7 @@ May be required for auto-detection if the glass on the scanner is preventing det
     lut = LUT(..., crop_top_bottom = 650)
 
 ROI size
-^^^^^^^^
+========
 
 Define the size of the region of interest over the calibration films.
 If film_detect = True: 'auto' to define the size of the ROIs according to the films,
@@ -189,7 +169,7 @@ or [width, height] (mm) to define a fixed size.
     lut = LUT(..., roi_size = 'auto')
 
 ROI crop
-^^^^^^^^
+========
 
 If film_detect = True and roi_size = 'auto': Margin size [mm] to apply on each side
 films to define the ROI.
@@ -199,7 +179,7 @@ films to define the ROI.
     lut = LUT(..., roi_crop = 3)
 
 Filtering
-^^^^^^^^^
+=========
 
 For image filtering, median filter kernel size to apply on images for noise reduction.
 
@@ -208,7 +188,7 @@ For image filtering, median filter kernel size to apply on images for noise redu
     lut = LUT(..., filt = 3)
 
 Metadata
-^^^^^^^^
+========
 
 Define general information
 
@@ -229,10 +209,8 @@ Define general information
 API Documentation
 -----------------
 
-Main classes
-============
-
-These are the classes a typical user may interface with.
+LUT class
+==========
 
 .. autoclass:: omg_dosimetry.calibration.LUT
     :members:
