@@ -93,6 +93,10 @@ class LUT:
             crop_top_bottom=None
             ):
         """
+
+        Parameters
+        ----------
+        
         path : str
             Path to folder containing scanned tif images of calibration films.
             Multiple scans of the same films should be named (someName)_00x.tif
