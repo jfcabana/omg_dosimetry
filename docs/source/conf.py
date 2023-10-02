@@ -13,7 +13,7 @@ author = 'Jean-François Cabana and Luis Alfonso Olivares Jiménez'
 # The short X.Y version.
 version = "1.5"
 # The full version, including alpha/beta/rc tags.
-release = "1.5.4.1"
+release = "1.5.5"
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
 

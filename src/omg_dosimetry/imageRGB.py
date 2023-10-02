@@ -922,7 +922,7 @@ class FileImage(BaseImage):
         """
         Parameters
         ----------
-        path : str, file-object
+        path : A filename (string), pathlib.Path object or a file object.
             The path to the file or a data stream.
         dpi : int, float
             The dots-per-inch of the image, defined at isocenter.
@@ -937,7 +937,7 @@ class FileImage(BaseImage):
         if path is None:
             pass
         else:
-            print('Loading: ' + path)
+            print('Loading: ' + str(path))
             super().__init__(path)
             pil_image = pImage.open(path)
             array = imageio.imread(path)

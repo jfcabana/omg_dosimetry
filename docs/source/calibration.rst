@@ -18,7 +18,7 @@ To run the demo, import the main class and run the demo method:
 
     from omg_dosimetry import LUT
 
-    #LUT.run_demo()
+    LUT.run_demo()
 
 Usage
 -----
@@ -44,24 +44,21 @@ If you don't have an image you can load the demo images:
 
 .. code-block:: python
 
-    #from omg_dosimetry import calibration
-    from omg_dosimetry.i_o import retrieve_demo_file
-    img_path_1 = retrieve_demo_file("C14_calib-18h-1_001.tif")
-    img_path_2 = retrieve_demo_file("C14_calib-18h-2_001.tif")
-    my_path = img_path_1.parent
-    #my_path = calibration.from_demo_image()
+    from omg_dosimetry import calibration
+    my_path = calibration.from_demo_image()
 
 Produce the LUT
 
 .. code-block:: python
 
-    lut = LUT(my_path, doses, crop_top_bottom = 650) # Crop needed because a glass on the scanner
+    lut = LUT(my_path, doses, crop_top_bottom = 650) # Crop needed because an unwanted border
 
 To display films and ROIs used for calibration
 
 .. code-block:: python
 
-    lut.plot_roi(show = True)
+    lut.plot_roi()
+    plt.show()
 
 .. plot::
 
@@ -99,6 +96,8 @@ To display a plot of the calibration curve and the fitted algebraic function
 Set calibration parameters
 --------------------------
 
+For a detalied description see :class:`~omg_dosimetry.calibration.LUT` class.
+
 Daily output factor
 ===================
 
@@ -128,8 +127,9 @@ Define if lateral scanner response correction is applied.
 Beam profile correction 
 =======================
 
-**None** to not correct for the shape of the dose profile, 
-or path to a text file containing the shape profile
+None to not correct for the shape of the dose profile, or path to a text file containing the shape profile
+(position and relative profile value). Data in the first column should be position, given in mm, with 0 being at center.
+Second column should be the measured profile relative value [%], normalised to 100 in the center.
 
 .. code-block:: python
 
