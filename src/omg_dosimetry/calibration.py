@@ -12,13 +12,14 @@ To account for non-flat beam profiles, a text file containing the relative beam 
 Alternatively, the lateral scanner response correction can be turned off, then a single calibration curve is computed for all pixels. This simpler calibration is adequate if scanning only small films at a reproducible location on the scanner.
 
 Features:
-- Automatically loads multiple images in a folder, average multiple copies of same image and stack different scans together.
-- Automatically detect films position and size, and define ROIs inside these films.
-- Daily output correction
-- Beam profile correction
-- Lateral scanner response correction
-- Save/Load LUt files
-- Publish PDF report
+
+* Automatically loads multiple images in a folder, average multiple copies of same image and stack different scans together.
+* Automatically detect films position and size, and define ROIs inside these films.
+* Daily output correction
+* Beam profile correction
+* Lateral scanner response correction
+* Save/Load LUT files
+* Publish PDF report
     
 Written by Jean-Francois Cabana and Luis Alfonso Olivares Jimenez, copyright 2018
 version 2023-09-27
@@ -45,114 +46,131 @@ import bz2
 from .i_o import retrieve_demo_file
 
 class LUT:
-    """ Class for performing gafchromic calibration.
+    """
+    Class for performing gafchromic calibration.
     
-    Usage : LUT = calibration.LUT(path='path/to/scanned/tiff/images', doses=[dose1, dose2, ...])
-            
-    LUT.lut: numpy array
-        When lateral correction is applied:
-            3D array of size (nDoses, nPixel, 6), where nDoses is the number of calibration doses used,
-            nPixel is the number of pixels in the lateral scanner direction, and the last dimension contains
-            [doses, output/profile corrected doses, mean channel, R channel, G channel, B channel].
-            
-        Without lateral correct:
-            2D array of size (nDoses, 6), defined as above, except that a single LUT is stored
-            by taking the median values over the ROIs, instead of one LUT for each scanner pixel.
-            
-    LUT.channel_mean: 2D array of size (nDoses, nPixel)
-        Contains the average RGB value for each dose, at each pixel location.
-    LUT.channel_R:    2D array of size (nDoses, nPixel)
-        Contains the Red channel value for each dose, at each pixel location.
-    LUT.channel_G:    2D array of size (nDoses, nPixel)
-        Contains the Gren channel value for each dose, at each pixel location.
-    LUT.channel_B:    2D array of size (nDoses, nPixel)
-        Contains the Blue channel value for each dose, at each pixel location.
-    LUT.doses_corr:   2D array of size (nDoses, nPixel)
-        Contains the output and beam profile corrected doses, at each pixel location.
-
-    Attributes
+    Parameters
     ----------
+
     path : str
         Path to folder containing scanned tif images of calibration films.
         Multiple scans of the same films should be named (someName)_00x.tif
         These files will be averaged together to increase SNR.
+
         Files with different basename ('someName1_00x.tif', 'someName2_00x.tif', ...)
         will be stacked side by side. This is to allow scanning films seperately,
         either because they don't fit on the scanner bed all at once, or to have
         the films scanned at the same location to mitigate scanner response inhomogeneities.
-        
+
     doses : list of floats
         List of nominal doses values that were delivered on the films.
-        
+
     output : float
         Daily output factor when films were exposed.
-        Doses will be corrected as : doses_corr = doses * output
+        Doses will be corrected as: doses_corr = doses * output
 
     lateral_correction : boolean
         Define if lateral scanner response correction is applied.
         True: A LUT is computed for every pixel in the scanner lateral direction
         False: A single LUT is computed for the scanner.
-        
+
         As currently implemented, lateral correction is performed by exposing
         long strips of calibration films with a large uniform field. By scanning
         the strips perpendicular to the scanner direction, a LUT is computed
         for each pixel in the scanner lateral direction. If this method is
         used, it is recommended that beam profile correction be applied also,
         so as to remove the contribution of beam inhomogeneity.
-        
+
     beam_profile : str
         Full path to beam profile text file that will be used to correct the doses at each pixel position.
-
         The text file has to be tab seperated containing the position and relative profile value.
         First column should be a position, given in mm, with 0 being at center.
+
         Second column should be the measured profile relative value [%], normalised to 100 in the center.
-        
         Corrected doses are defined as dose_corr(y) = dose * profile(y),
         where profile(y) is the beam profile, normalized to 100% at beam center
         axis, which is assumed to be aligned with scanner center.
-        
+
         If set to 'None', the beam profile is assumed to be flat.
-        
+
     filt : int (must be odd)
         If filt > 0, a median filter of size (filt,filt) is applied to 
-        each channel of the scanned image prior to LUT creation.
-        
+        each channel of the scanned image prior to LUT creation.            
         This feature might affect the automatic detection of film strips if
         they are not separated by a large enough gap. In this case, you can
         either use manual ROIs selection, or apply filtering to the LUT during
         the conversion to dose (see tiff2dose module).
-        
+
     film_detect : boolean
         Define if automatic film position detection is performed.
-        
         True:  The film positions on the image are detected automatically, by finding peaks in the longitudinal and lateral directions.
         False: The user must manually draw the ROIs over the films.
-        
+
     roi_size : str ('auto') or list of floats ([width, length])
         Define the size of the region of interest over the calibration films.
-        Used only when film_detect is set 'auto'. 
-        
+        Used only when film_detect is set 'auto'.
+
         'auto': The ROIs are defined automatically by the detected film strips.
+
         [width, length]: Size (in mm) of the ROIs. The ROIs are set to a fixed
         size at the center of the detected film strips.
-                
+
     roi_crop : float
         Margins [mm] to apply to the detected film to define the ROIs.
         Used only when both film_detect and roi_size are set to 'auto'.
 
     crop_top_bottom : float
         Number of pixels to crop in the top and bottom of the image.
-        Used only when film_detect is set 'auto'. 
+        Used only when film_detect is set 'auto'.
+
         May be required for correct detection of films if a glass plate is placed on top of the films and is preventing detection.
 
     info : dictionary
         Used to store information about the calibration that will be shown on the calibration report.
-        key:value pairs must include "author", "unit", "film_lot", "scanner_id", date_exposed", "date_scanned", "wait_time", "notes"
+        key: value pairs must include "author", "unit", "film_lot", "scanner_id", date_exposed", "date_scanned", "wait_time", "notes"
+
+    Attributes
+    ----------
+            
+    LUT.lut : numpy array
+        When lateral correction is applied:
+
+        3D array of size (nDoses, nPixel, 6), where nDoses is the number of calibration doses used,
+        nPixel is the number of pixels in the lateral scanner direction, and the last dimension contains
+        [doses, output/profile corrected doses, mean channel, R channel, G channel, B channel].
+        Without lateral correct:
+        
+        2D array of size (nDoses, 6), defined as above, except that a single LUT is stored
+        by taking the median values over the ROIs, instead of one LUT for each scanner pixel.
+    LUT.channel_mean : 2D array of size (nDoses, nPixel)
+        Contains the average RGB value for each dose, at each pixel location.
+    LUT.channel_R : 2D array of size (nDoses, nPixel)
+        Contains the Red channel value for each dose, at each pixel location.
+    LUT.channel_G : 2D array of size (nDoses, nPixel)
+        Contains the Gren channel value for each dose, at each pixel location.
+    LUT.channel_B : 2D array of size (nDoses, nPixel)
+        Contains the Blue channel value for each dose, at each pixel location.
+    LUT.doses_corr : 2D array of size (nDoses, nPixel)
+        Contains the output and beam profile corrected doses, at each pixel location.
     """
 
-    def __init__(self, path=None, doses=None, output=1.0, lateral_correction=False, beam_profile=None,
-                 filt=0, film_detect=True, roi_size='auto', roi_crop=2.0, info=None, crop_top_bottom=None):
-        
+    def __init__(
+        self, 
+        path=None, 
+        doses=None, 
+        output=1.0, 
+        lateral_correction=False, 
+        beam_profile=None,
+        filt=3, 
+        film_detect=True, 
+        roi_size='auto', 
+        roi_crop=3.0, 
+        info=None, 
+        crop_top_bottom=None
+        ):
+        """Initializer.
+        """
+
         if path is None:
             raise ValueError("You need to provide a path to a folder containing scanned calibration films!")
         if doses is None:
@@ -882,3 +900,9 @@ def save_lut(lut, filename, use_compression=True):
     pickle.dump(lut, file, pickle.HIGHEST_PROTOCOL)
     file.close()
 
+def from_demo_image() -> Path:
+    """Load the demo images and return the path to the content folder."""
+
+    img = retrieve_demo_file("C14_calib-18h-1_001.tif")
+    retrieve_demo_file("C14_calib-18h-2_001.tif")
+    return img.parent
