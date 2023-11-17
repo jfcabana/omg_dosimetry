@@ -22,7 +22,8 @@ Features:
 * Publish PDF report
     
 Written by Jean-Francois Cabana and Luis Alfonso Olivares Jimenez, copyright 2018
-version 2023-09-27
+Modified by Peter Truong (CISSSO)
+version 2023-11-17
 """
 
 from pylinac.core.profile import SingleProfile
@@ -472,6 +473,8 @@ class LUT:
                     dose = self.doses_corr[:,i]
                     # interpolate beam profile at each pixel location
                     profile = np.interp(self.lat_pos[i], self.profile[:,0], self.profile[:,1]) / 100  
+                    # profile = np.interp(self.lat_pos[i], self.profile[:,0], self.profile[:,1])  # If already converted (Eclipse case)
+                    
                     dose_corr = dose * profile
                     self.doses_corr[:,i] = dose_corr
             
@@ -657,7 +660,7 @@ class LUT:
                 ax1.plot(ydata,xdata,'o',color=colors[j-2])
                 ax1.plot(y,x,color=colors[j-2])  
         
-    def show_results(self, savefile):
+    def show_results(self, savefile = None):
         """ Display a summary of the results.
         """
         fig = plt.figure(figsize=(8, 8))
@@ -675,7 +678,7 @@ class LUT:
             self.plot_fit(i='mean', ax=ax3)
             self.plot_lateral_response(ax=(ax4,ax5,ax6))
             fig.tight_layout()
-            plt.savefig(savefile)
+            if savefile: plt.savefig(savefile)
             plt.show()
         else:
             ax1 = plt.subplot2grid((3, 2), (0, 0))
@@ -688,7 +691,7 @@ class LUT:
             ax3.set_xlabel('Dose (cGy)')
             ax3.set_ylabel('Normalized pixel value')
             fig.tight_layout()
-            plt.savefig(savefile)
+            if savefile: plt.savefig(savefile)
             plt.show()
  
     def plot_beam_profile(self, ax=None):
@@ -862,6 +865,20 @@ def get_profile(file):
         profile[i,1] = float(content[i][1].replace(',','.')) 
     profile = profile[profile[:, 0].argsort()]
     return profile
+
+# def get_profile(file):
+#     """ Adjustment for profile taken/formatted from Eclipse/CISSSO"""
+#     with open(file, "r") as f:
+#         reader = csv.reader(f, delimiter = "\t")
+#         profile = list(reader)
+#         profile[0][0] = profile[0][0][3:]       # Remove ï»¿ (BOM: Byte Order Mark)
+    
+#     ### Convert String to Float
+#     for i in range(0, len(profile)):
+#         profile[i][0] = float(profile[i][0]) * 10   # Convert cm to mm
+#         profile[i][1] = float(profile[i][1]) / 100  # Convert from percentage
+        
+#     return profile
         
 def load_lut_array(filename):
     return np.load(filename)
