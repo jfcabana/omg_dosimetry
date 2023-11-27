@@ -720,7 +720,7 @@ class DoseAnalysis():
         fig, ((ax1,ax2),(ax3,ax4),(ax5,ax6)) = plt.subplots(3,2, figsize=(10, 8))
         fig.tight_layout()
         axes = [ax1,ax2,ax3,ax4,ax5,ax6]
-        fig.canvas.set_window_title("Facteur{:.2f}_Filtre{}_Gamma{}%-{}mm".format(self.film_dose_factor, self.film_filt, self.doseTA, self.distTA))
+        fig.canvas.manager.set_window_title("Facteur{:.2f}_Filtre{}_Gamma{}%-{}mm".format(self.film_dose_factor, self.film_filt, self.doseTA, self.distTA))
         
         max_dose_comp = np.percentile(self.ref_dose.array,[98])[0].round(decimals=-1)
         clim = [0, max_dose_comp]   
@@ -829,7 +829,7 @@ class DoseAnalysis():
         plt.show()
         
         self.wait = True
-        while self.wait: plt.pause(5)
+        while self.wait: plt.pause(5)   # To consider 1 second vs. 5 seconds
         plt.close(self.fig)  # Before with self.rs=RectangleSelector(drawtype='box')... This would help close object instance (avoids extra figure instances open)
         return
         
