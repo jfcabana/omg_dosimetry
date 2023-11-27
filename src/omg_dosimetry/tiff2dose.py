@@ -17,7 +17,7 @@ Features:
     - Publish PDF report
         
 Written by Jean-Francois Cabana, copyright 2018
-version 2023-07-27
+Edit par Peter Truong: 2023-10-05
 """
 
 import os
@@ -298,11 +298,12 @@ class Gaf:
         self.dose_b.plotCB(ax3,clim=clim, title='Blue channel dose')
         self.dose_m.plotCB(ax4,clim=clim, title='Mean channel dose')
         self.dose_rg.plotCB(ax5,clim=clim, title='Red+Green Average dose')
-        self.dose_consistency.plotCB(ax6, cmap='gray', title='Consistency')
+        self.dose_consistency.plotCB(ax6, clim = [0, np.percentile(self.dose_consistency.array, [99.5])[0]], cmap='gray', title='Consistency')
         self.dose_opt.plotCB(ax7,clim=clim, title='Multichannel optimized dose')
-        self.dose_opt_delta.plotCB(ax8, cmap='gray', title='Disturbance')
-        self.dose_opt_RE.plotCB(ax9, cmap='gray', title='Residuals')
-
+        self.dose_opt_delta.plotCB(ax8, clim = [np.percentile(self.dose_opt_delta.array, [0.5])[0], 
+                                                np.percentile(self.dose_opt_delta.array, [99.5])[0]], cmap='gray', title='Disturbance')
+        self.dose_opt_RE.plotCB(ax9, clim = [0, np.percentile(self.dose_opt_RE.array, [99.5])[0]], cmap='gray', title='Residuals')
+        
         fig.tight_layout()
         
     def save_analyzed_image(self, filename, **kwargs):
@@ -315,7 +316,6 @@ class Gaf:
         kwargs
             Keyword arguments are passed to plt.savefig().
         """
-        
         self.show_results()
         fig = plt.gcf()
         fig.savefig(filename)
@@ -340,7 +340,6 @@ class Gaf:
             Whether or not to open the PDF file after it is created.
             Default is False.
         """
-
         if filename is None:
             filename = os.path.join(self.path, 'Report.pdf')
         title='Film-to-Dose Report'
