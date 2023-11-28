@@ -179,7 +179,7 @@ class DoseAnalysis():
         self.cid = self.fig.canvas.mpl_connect('key_press_event', self.apply_factor_from_roi_press_enter)
         
         self.wait = True
-        while self.wait: plt.pause(5)   # To consider 1 second vs. 5 seconds
+        while self.wait: plt.pause(1)   # To consider 1 second vs. 5 seconds
         plt.close(self.fig)  # Before with self.rs=RectangleSelector(drawtype='box')... This would help close object instance (avoids extra figure instances open)
         return
 
@@ -225,7 +225,9 @@ class DoseAnalysis():
         self.fig.canvas.mpl_connect('button_press_event', self.onclick_norm)
         self.cid = self.fig.canvas.mpl_connect('key_press_event', self.apply_factor_from_roi_press_enter)         
         self.wait = True
-        while self.wait: plt.pause(5)
+        while self.wait: plt.pause(1)   # To consider 1 second vs. 5 seconds
+        plt.close(self.fig)
+        return
             
     def onclick_norm(self, event):
         ax = plt.gca()
@@ -265,7 +267,7 @@ class DoseAnalysis():
         self.rs = RectangleSelector(ax, select_box, useblit=True, button=[1], minspanx=5, minspany=5, spancoords='pixels', interactive=True)  
         self.cid = self.fig.canvas.mpl_connect('key_press_event', self.crop_film_press_enter)
         self.wait = True
-        while self.wait: plt.pause(5)      # To consider 1 second vs. 5 seconds
+        while self.wait: plt.pause(1)      # To consider 1 second vs. 5 seconds
         plt.close(self.fig)  # Before with self.rs=RectangleSelector(drawtype='box')... This would help close object instance (avoids extra figure instances open)
         return
         
@@ -822,14 +824,14 @@ class DoseAnalysis():
         self.fig = plt.gcf()
         self.markers = []
         ax = plt.gca()
-        ax.set_title('Marker 1 =  ; Marker 2 =  ; Marker 3 =  ; Marker 4 =  ')
+        ax.set_title('Marker 1 = ; Marker 2 = ; Marker 3 = ; Marker 4 = ')
         self.fig.canvas.mpl_connect('button_press_event', self.onclick)
         self.cid = self.fig.canvas.mpl_connect('key_press_event', self.ontype)
-        cursor = Cursor(ax, useblit=True, color='white', linewidth=1)
+        plt.cursor = Cursor(ax, useblit=True, color='white', linewidth=1)
         plt.show()
         
         self.wait = True
-        while self.wait: plt.pause(5)   # To consider 1 second vs. 5 seconds
+        while self.wait: plt.pause(1)  # To consider 1 second vs. 5 seconds
         plt.close(self.fig)  # Before with self.rs=RectangleSelector(drawtype='box')... This would help close object instance (avoids extra figure instances open)
         return
         
@@ -837,59 +839,67 @@ class DoseAnalysis():
         """ This function is called by self.select_markers() to set the markers
             coordinates when the mouse is double-cliked.
         """
-        ax = plt.gca()
-        if event.dblclick:
-            l = 20
+        if event.dblclick and len(self.markers) < 4: 
             self.markers.append([int(event.xdata), int(event.ydata)])
-            if len(self.markers)==1:
-                ax.plot((self.markers[0][0]-l,self.markers[0][0]+l),(self.markers[0][1],self.markers[0][1]),'w', linewidth=1)
-                ax.plot((self.markers[0][0],self.markers[0][0]),(self.markers[0][1]-l,self.markers[0][1]+l),'w', linewidth=1)
-                ax.set_title('Marker 1 = {}; Marker 2 =  ; Marker 3 =  ; Marker 4 =  '.format(self.markers[0]))
-            if len(self.markers)==2:
-                ax.plot((self.markers[1][0]-l,self.markers[1][0]+l),(self.markers[1][1],self.markers[1][1]),'w', linewidth=1)
-                ax.plot((self.markers[1][0],self.markers[1][0]),(self.markers[1][1]-l,self.markers[1][1]+l),'w', linewidth=1)
-                ax.set_title('Marker 1 = {}; Marker 2 = {}; Marker 3 =  ; Marker 4 =  '.format(self.markers[0], self.markers[1]))
-            if len(self.markers)==3:
-                ax.plot((self.markers[2][0]-l,self.markers[2][0]+l),(self.markers[2][1],self.markers[2][1]),'w', linewidth=1)
-                ax.plot((self.markers[2][0],self.markers[2][0]),(self.markers[2][1]-l,self.markers[2][1]+l),'w', linewidth=1)
-                ax.set_title('Marker 1 = {}; Marker 2 = {}; Marker 3 = {}; Marker 4 =  '.format(self.markers[0], self.markers[1], self.markers[2]))
-            if len(self.markers)==4:
-                ax.plot((self.markers[3][0]-l,self.markers[3][0]+l),(self.markers[3][1],self.markers[3][1]),'w', linewidth=1)
-                ax.plot((self.markers[3][0],self.markers[3][0]),(self.markers[3][1]-l,self.markers[3][1]+l),'w', linewidth=1)
-                ax.set_title('Marker 1 = {}; Marker 2 = {}; Marker 3 = {}; Marker 4 = {}'.format(self.markers[0], self.markers[1], self.markers[2], self.markers[3]))
-            plt.gcf().canvas.draw_idle()
+            self.plot_markers()
+            
+    def plot_markers(self):
+        """ This function is called by self.onclick() and self.ontype() when 
+            self.markers need to be plotted onto figure
+        """
+        ax = plt.gca()
+        l = 20          # Length of crosshair/marker
+        for i in range(0, len(self.markers)):
+            ax.plot((self.markers[i][0]-l,self.markers[i][0]+l),(self.markers[i][1],self.markers[i][1]),'w', linewidth=1)
+            ax.plot((self.markers[i][0],self.markers[i][0]),(self.markers[i][1]-l,self.markers[i][1]+l),'w', linewidth=1)
+            if i == 0: ax.set_title('Marker 1 = {}; Marker 2 =  ; Marker 3 =  ; Marker 4 =  '.format(self.markers[0]))
+            elif i == 1: ax.set_title('Marker 1 = {}; Marker 2 = {}; Marker 3 =  ; Marker 4 =  '.format(self.markers[0], self.markers[1]))
+            elif i == 2: ax.set_title('Marker 1 = {}; Marker 2 = {}; Marker 3 = {}; Marker 4 =  '.format(self.markers[0], self.markers[1], self.markers[2]))
+            elif i == 3: ax.set_title('Marker 1 = {}; Marker 2 = {}; Marker 3 = {}; Marker 4 = {}'.format(self.markers[0], self.markers[1], self.markers[2], self.markers[3]))
+        plt.gcf().canvas.draw_idle()
         
     def ontype(self, event):
         """ This function is called by self.select_markers() to continue the registration
             process when "enter" is pressed on the keyboard.
         """
+        def reset_markers(reason = "change"):
+            """ This subfunction will reset self.markers and add marker text/title
+                to the figure
+            """
+            print('')
+            if reason == "change": print('Film dose array changed...')
+            elif reason == "less": print('{} markers were selected when 4 were expected...'.format(len(self.markers)))
+            print('Please start over...')
+            print('Please double-click on each marker. Press ''enter'' when done')
+            self.markers = []
+            ax.set_title('Marker 1 = ; Marker 2 = ; Marker 3 = ; Marker 4 = ')        
+            
         fig = plt.gcf()
         ax = plt.gca()
-        ax.clear()
         if event.key == 'right':
+            ax.clear()
             self.film_dose.array = np.rot90(self.film_dose.array, k=1)
             self.film_dose.plot(ax=ax)
+            reset_markers()
             fig.canvas.draw_idle()
-        if event.key == 'left':
+        elif event.key == 'left':
+            ax.clear()
             self.film_dose.array = np.fliplr(self.film_dose.array)
             self.film_dose.plot(ax=ax)
+            reset_markers()
             fig.canvas.draw_idle()
-        if event.key == 'up':
+        elif event.key == 'up':
+            ax.clear()
             self.film_dose.array = np.flipud(self.film_dose.array)
             self.film_dose.plot(ax=ax)
+            reset_markers()
             fig.canvas.draw_idle()
-        
-        if event.key == 'enter':
+        elif event.key == 'enter':
             if len(self.markers) != 4:
-                print('')
-                print('Please start over...')
-                print('{} markers were selected when 4 were expected...'.format(len(self.markers)))
-                print('Please double-click on each marker. Press ''enter'' when done')
-                self.markers = []
-                ax = plt.gca()
+                ax.clear()
                 self.film_dose.plot(ax=ax)
+                reset_markers("less")
                 fig.canvas.draw_idle()
-                ax.set_title('Marker 1 = ; Marker 2 = ; Marker 3 = ; Marker 4 = ')
             else:
                 self.fig.canvas.mpl_disconnect(self.cid)
                 # plt.close(self.fig)   # Closing too early before self.wait is done causes issues.
@@ -902,7 +912,7 @@ class DoseAnalysis():
                     self.film_dose.rotate(self.rot)
                 self.wait = False
                 # self.tune_registration()  # Better performed separately in register function (not reliant on event)
-                return
+            return
                 
     def move_iso_center(self):
         """ Register the film dose and reference dose by moving the reference
@@ -1035,7 +1045,7 @@ class DoseAnalysis():
         self.show_registration(ax=ax)
 
         self.wait = True
-        while self.wait: plt.pause(5)   # To consider 1 second vs. 5 seconds
+        while self.wait: plt.pause(1)   # To consider 1 second vs. 5 seconds
         plt.close(self.fig)  # Before with self.rs=RectangleSelector(drawtype='box')... This would help close object instance (avoids extra figure instances open)
         return
         
@@ -1224,7 +1234,9 @@ class DoseAnalysis():
         self.fig = plt.gcf()
         self.cid = self.fig.canvas.mpl_connect('key_press_event', self.move_profile_ontype)
         self.wait = True
-        while self.wait: plt.pause(5)
+        while self.wait: plt.pause(1)   # To consider 1 second vs. 5 seconds
+        plt.close(self.fig)
+        return
                 
     def move_profile_ontype(self, event):
         """ This function is called by self.get_profile_offset()
@@ -1248,7 +1260,6 @@ class DoseAnalysis():
         
         if event.key == 'enter':
             self.fig.canvas.mpl_disconnect(self.cid)
-            plt.close(self.fig)
             self.wait = False
             return self.offset
 
