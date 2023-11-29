@@ -15,13 +15,12 @@ Features:
 Written by Jean-Francois Cabana
 Version 2023-07-27
 Written by Jean-Francois Cabana, copyright 2018
-Modified by Peter Truong: 2023-11-27
+Modified by Peter Truong: 2023-11-29
 """
 
 import numpy as np
 import scipy.ndimage.filters as spf
 import copy
-import matplotlib
 import matplotlib.pyplot as plt
 import os
 from pylinac.core.utilities import is_close
@@ -179,8 +178,8 @@ class DoseAnalysis():
         self.cid = self.fig.canvas.mpl_connect('key_press_event', self.apply_factor_from_roi_press_enter)
         
         self.wait = True
-        while self.wait: plt.pause(1)   # To consider 1 second vs. 5 seconds
-        plt.close(self.fig)  # Before with self.rs=RectangleSelector(drawtype='box')... This would help close object instance (avoids extra figure instances open)
+        while self.wait: plt.pause(1)
+        plt.close(self.fig)
         return
 
     def apply_factor_from_roi_press_enter(self, event):
@@ -199,7 +198,6 @@ class DoseAnalysis():
             
             if hasattr(self, "rs"): del self.rs                
             self.fig.canvas.mpl_disconnect(self.cid)
-            # plt.close(self.fig)   # Commented out as issue (outside of Spyder IDE) causes crash due to missing self.fig pointer/object
             self.wait = False
             return
 
@@ -225,7 +223,7 @@ class DoseAnalysis():
         self.fig.canvas.mpl_connect('button_press_event', self.onclick_norm)
         self.cid = self.fig.canvas.mpl_connect('key_press_event', self.apply_factor_from_roi_press_enter)         
         self.wait = True
-        while self.wait: plt.pause(1)   # To consider 1 second vs. 5 seconds
+        while self.wait: plt.pause(1)
         plt.close(self.fig)
         return
             
@@ -267,8 +265,8 @@ class DoseAnalysis():
         self.rs = RectangleSelector(ax, select_box, useblit=True, button=[1], minspanx=5, minspany=5, spancoords='pixels', interactive=True)  
         self.cid = self.fig.canvas.mpl_connect('key_press_event', self.crop_film_press_enter)
         self.wait = True
-        while self.wait: plt.pause(1)      # To consider 1 second vs. 5 seconds
-        plt.close(self.fig)  # Before with self.rs=RectangleSelector(drawtype='box')... This would help close object instance (avoids extra figure instances open)
+        while self.wait: plt.pause(1)
+        plt.close(self.fig)
         return
         
     def crop_film_press_enter(self, event):
@@ -285,7 +283,6 @@ class DoseAnalysis():
             self.film_dose.crop(bottom,'bottom')  
             
             self.fig.canvas.mpl_disconnect(self.cid)
-            # plt.close(self.fig)      # Commented out as issue (outside of Spyder IDE) causes crash due to missing self.fig pointer/object
             self.wait = False
             return
         
@@ -370,7 +367,7 @@ class DoseAnalysis():
     def computeGamma(self, doseTA=2, distTA=2, threshold=0.1, norm_val=None, local_gamma=False, max_gamma=None, random_subset=None):
         """Compute Gamma (using pymedphys.gamma) """
         print("Computing {}% {} mm Gamma...".format(doseTA, distTA))
-#       # error checking
+        # error checking
         if not is_close(self.film_dose.dpi, self.ref_dose.dpi, delta=3):
             raise AttributeError("The image DPIs to not match: {:.2f} vs. {:.2f}".format(self.film_dose.dpi, self.ref_dose.dpi))
         same_x = is_close(self.film_dose.shape[1], self.ref_dose.shape[1], delta=1.1)
@@ -400,16 +397,6 @@ class DoseAnalysis():
         
         # Compute the number of pixels to analyze
         if random_subset: random_subset = int(len(dose_reference[dose_reference >= threshold].flat) * random_subset)
-
-        # # set coordinates (convert pixel coordinates to mm [distTA units])    # Keeping for reference (CISSSO-Side)
-        # x, y = ref_dose.shape[0], ref_dose.shape[1]
-        # x_coord, y_coord =  list(range(0,x)), list(range(0,y)) 
-        # x_coord, y_coord = [pixel / self.ref_dose.dpmm for pixel in x_coord], [pixel / self.ref_dose.dpmm for pixel in y_coord]
-        # coords_reference, coords_evaluation = (x_coord, y_coord), (x_coord, y_coord)
-        
-        # # Gamma computation and set maps
-        # gamma = pymedphys.gamma(coords_reference, ref_dose.array, coords_evaluation, film_dose.array, doseTA, distTA, 
-        #                         threshold*100, local_gamma = local_gamma, max_gamma = 2.0)
         
         # Gamma computation and set maps
         gamma = pymedphys.gamma(axes_reference, dose_reference, axes_evaluation, dose_evaluation, doseTA, distTA, threshold*100,
@@ -649,7 +636,6 @@ class DoseAnalysis():
                 film_prof = film[position[1],:]
                 ref_prof = ref[position[1],:]
                 v_ligne = position[0]
-#            x_axis = (np.array(range(0, len(film_prof))) / self.film_dose.dpmm).tolist()
             
         elif profile == 'y':
             if position is None:
@@ -659,8 +645,7 @@ class DoseAnalysis():
             else: 
                 film_prof = film[:,position[0]]
                 ref_prof = ref[:,position[0]]
-                v_ligne = position[1]
-#            x_axis = (np.array(range(0, len(film_prof))) / self.film_dose.dpmm).tolist()            
+                v_ligne = position[1]           
         
         x_axis = np.array(range(0, len(film_prof))).tolist()
         y_max = max(np.concatenate((film_prof, ref_prof)))
@@ -680,7 +665,6 @@ class DoseAnalysis():
                 if profile == 'x': title='Profile horizontal (y={})'.format(position)
                 if profile == 'y': title='Profile vertical (x={})'.format(position)
         ax.set_title(title)
-#        ax.set_xlabel('Position (mm)')
         ax.set_xlabel('Pixel Position')
         ax.set_ylabel('Dose (cGy)')
         
@@ -707,17 +691,14 @@ class DoseAnalysis():
         film_fileName=os.path.basename(self.film_dose.path)
         ref_fileName=os.path.basename(self.ref_dose.path)
         
-        if x is None:
-            x = np.floor(self.ref_dose.shape[1] / 2).astype(int)
+        if x is None: self.prof_x = np.floor(self.ref_dose.shape[1] / 2).astype(int)
         elif x == 'max':
             a = np.unravel_index(self.ref_dose.array.argmax(), self.ref_dose.array.shape)
-            x = a[1]
-        if y is None:
-            y = np.floor(self.ref_dose.shape[0] / 2).astype(int)
+            self.prof_x = a[1]
+        if y is None: self.prof_y = np.floor(self.ref_dose.shape[0] / 2).astype(int)
         elif y == 'max':
-            if a is None:
-                a = np.unravel_index(self.ref_dose.array.argmax(), self.ref_dose.array.shape)
-            y = a[0]
+            if a is None: a = np.unravel_index(self.ref_dose.array.argmax(), self.ref_dose.array.shape)
+            self.prof_y = a[0]
          
         fig, ((ax1,ax2),(ax3,ax4),(ax5,ax6)) = plt.subplots(3,2, figsize=(10, 8))
         fig.tight_layout()
@@ -735,7 +716,7 @@ class DoseAnalysis():
         max_value = min(20, np.percentile(self.DiffMap.array,[99])[0].round(decimals=0))
         clim = [min_value, max_value]    
         self.RelError.plotCB(ax4, cmap='jet', clim=clim, title='Relative Error (%) (RMSE={:.2f})'.format(self.DiffMap.RMSE))
-        self.show_profiles(axes, x=x, y=y)
+        self.show_profiles(axes, x=self.prof_x, y=self.prof_y)
         
         fig.canvas.mpl_connect('button_press_event', lambda event: self.set_profile(event, axes))
         
@@ -761,22 +742,16 @@ class DoseAnalysis():
         """ This function is called by show_results to draw dose profiles
             on mouse click (if cursor is not set to zoom or pan).
         """
-        try:
-            zooming_panning = ( plt.gcf().canvas.cursor().shape() != 0 ) # 0 is the arrow, which means we are not zooming or panning.
-        except:
-            zooming_panning = False
-        if zooming_panning: 
-            return
-        if event.inaxes in axes[0:4]:
-            if event.button == 1:
-                x = int(event.xdata)
-                y = int(event.ydata)
-                self.show_profiles(axes,x=x, y=y)
-                plt.gcf().canvas.draw_idle()
-        # x = int(event.xdata)  # Keeping previous version for CISSSO application
-        # y = int(event.ydata)
-        # self.show_profiles(axes,x=x, y=y)
-        # plt.gcf().canvas.draw_idle()
+        if event.button == 1 and plt.gcf().canvas.cursor().shape() == 0:   # 0 is the arrow, which means we are not zooming or panning.
+            if event.inaxes in axes[0:4]:
+                self.prof_x = int(event.xdata)
+                self.prof_y = int(event.ydata)
+            elif event.inaxes == axes[4]: self.prof_x = int(event.xdata)
+            elif event.inaxes == axes[5]: self.prof_y = int(event.xdata)
+            
+            self.show_profiles(axes,x=self.prof_x, y=self.prof_y)    
+            plt.gcf().canvas.draw_idle()
+        else: print('Zoom/pan is currently selected.\nUnable to set profile when this tool has been selected.\n')
         
     def register(self, shift_x=0, shift_y=0, threshold=10, register_using_gradient=False, markers_center=None, rot=0):
         """ Starts the registration procedure between film and reference dose.
@@ -831,8 +806,8 @@ class DoseAnalysis():
         plt.show()
         
         self.wait = True
-        while self.wait: plt.pause(1)  # To consider 1 second vs. 5 seconds
-        plt.close(self.fig)  # Before with self.rs=RectangleSelector(drawtype='box')... This would help close object instance (avoids extra figure instances open)
+        while self.wait: plt.pause(1)
+        plt.close(self.fig)
         return
         
     def onclick(self, event):
@@ -895,23 +870,26 @@ class DoseAnalysis():
             reset_markers()
             fig.canvas.draw_idle()
         elif event.key == 'enter':
-            if len(self.markers) != 4:
+            if len(self.markers) == 0:
+                max_x = np.floor(self.film_dose.array.shape[1]).astype(int)
+                max_y = np.floor(self.film_dose.array.shape[0]).astype(int)
+                self.markers = [[max_x/2, 0], [max_x, max_y/2], [max_x/2, max_y], [0, max_y/2]]
+                print("No markers selected.\nCenter of film dose array selected for markers.\nAdjust registration.")
+            elif len(self.markers) != 4:
                 ax.clear()
                 self.film_dose.plot(ax=ax)
                 reset_markers("less")
                 fig.canvas.draw_idle()
-            else:
+            
+            for i in self.markers:
+                print(i)
+            if len(self.markers) == 4:    
                 self.fig.canvas.mpl_disconnect(self.cid)
-                # plt.close(self.fig)   # Closing too early before self.wait is done causes issues.
-                
                 self.move_iso_center()
                 self.remove_rotation()
-                if self.ref_dose is not None:
-                    self.apply_shifts_ref()
-                if self.rot:
-                    self.film_dose.rotate(self.rot)
+                if self.ref_dose is not None: self.apply_shifts_ref()
+                if self.rot: self.film_dose.rotate(self.rot)
                 self.wait = False
-                # self.tune_registration()  # Better performed separately in register function (not reliant on event)
             return
                 
     def move_iso_center(self):
@@ -982,8 +960,6 @@ class DoseAnalysis():
                 y_pos_mm = y_marker - y_corner
                 x0 = int(np.around(x_pos_mm * self.ref_dose.dpmm))
                 y0 = self.ref_dose.sizeY - int(np.around(y_pos_mm * self.ref_dose.dpmm))
-                # x0 = x_corner + (self.ref_dose.sizeX / 2 * self.ref_dose.metadata.PixelSpacing[0])        # Idea, but not working for Eclipse case
-                # y0 = y_corner - (self.ref_dose.sizeY / 2 * self.ref_dose.metadata.PixelSpacing[1])
 
             self.ref_dose.move_pixel_to_center(x0, y0)
 
@@ -1045,8 +1021,8 @@ class DoseAnalysis():
         self.show_registration(ax=ax)
 
         self.wait = True
-        while self.wait: plt.pause(1)   # To consider 1 second vs. 5 seconds
-        plt.close(self.fig)  # Before with self.rs=RectangleSelector(drawtype='box')... This would help close object instance (avoids extra figure instances open)
+        while self.wait: plt.pause(1)
+        plt.close(self.fig)
         return
         
     def show_registration(self, ax=None, cmap='bwr'):
@@ -1114,7 +1090,6 @@ class DoseAnalysis():
             fig.canvas.draw_idle()
         if event.key == 'enter':
             self.fig.canvas.mpl_disconnect(self.cid)
-            # plt.close(self.fig)   # Closing too early before self.wait is done causes issues.
             self.wait = False
             return
             
@@ -1234,7 +1209,7 @@ class DoseAnalysis():
         self.fig = plt.gcf()
         self.cid = self.fig.canvas.mpl_connect('key_press_event', self.move_profile_ontype)
         self.wait = True
-        while self.wait: plt.pause(1)   # To consider 1 second vs. 5 seconds
+        while self.wait: plt.pause(1)
         plt.close(self.fig)
         return
                 
