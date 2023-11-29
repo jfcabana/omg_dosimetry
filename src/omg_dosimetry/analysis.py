@@ -881,8 +881,6 @@ class DoseAnalysis():
                 reset_markers("less")
                 fig.canvas.draw_idle()
             
-            for i in self.markers:
-                print(i)
             if len(self.markers) == 4:    
                 self.fig.canvas.mpl_disconnect(self.cid)
                 self.move_iso_center()
@@ -962,7 +960,7 @@ class DoseAnalysis():
                 y0 = self.ref_dose.sizeY - int(np.around(y_pos_mm * self.ref_dose.dpmm))
 
             self.ref_dose.move_pixel_to_center(x0, y0)
-
+            
     def remove_rotation(self):
         """ Rotates the film around the center so that left/right
             and top/bottom markers are horizontally and vertically aligned.  
