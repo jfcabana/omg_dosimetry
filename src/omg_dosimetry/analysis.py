@@ -116,7 +116,7 @@ class DoseAnalysis():
         if film_dose_factor is not None:
             self.film_dose_factor = film_dose_factor
             self.film_dose.array = self.film_dose.array * self.film_dose_factor
-            print("\mApplied film normalisation factor = {}".format(self.film_dose_factor))
+            print("\nApplied film normalisation factor = {}".format(self.film_dose_factor))
 
     def apply_ref_factor(self, ref_dose_factor = None):
         """ Apply a normalisation factor to reference dose. """
