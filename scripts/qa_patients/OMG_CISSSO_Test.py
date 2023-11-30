@@ -105,7 +105,8 @@ def main():
     else: path_normFilm = None
     ### Reference Eclipse Dose Plan File Selection
     path_doseEclipse = filedialog.askopenfilename(parent = root, title = "Select Reference Eclipse Dose Plan File", 
-                                                  filetypes = [("Eclipse Dose Plane DICOM File", ".dcm")])
+                                                  filetypes = [("Eclipse Dose Plane DICOM File", ".dcm")], 
+                                                  initialdir = os.path.dirname(os.path.dirname(path_scan)))
     if not path_doseEclipse:
         print("No image selected. Exiting Script... ")
         sys.exit()
@@ -173,7 +174,7 @@ def gamma_analysis(dose2analysis, filebase, path_analyse, doseTA = 3, distTA = 3
     filename = "{}_Facteur{:.2f}_Filtre{}_Gamma{}%-{}mm_report.pdf".format(filebase, 
                 dose2analysis.film_dose_factor, film_filt, doseTA, distTA)
     fileout = os.path.join(path_analyse, filename)
-    print("Analyse en cours...")
+    print("\nAnalyse en cours...")
     dose2analysis.gamma_analysis(doseTA = doseTA, distTA = distTA, threshold = threshold, norm_val = norm_val, 
                           film_filt = film_filt, local_gamma = False)
     print("")
