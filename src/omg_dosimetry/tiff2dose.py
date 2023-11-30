@@ -17,7 +17,8 @@ Features:
     - Publish PDF report
         
 Written by Jean-Francois Cabana, copyright 2018
-Edit par Peter Truong: 2023-10-05
+Modified by Peter Truong (CISSSO)
+Version: 2023-11-30
 """
 
 import os

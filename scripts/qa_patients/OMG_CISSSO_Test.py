@@ -4,7 +4,7 @@
 """
 __author__ = "Peter Truong"
 __contact__ = "petertruong.cissso@ssss.gouv.qc.ca"
-__version__ = "04 octobre 2023"
+__version__ = "27 novembre 2023"
 
 from omg_dosimetry import analysis, tiff2dose
 import os, sys, ctypes, pickle
@@ -19,11 +19,11 @@ plt.ion()           # Interactive Mode: ON
 
 ### Parameter Initialization
 info = dict(author = "PT", 
-            unit = "CL1", 
+            unit = "CL3", 
             film_lot = "EBT-3 C2",
             scanner_id = "Epson 10000XL", 
-            date_exposed = "2023-10-02",
-            date_scanned = "2023-10-03",
+            date_exposed = "2023-11-16",
+            date_scanned = "2023-11-17",
             wait_time = "24h", 
             notes = "Patient QA")
 
@@ -39,9 +39,9 @@ else: # Portrait Orientation
     # else: lut_file = (r"\\SVWCT2Out0455\Phys\Répertoires communs\Radiotherapie Externe\Film_QA\Calibration_LUT"
     #                   r"\2023-09-12 (C2 LatCor)\Sans LatCor\C2_3Gy_LUT_9MeV_2023-09-12.pkl")
     if LatCor: lut_file = (r"\\SVWCT2Out0455\Phys\Répertoires communs\Radiotherapie Externe\Film_QA"
-                           r"\379302 CRIC Test\2023-09-12 (C2 LatCor)\C2_3Gy_LUT_LatCor_9MeV_2023-09-12.pkl")
+                           r"\CRIC Testing\2023-09-12 (C2 LatCor)\C2_3Gy_LUT_LatCor_9MeV_2023-09-12.pkl")
     else: lut_file = (r"\\SVWCT2Out0455\Phys\Répertoires communs\Radiotherapie Externe\Film_QA"
-                      r"\379302 CRIC Test\2023-09-12 (C2 LatCor)\C2_3Gy_LUT_LatCor_9MeV_2023-09-12_sansLatCor.pkl")
+                      r"\CRIC Testing\2023-09-12 (C2 LatCor)\Sans LatCor\C2_3Gy_LUT_9MeV_2023-09-12.pkl")
     
 
 ### Tiff2Dose Parameters
@@ -52,8 +52,8 @@ else: rot_scan = 0
 
 ### Tiff2Analysis Parameters
 dose_2_analysis, dose_2_analysis_show_pdf = 1, 0
-analysis_publish_pdf = False
-pickle_save = False
+analysis_publish_pdf = True
+pickle_save = True
 crop_film = 1
 flipLR, flipUD = 1, 0
 rot90 = 0

@@ -23,7 +23,7 @@ Features:
     
 Written by Jean-Francois Cabana and Luis Alfonso Olivares Jimenez, copyright 2018
 Modified by Peter Truong (CISSSO)
-version 2023-11-17
+Version: 2023-11-30
 """
 
 from pylinac.core.profile import SingleProfile
@@ -472,8 +472,7 @@ class LUT:
                 for i in range(self.npixel):
                     dose = self.doses_corr[:,i]
                     # interpolate beam profile at each pixel location
-                    profile = np.interp(self.lat_pos[i], self.profile[:,0], self.profile[:,1]) / 100  
-                    # profile = np.interp(self.lat_pos[i], self.profile[:,0], self.profile[:,1])  # If already converted (Eclipse case)
+                    profile = np.interp(self.lat_pos[i], self.profile[:,0], self.profile[:,1]) / 100
                     
                     dose_corr = dose * profile
                     self.doses_corr[:,i] = dose_corr
@@ -865,20 +864,6 @@ def get_profile(file):
         profile[i,1] = float(content[i][1].replace(',','.')) 
     profile = profile[profile[:, 0].argsort()]
     return profile
-
-# def get_profile(file):
-#     """ Adjustment for profile taken/formatted from Eclipse/CISSSO"""
-#     with open(file, "r") as f:
-#         reader = csv.reader(f, delimiter = "\t")
-#         profile = list(reader)
-#         profile[0][0] = profile[0][0][3:]       # Remove ï»¿ (BOM: Byte Order Mark)
-    
-#     ### Convert String to Float
-#     for i in range(0, len(profile)):
-#         profile[i][0] = float(profile[i][0]) * 10   # Convert cm to mm
-#         profile[i][1] = float(profile[i][1]) / 100  # Convert from percentage
-        
-#     return profile
         
 def load_lut_array(filename):
     return np.load(filename)

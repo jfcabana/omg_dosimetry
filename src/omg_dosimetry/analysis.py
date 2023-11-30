@@ -12,10 +12,9 @@ Features:
       pass rate vs dose to agreement (fixed distance to agreement)
     - Publish PDF report
     
-Written by Jean-Francois Cabana
-Version 2023-07-27
 Written by Jean-Francois Cabana, copyright 2018
-Modified by Peter Truong: 2023-11-29
+Modified by Peter Truong (CISSSO)
+Version: 2023-11-30
 """
 
 import numpy as np
@@ -924,10 +923,8 @@ class DoseAnalysis():
             self.ref_dose.sizeX = self.ref_dose.metadata.Columns
             self.ref_dose.sizeY = self.ref_dose.metadata.Rows
             self.ref_dose.orientation = self.ref_dose.metadata.SeriesDescription
-            # self.ref_dose.orientation = self.ref_dose.metadata.ImageOrientationPatient      # Does not rely on description for orientation
 
             if 'Transversal' in self.ref_dose.orientation:
-            # if self.ref_dose.orientation == [1, 0, 0, 0, 1, 0]:
                 x_corner = self.ref_dose.position[0]
                 y_corner = -1.0 * self.ref_dose.position[1]
                 x_marker = self.markers_center[0]
@@ -938,7 +935,6 @@ class DoseAnalysis():
                 y0 = int(np.around(y_pos_mm * self.ref_dose.dpmm))
 
             if 'Sagittal' in self.ref_dose.orientation:
-            # if self.ref_dose.orientation == [0, -1, 0, 0, 0, -1]:
                 x_corner = -1.0 * self.ref_dose.position[1]
                 y_corner = self.ref_dose.position[2]
                 x_marker = self.markers_center[2]
@@ -949,7 +945,6 @@ class DoseAnalysis():
                 y0 = self.ref_dose.sizeY - int(np.around(y_pos_mm * self.ref_dose.dpmm))
 
             if 'Coronal' in self.ref_dose.orientation:
-            # if self.ref_dose.orientation == [1, 0, 0, 0, 0, -1]:
                 x_corner = self.ref_dose.position[0]
                 y_corner = self.ref_dose.position[2]
                 x_marker = self.markers_center[0]
