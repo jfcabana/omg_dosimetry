@@ -14,7 +14,7 @@ Features:
     
 Written by Jean-Francois Cabana, copyright 2018
 Modified by Peter Truong (CISSSO)
-Version: 2023-11-30
+Version: 2023-12-06
 """
 
 import numpy as np
@@ -669,7 +669,7 @@ class DoseAnalysis():
             diff_prof = film_prof - ref_prof
             ax.plot(x_axis, diff_prof,'g-', linewidth=2)
     
-    def show_results(self, fig=None, x=None, y=None):
+    def show_results(self, fig=None, x=None, y=None, show = True):
         """ Display an interactive figure showing the results of a gamma analysis.
             The figure contains 6 axis, which are, from left to right and top to bottom:
             Film dose, reference dose, gamma map, relative error, x profile and y profile.
@@ -716,6 +716,7 @@ class DoseAnalysis():
         self.show_profiles(axes, x=self.prof_x, y=self.prof_y)
         
         fig.canvas.mpl_connect('button_press_event', lambda event: self.set_profile(event, axes))
+        if show: plt.show()
         
     def show_profiles(self, axes, x, y):
         """ This function is called by show_results and set_profile to draw dose profiles
@@ -733,7 +734,6 @@ class DoseAnalysis():
             ax.plot((x,x),(0,self.ref_dose.shape[0]),'w--', linewidth=1)
             ax.plot((0,self.ref_dose.shape[1]),(y,y),'w--', linewidth=1)
         plt.multi = MultiCursor(None, (axes[0],axes[1],axes[2],axes[3]), color='r', lw=1, horizOn=True)
-        plt.show()
         
     def set_profile(self, event, axes):
         """ This function is called by show_results to draw dose profiles
@@ -748,7 +748,7 @@ class DoseAnalysis():
             
             self.show_profiles(axes,x=self.prof_x, y=self.prof_y)    
             plt.gcf().canvas.draw_idle()
-        else: print('\nZoom/pan is currently selected.\nUnable to set profile when this tool has been selected.')
+        else: print('\nZoom/pan is currently selected.\nNote: Unable to set profile when this tool is active.')
         
     def register(self, shift_x=0, shift_y=0, threshold=10, register_using_gradient=False, markers_center=None, rot=0):
         """ Starts the registration procedure between film and reference dose.
@@ -1106,7 +1106,7 @@ class DoseAnalysis():
         kwargs
             Keyword arguments are passed to plt.savefig().
         """
-        self.show_results(x=x, y=y)
+        self.show_results(x=x, y=y, **kwargs)
         fig = plt.gcf()
         fig.savefig(filename)
         plt.close(fig)
@@ -1162,7 +1162,7 @@ class DoseAnalysis():
                ]
         canvas.add_text(text=text, location=(1, 25), font_size=10)
         data = io.BytesIO()
-        self.save_analyzed_image(data, x=x, y=y)
+        self.save_analyzed_image(data, x=x, y=y, show = False)
         canvas.add_image(image_data=data, location=(0.5, 3), dimensions=(19, 19))
         
         canvas.add_new_page()

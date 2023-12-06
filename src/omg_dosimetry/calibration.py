@@ -23,7 +23,7 @@ Features:
     
 Written by Jean-Francois Cabana and Luis Alfonso Olivares Jimenez, copyright 2018
 Modified by Peter Truong (CISSSO)
-Version: 2023-11-30
+Version: 2023-12-06
 """
 
 from pylinac.core.profile import SingleProfile
@@ -272,7 +272,7 @@ class LUT:
         #lut.publish_pdf(filename=os.path.join(demo_path, outname +'_report.pdf'), open_file=True)            # Generate a PDF report
         save_lut(lut, filename=os.path.join(demo_path, outname + '.pkl'), use_compression=True)  # Save the LUT file. use_compression allows a reduction  
                                                                                                         # in file size by a factor of ~10, but slows down the operation.
-        lut.show_results(io.BytesIO())
+        lut.show_results(io.BytesIO(), show = True)
 
     def load_images(self,path,filt):
         """ Load all images in a folder. Average multiple copies of same image
@@ -659,7 +659,7 @@ class LUT:
                 ax1.plot(ydata,xdata,'o',color=colors[j-2])
                 ax1.plot(y,x,color=colors[j-2])  
         
-    def show_results(self, savefile = None):
+    def show_results(self, savefile = None, show = True):
         """ Display a summary of the results.
         """
         fig = plt.figure(figsize=(8, 8))
@@ -676,9 +676,6 @@ class LUT:
             self.plot_calibration_curves(mode='all',ax=ax3)
             self.plot_fit(i='mean', ax=ax3)
             self.plot_lateral_response(ax=(ax4,ax5,ax6))
-            fig.tight_layout()
-            if savefile: plt.savefig(savefile)
-            plt.show()
         else:
             ax1 = plt.subplot2grid((3, 2), (0, 0))
             ax2 = plt.subplot2grid((3, 2), (0, 1))
@@ -689,9 +686,10 @@ class LUT:
             ax3.set_title('Calibration curves')
             ax3.set_xlabel('Dose (cGy)')
             ax3.set_ylabel('Normalized pixel value')
-            fig.tight_layout()
-            if savefile: plt.savefig(savefile)
-            plt.show()
+        
+        fig.tight_layout()
+        if savefile: plt.savefig(savefile)
+        if show: plt.show()
  
     def plot_beam_profile(self, ax=None):
         """ Plot the beam profile.
@@ -760,7 +758,7 @@ class LUT:
         kwargs
             Keyword arguments are passed to plt.savefig().
         """
-        self.show_results(filename)
+        self.show_results(filename, **kwargs)
         fig = plt.gcf()
         fig.savefig(filename)
         plt.close(fig)
@@ -787,7 +785,7 @@ class LUT:
         title = 'Film Calibration Report'
         canvas = pdf.PylinacCanvas(filename, page_title=title, logo=Path(__file__).parent / 'OMG_Logo.png')
         data = io.BytesIO()
-        self.save_analyzed_image(data)
+        self.save_analyzed_image(data, show = False)
         canvas.add_image(image_data=data, location=(3, 3.5), dimensions=(15, 15))
         canvas.add_text(text='Film infos:', location=(1, 25.5), font_size=10)
         text = ['Author: {}'.format(self.info['author']),
@@ -891,7 +889,7 @@ def save_lut(lut, filename, use_compression=True):
         filename : str
             Complete path to file
         use_compression : boolean
-            Wether or not to use bz2 compression to reduce file size
+            Whether or not to use bz2 compression to reduce file size
     """
     
     print("Saving LUT file as {}...".format(filename))

@@ -161,12 +161,11 @@ def main():
         if normalisation == "ref_roi": film.apply_factor_from_roi()             # Normalize based on roi dose
         
         gamma_analysis(film, scan_name, path_analyse, doseTA = 3, distTA = 3, show_results = True, 
-                      threshold = threshold, norm_val = None, film_filt = film_filt, pickle_save = pickle_save)
+                      threshold = threshold, norm_val = norm_val, film_filt = film_filt, pickle_save = pickle_save)
         gamma_analysis(film, scan_name, path_analyse, doseTA = 2, distTA = 2, show_results = True, 
-                      threshold = threshold, norm_val = None, film_filt = film_filt, pickle_save = pickle_save)
+                      threshold = threshold, norm_val = norm_val, film_filt = film_filt, pickle_save = pickle_save)
         gamma_analysis(film, scan_name, path_analyse, doseTA = 1, distTA = 1, show_results = True,
-                      threshold = threshold, norm_val = None, film_filt = film_filt, pickle_save = pickle_save)
-
+                      threshold = threshold, norm_val = norm_val, film_filt = film_filt, pickle_save = pickle_save)
         return
         
 def gamma_analysis(dose2analysis, filebase, path_analyse, doseTA = 3, distTA = 3, show_results = True, 
