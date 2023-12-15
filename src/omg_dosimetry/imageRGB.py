@@ -1,7 +1,9 @@
 """This module holds classes for image loading and manipulation.
     Adapted from pylinac.core.image for multichannel format support
     by Jean-François Cabana.
-
+    
+    Modified by: Peter Truong
+    Version: 2023-12-05
 """
 import copy
 from collections import Counter
@@ -368,8 +370,7 @@ class BaseImage:
         fig.colorbar(cax, ax=ax)   
         ax.set_title(title)
         ax.axis('image')      
-        if show:
-            plt.show()
+        if show: plt.show(block = False)
         return cax
 
     # @value_accept(kind=('median', 'gaussian'))

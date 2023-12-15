@@ -17,7 +17,8 @@ Features:
     - Publish PDF report
         
 Written by Jean-Francois Cabana, copyright 2018
-version 2023-07-27
+Modified by Peter Truong (CISSSO)
+Version: 2023-12-06
 """
 
 import os
@@ -27,7 +28,7 @@ import matplotlib.pyplot as plt
 import pickle
 from pylinac.core import pdf
 import io
-from matplotlib.widgets  import RectangleSelector
+from matplotlib.widgets  import RectangleSelector, MultiCursor
 import webbrowser
 from pathlib import Path
 from .imageRGB import load, load_multiples
@@ -284,7 +285,7 @@ class Gaf:
         self.dose_rg = load((dose_r+dose_g)/2., dpi=self.img.dpi)  
         self.dose_consistency = load(((dose_r-dose_g)**2 + (dose_r-dose_b)**2 + (dose_b-dose_g)**2)**0.5, dpi=self.img.dpi)  
         
-    def show_results(self):
+    def show_results(self, show = True):
         """ Display a figure with the different converted dose maps and metrics.
         """
 
@@ -292,18 +293,23 @@ class Gaf:
         max_dose_opt = np.percentile(self.dose_opt.array,[99.9])[0].round(decimals=-1)
         clim = [0, max(max_dose_m, max_dose_opt)]   
         fig, ((ax1,ax2,ax3),(ax4,ax5,ax6),(ax7,ax8,ax9)) = plt.subplots(3,3,figsize=(14, 9))
+        axes = [ax1, ax2, ax3, ax4, ax5, ax6, ax7, ax8, ax9]
 
         self.dose_r.plotCB(ax1,clim=clim, title='Red channel dose')
         self.dose_g.plotCB(ax2,clim=clim, title='Green channel dose')
         self.dose_b.plotCB(ax3,clim=clim, title='Blue channel dose')
         self.dose_m.plotCB(ax4,clim=clim, title='Mean channel dose')
         self.dose_rg.plotCB(ax5,clim=clim, title='Red+Green Average dose')
-        self.dose_consistency.plotCB(ax6, cmap='gray', title='Consistency')
+        self.dose_consistency.plotCB(ax6, clim = [0, np.percentile(self.dose_consistency.array, [99.5])[0]], cmap='gray', title='Consistency')
         self.dose_opt.plotCB(ax7,clim=clim, title='Multichannel optimized dose')
-        self.dose_opt_delta.plotCB(ax8, cmap='gray', title='Disturbance')
-        self.dose_opt_RE.plotCB(ax9, cmap='gray', title='Residuals')
-
+        self.dose_opt_delta.plotCB(ax8, clim = [np.percentile(self.dose_opt_delta.array, [0.5])[0], 
+                                                np.percentile(self.dose_opt_delta.array, [99.5])[0]], cmap='gray', title='Disturbance')
+        self.dose_opt_RE.plotCB(ax9, clim = [0, np.percentile(self.dose_opt_RE.array, [99.5])[0]], cmap='gray', title='Residuals')
+        
         fig.tight_layout()
+        if show: 
+            plt.multi = MultiCursor(None, (axes), color='r', lw=1, horizOn=True)
+            plt.show()
         
     def save_analyzed_image(self, filename, **kwargs):
         """Save the analyzed image to a file.
@@ -315,8 +321,7 @@ class Gaf:
         kwargs
             Keyword arguments are passed to plt.savefig().
         """
-        
-        self.show_results()
+        self.show_results(**kwargs)
         fig = plt.gcf()
         fig.savefig(filename)
         plt.close(fig)
@@ -340,15 +345,13 @@ class Gaf:
             Whether or not to open the PDF file after it is created.
             Default is False.
         """
-
-        if filename is None:
-            filename = os.path.join(self.path, 'Report.pdf')
+        if filename is None: filename = os.path.join(self.path, 'Report.pdf')
         title='Film-to-Dose Report'
         # canvas = pdf.create_pylinac_page_template(filename, analysis_title=title)
         canvas = pdf.PylinacCanvas(filename, page_title=title, logo=Path(__file__).parent / 'OMG_Logo.png')
         
         data = io.BytesIO()
-        self.save_analyzed_image(data)
+        self.save_analyzed_image(data, show = False)
         canvas.add_image(image_data=data, location=(0.5, 2), dimensions=(20, 20))
         canvas.add_text(text='Film infos:', location=(1, 25.5), font_size=12)
         text = ['Author: {}'.format(self.info['author']),
@@ -373,8 +376,7 @@ class Gaf:
             canvas.add_text(text='Notes:', location=(1, 2.5), font_size=14)
             canvas.add_text(text=self.info['notes'], location=(1, 2), font_size=14)
         canvas.finish()
-        if open_file:
-            webbrowser.open(filename)
+        if open_file: webbrowser.open(filename)
     
     # def apply_factor_from_roi(self, norm_dose = None):
     #     """ Define an ROI on an unexposed film to correct for scanner response. """
