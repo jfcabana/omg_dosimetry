@@ -31,8 +31,10 @@ info = dict(author = "PT",
 landscape = False
 LatCor = True
 if landscape: # Landscape Orientation
-    lut_file = (r"\\SVWCT2Out0455\Phys\Répertoires communs\Radiotherapie Externe\Film_QA\Calibration_LUT"
-                r"\2022-10-04\C2_3Gy_72dpi_landscape.pkl")
+    # lut_file = (r"\\SVWCT2Out0455\Phys\Répertoires communs\Radiotherapie Externe\Film_QA\Calibration_LUT"
+    #             r"\2022-10-04\C2_3Gy_72dpi_landscape.pkl")
+    lut_file = (r"\\SVWCT2Out0455\Phys\Répertoires communs\Radiotherapie Externe\Film_QA\CRIC Testing"
+                r"\0001-Drolet_039086\C2_3Gy_72dpi_landscape_CRIC.pkl")
 else: # Portrait Orientation    
     # if LatCor: lut_file = (r"\\SVWCT2Out0455\Phys\Répertoires communs\Radiotherapie Externe\Film_QA\Calibration_LUT"
     #                        r"\2023-09-12 (C2 LatCor)\C2_3Gy_LUT_LatCor_9MeV_2023-09-12.pkl")
@@ -184,7 +186,7 @@ def gamma_analysis(dose2analysis, filebase, path_analyse, doseTA = 3, distTA = 3
     if show_results: dose2analysis.show_results()
     if analysis_publish_pdf: 
         dose2analysis.publish_pdf(fileout, open_file = dose_2_analysis_show_pdf, show_hist = True, 
-                                  show_pass_hist = True, show_varDistTA = False, show_var_DoseTA = False, 
+                                  show_pass_hist = True, show_varDistTA = False, show_varDoseTA = False, 
                                   x = None, y = None)
     if pickle_save: pickle.dump(dose2analysis, open(fileout[:-4] + ".pkl", "wb"))
     

@@ -14,7 +14,7 @@ Features:
     
 Written by Jean-Francois Cabana, copyright 2018
 Modified by Peter Truong (CISSSO)
-Version: 2023-12-06
+Version: 2023-12-15
 """
 
 import numpy as np
@@ -560,7 +560,7 @@ class DoseAnalysis():
         ax.set_title("Gamma pass rate vs dose")
         ax.set_xticks(bins)
         
-    def plot_gamma_stats(self, figsize=(10, 10), show_hist=True, show_pass_hist=True, show_varDistTA=True, show_var_DoseTA=True):
+    def plot_gamma_stats(self, figsize=(10, 10), show_hist=True, show_pass_hist=True, show_varDistTA=True, show_varDoseTA=True):
         """ Displays a figure with 4 subplots showing gamma analysis statistics:
             1- Gamma map histogram, 
             2- Gamma pass rate vs dose histogram
@@ -582,7 +582,7 @@ class DoseAnalysis():
         if show_varDistTA:
             self.plot_gamma_varDistTA(ax=axes[i])
             i=i+1
-        if show_var_DoseTA:
+        if show_varDoseTA:
             self.plot_gamma_varDoseTA(ax=axes[i])
         
     def plot_profile(self, ax=None, profile='x', position=None, title=None, diff=False, offset=0):
@@ -621,53 +621,38 @@ class DoseAnalysis():
                 Default is 0 mm
         """        
 
-        film = self.film_dose.array
-        ref = self.ref_dose.array
+        film, ref = self.film_dose.array, self.ref_dose.array
         v_ligne = None
+        if position is None: position = [np.floor(self.ref_dose.shape[1] / 2).astype(int), 
+                                         np.floor(self.ref_dose.shape[0] / 2).astype(int)]
         if profile == 'x':
-            if position is None:
-                position = np.floor(self.ref_dose.shape[0] / 2).astype(int)
-                film_prof = film[position,:]
-                ref_prof = ref[position,:]
-            else:
-                film_prof = film[position[1],:]
-                ref_prof = ref[position[1],:]
-                v_ligne = position[0]
-            
+            film_prof, ref_prof = film[position[1],:], ref[position[1],:] 
+            v_ligne = position[0] / self.film_dose.dpmm
         elif profile == 'y':
-            if position is None:
-                position = np.floor(self.ref_dose.shape[1] / 2).astype(int)
-                film_prof = film[:,position]
-                ref_prof = ref[:,position]
-            else: 
-                film_prof = film[:,position[0]]
-                ref_prof = ref[:,position[0]]
-                v_ligne = position[1]           
+            film_prof, ref_prof = film[:,position[0]], ref[:,position[0]]
+            v_ligne = position[1] / self.film_dose.dpmm        
         
-        x_axis = np.array(range(0, len(film_prof))).tolist()
+        x_axis = (np.array(range(0, len(film_prof))) / self.film_dose.dpmm).tolist()
         y_max = max(np.concatenate((film_prof, ref_prof)))
         
-        if ax is None:
-            fig, ax = plt.subplots()    
+        if ax is None: fig, ax = plt.subplots()    
         ax.clear()
         ax.plot([i+offset for i in x_axis], film_prof,'r-', linewidth=2)
         ax.plot(x_axis, ref_prof,'b--', linewidth=2)
         if v_ligne: ax.plot((v_ligne, v_ligne), (0, y_max * 1.10), 'k:', linewidth = 1)
         
         if title is None:
-            if v_ligne: 
-                if profile == 'x': title='Profile horizontal (y={})'.format(position[1])
-                if profile == 'y': title='Profile vertical (x={})'.format(position[0])
-            else:
-                if profile == 'x': title='Profile horizontal (y={})'.format(position)
-                if profile == 'y': title='Profile vertical (x={})'.format(position)
+            if profile == 'x': title='Horizontal Profile (y = {} mm)'.format(int(position[1] / self.film_dose.dpmm))
+            if profile == 'y': title='Vertical Profile (x = {} mm)'.format(int(position[0] / self.film_dose.dpmm))
         ax.set_title(title)
-        ax.set_xlabel('Pixel Position')
+        ax.set_xlabel('Position (mm)')
         ax.set_ylabel('Dose (cGy)')
         
         if diff:
+            ax_diff = ax.twinx()
             diff_prof = film_prof - ref_prof
-            ax.plot(x_axis, diff_prof,'g-', linewidth=2)
+            ax_diff.set_ylabel("Difference (cGy)")
+            ax_diff.plot(x_axis, diff_prof,'g-', linewidth=0.25)
     
     def show_results(self, fig=None, x=None, y=None, show = True):
         """ Display an interactive figure showing the results of a gamma analysis.
@@ -705,15 +690,16 @@ class DoseAnalysis():
         max_dose_comp = np.percentile(self.ref_dose.array,[98])[0].round(decimals=-1)
         clim = [0, max_dose_comp]
 
-        self.film_dose.plotCB(ax1, clim=clim, title='Film dose ({})'.format(os.path.basename(self.film_dose.path)))
-        self.ref_dose.plotCB(ax2, clim=clim, title='Reference dose ({})'.format(os.path.basename(self.ref_dose.path)))
-        self.GammaMap.plotCB(ax3, clim=[0,2], cmap='bwr', title='Gamma map ({:.2f}% pass; {:.2f} mean)'.format(self.GammaMap.passRate, self.GammaMap.mean))
+        self.film_dose.plotCB(ax1, clim=clim, title='Film Dose ({})'.format(os.path.basename(self.film_dose.path)))
+        self.ref_dose.plotCB(ax2, clim=clim, title='Reference Dose ({})'.format(os.path.basename(self.ref_dose.path)))
+        self.GammaMap.plotCB(ax3, clim=[0,2], cmap='bwr', title='Gamma Map ({:.2f}% Pass; {:.2f} Mean)'.format(self.GammaMap.passRate, self.GammaMap.mean))
         ax3.set_facecolor('k')
         min_value = max(-20, np.percentile(self.DiffMap.array,[1])[0].round(decimals=0))
         max_value = min(20, np.percentile(self.DiffMap.array,[99])[0].round(decimals=0))
         clim = [min_value, max_value]    
-        self.RelError.plotCB(ax4, cmap='jet', clim=clim, title='Relative Error (%) (RMSE={:.2f})'.format(self.DiffMap.RMSE))
+        self.RelError.plotCB(ax4, cmap='jet', clim=clim, title='Relative Error (%) (RMSE = {:.2f})'.format(self.DiffMap.RMSE))
         self.show_profiles(axes, x=self.prof_x, y=self.prof_y)
+        plt.multi = MultiCursor(None, (axes[0],axes[1],axes[2],axes[3]), color='r', lw=1, horizOn=True)
         
         fig.canvas.mpl_connect('button_press_event', lambda event: self.set_profile(event, axes))
         if show: plt.show()
@@ -723,17 +709,16 @@ class DoseAnalysis():
             at a given x/y coordinates, and draw lines on the dose distribution maps
             to show where the profile is taken.
         """
-        self.plot_profile(ax=axes[-2], profile='x', title='Horizontal profile (y={})'.format(y), position=[x, y])
-        self.plot_profile(ax=axes[-1], profile='y', title='Vertical profile (x={})'.format(x), position=[x, y])
+        self.plot_profile(ax=axes[-2], profile='x', position=[x, y])
+        self.plot_profile(ax=axes[-1], profile='y', position=[x, y])
         
         for i in range(0,4):
             ax = axes[i]
-            while len(ax.lines) > 0:
-                ax.lines[-1].remove()
+            while len(ax.lines) > 0: ax.lines[-1].remove()       # Remove prior crosshairs (if any)
             
+            ### Plot crosshairs
             ax.plot((x,x),(0,self.ref_dose.shape[0]),'w--', linewidth=1)
             ax.plot((0,self.ref_dose.shape[1]),(y,y),'w--', linewidth=1)
-        plt.multi = MultiCursor(None, (axes[0],axes[1],axes[2],axes[3]), color='r', lw=1, horizOn=True)
         
     def set_profile(self, event, axes):
         """ This function is called by show_results to draw dose profiles
@@ -743,8 +728,8 @@ class DoseAnalysis():
             if event.inaxes in axes[0:4]:
                 self.prof_x = int(event.xdata)
                 self.prof_y = int(event.ydata)
-            elif event.inaxes == axes[4]: self.prof_x = int(event.xdata)
-            elif event.inaxes == axes[5]: self.prof_y = int(event.xdata)
+            elif event.inaxes == axes[4]: self.prof_x = int(event.xdata * self.film_dose.dpmm)
+            elif event.inaxes == axes[5]: self.prof_y = int(event.xdata * self.film_dose.dpmm)
             
             self.show_profiles(axes,x=self.prof_x, y=self.prof_y)    
             plt.gcf().canvas.draw_idle()
