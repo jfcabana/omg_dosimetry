@@ -31,9 +31,13 @@ import io
 from matplotlib.widgets  import RectangleSelector, MultiCursor
 import webbrowser
 from pathlib import Path
-from .imageRGB import load, load_multiples
-from .calibration import load_lut
-from .i_o import retrieve_demo_file
+#from .imageRGB import load, load_multiples
+#from .calibration import load_lut
+#from .i_o import retrieve_demo_file
+
+from imageRGB import load, load_multiples
+from calibration import load_lut
+from i_o import retrieve_demo_file
 
 class Gaf:
     """Base class for gafchromic films converted to dose.
@@ -146,7 +150,7 @@ class Gaf:
             self.dose_consistency.crop_edges(threshold=crop_edges)
 
     @staticmethod
-    def run_demo(film_detect = True) -> None:
+    def run_demo() -> None:
         """Run the Gaf demo by loading the demo image and print results."""
 
         # Define general information
@@ -164,13 +168,13 @@ class Gaf:
         retrieve_demo_file("A1A_Multi_6cm_001.tif")
 
         # Folder containing scanned image
-        demo_path = Path(__file__).parent / "demo_files"       
+        demo_path = Path(__file__).parent / "demo_files" / "tiff2dose"      
         
         # Name of the output file to produce
         outname = "Demo_dose"
 
         # Path to LUT film to use
-        lut_file = Path(__file__).parent / "demo_files" / "Demo_calib.pkl"
+        lut_file = Path(__file__).parent / "demo_files" / "calibration" / "Demo_calib.pkl"
 
         # Function type used for fitting calibration curve. 'rational' (recommended) or 'spline'
         fit_type = 'rational'
@@ -182,14 +186,14 @@ class Gaf:
         gaf1 = Gaf(path = demo_path, lut_file=lut_file, fit_type=fit_type, info=info, clip = clip)
 
         # Save dose and PDF report
-        #filename_tif = demo_path / outname / '.tif'
+        filename_tif = demo_path / str(outname + ".tif")
 
         # We save the optimized dose (dose_opt). Other options include individual channels 
         # (dose_r, dose_g, dose_b) and individual channels doses average (dose_ave).
-        #gaf1.dose_opt.save(filename_tif)
+        gaf1.dose_opt.save(filename_tif)
 
-        #filename_pdf = demo_path / outname / '.pdf'
-        #gaf1.publish_pdf(filename_pdf, open_file=True)
+        filename_pdf = demo_path / str(outname + ".pdf")
+        gaf1.publish_pdf(str(filename_pdf), open_file=True)
 
     def load_files(self, path):
         """ Load image files found in path. 
