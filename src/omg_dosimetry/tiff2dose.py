@@ -33,6 +33,7 @@ import webbrowser
 from pathlib import Path
 from .imageRGB import load, load_multiples
 from .calibration import load_lut
+from .i_o import retrieve_demo_file
 
 class Gaf:
     """Base class for gafchromic films converted to dose.
@@ -143,6 +144,52 @@ class Gaf:
             self.dose_opt_RE.crop_edges(threshold=crop_edges)
             self.dose_rg.crop_edges(threshold=crop_edges)
             self.dose_consistency.crop_edges(threshold=crop_edges)
+
+    @staticmethod
+    def run_demo(film_detect = True) -> None:
+        """Run the Gaf demo by loading the demo image and print results."""
+
+        # Define general information
+        info = dict(author = 'Demo Physicist',
+            unit = 'Demo Linac',
+            film_lot = 'XD_1',
+            scanner_id = 'Epson 72000XL',
+            date_exposed = '2023-01-24 16h',
+            date_scanned = '2023-01-25 16h',
+            wait_time = '24 hours',
+            notes = 'Transmission mode, @300ppp and 16 bits/channel'
+           )
+
+        # Download demo tif files and save it on demo_files folder.
+        retrieve_demo_file("A1A_Multi_6cm_001.tif")
+
+        # Folder containing scanned image
+        demo_path = Path(__file__).parent / "demo_files"       
+        
+        # Name of the output file to produce
+        outname = "Demo_dose"
+
+        # Path to LUT film to use
+        lut_file = Path(__file__).parent / "demo_files" / "Demo_calib.pkl"
+
+        # Function type used for fitting calibration curve. 'rational' (recommended) or 'spline'
+        fit_type = 'rational'
+
+        # Maximum value [cGy] to limit dose. Useful to avoid very high doses obtained due to markings on the film.
+        clip = 500
+
+        # Perform dose conversion
+        gaf1 = Gaf(path = demo_path, lut_file=lut_file, fit_type=fit_type, info=info, clip = clip)
+
+        # Save dose and PDF report
+        #filename_tif = demo_path / outname / '.tif'
+
+        # We save the optimized dose (dose_opt). Other options include individual channels 
+        # (dose_r, dose_g, dose_b) and individual channels doses average (dose_ave).
+        #gaf1.dose_opt.save(filename_tif)
+
+        #filename_pdf = demo_path / outname / '.pdf'
+        #gaf1.publish_pdf(filename_pdf, open_file=True)
 
     def load_files(self, path):
         """ Load image files found in path. 

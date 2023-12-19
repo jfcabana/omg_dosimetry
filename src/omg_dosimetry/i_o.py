@@ -20,7 +20,8 @@ def retrieve_demo_file(name: str, force: bool = False) -> Path:
     urls = {
         "C14_calib-18h-1_001.tif": r"https://raw.githubusercontent.com/jfcabana/omg_dosimetry/OMG_master/scripts/demo/files/calibration/scan/",
         "C14_calib-18h-2_001.tif": r"https://raw.githubusercontent.com/jfcabana/omg_dosimetry/OMG_master/scripts/demo/files/calibration/scan/",
-        "BeamProfile.txt": r"https://raw.githubusercontent.com/jfcabana/omg_dosimetry/OMG_master/scripts/demo/files/calibration/"
+        "BeamProfile.txt": r"https://raw.githubusercontent.com/jfcabana/omg_dosimetry/OMG_master/scripts/demo/files/calibration/",
+        "A1A_Multi_6cm_001.tif": r"https://raw.githubusercontent.com/jfcabana/omg_dosimetry/OMG_master/scripts/demo/files/tiff2dose/scan/"
         }
     
     url = urls[name] + name
