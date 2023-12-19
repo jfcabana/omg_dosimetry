@@ -42,9 +42,11 @@ from random import randint
 from scipy.interpolate import UnivariateSpline
 from pathlib import Path
 import webbrowser
-from .imageRGB import load, load_folder, stack_images
+#from .imageRGB import load, load_folder, stack_images
+from imageRGB import load, load_folder, stack_images
 import bz2
-from .i_o import retrieve_demo_file
+#from .i_o import retrieve_demo_file
+from i_o import retrieve_demo_file
 
 class LUT:
     """
@@ -236,7 +238,7 @@ class LUT:
         retrieve_demo_file("C14_calib-18h-1_001.tif")
         retrieve_demo_file("C14_calib-18h-2_001.tif")
 
-        demo_path = Path(__file__).parent / "demo_files"       # Folder containing scanned images
+        demo_path = Path(__file__).parent / "demo_files" / "calibration"      # Folder containing scanned images
         outname = 'Demo_calib'                                 ## Name of the calibration file to produce
 
         #%% Set calibration parameters
