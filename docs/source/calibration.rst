@@ -35,6 +35,8 @@ Import :class:`~omg_dosimetry.calibration.LUT` and Path
 
 Define the folder containing the scanned tiff images, and the nominal doses [cGy] imparted to the films
 
+.. note:: Only 16-bit/channel RGB tiff images are supported.
+
 .. code-block:: python
 
     my_path = Path(r"C:/my/folder")
