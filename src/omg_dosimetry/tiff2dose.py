@@ -17,8 +17,8 @@ Features:
     - Publish PDF report
         
 Written by Jean-Francois Cabana, copyright 2018
-Modified by Peter Truong (CISSSO)
-Version: 2023-12-06
+Modified by Peter Truong (CISSSO) and Luis Alfonso Olivares Jimenez
+Version: 2023-12-26
 """
 
 import os
@@ -168,7 +168,7 @@ class Gaf:
         retrieve_demo_file("A1A_Multi_6cm_001.tif")
 
         # Folder containing scanned image
-        demo_path = Path(__file__).parent / "demo_files" / "tiff2dose"      
+        demo_path = Path(__file__).parent / "demo_files" / "tiff2dose" / "scan"
         
         # Name of the output file to produce
         outname = "Demo_dose"
@@ -186,7 +186,7 @@ class Gaf:
         gaf1 = Gaf(path = demo_path, lut_file=lut_file, fit_type=fit_type, info=info, clip = clip)
 
         # Save dose and PDF report
-        filename_tif = demo_path / str(outname + ".tif")
+        filename_tif = demo_path.parent / str(outname + ".tif")
 
         # We save the optimized dose (dose_opt). Other options include individual channels 
         # (dose_r, dose_g, dose_b) and individual channels doses average (dose_ave).

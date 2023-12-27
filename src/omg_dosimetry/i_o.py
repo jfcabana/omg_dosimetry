@@ -34,13 +34,13 @@ def retrieve_demo_file(name: str, force: bool = False) -> Path:
     root_demo_path = Path(__file__).parent / "demo_files"
     if not root_demo_path.exists():
         os.makedirs(root_demo_path)
-    calib_demo_path = root_demo_path / "calibration"
+    calib_demo_path = root_demo_path / "calibration" / "scan"
     if not calib_demo_path.exists():
         os.makedirs(calib_demo_path)
-    tiff2dose_demo_path = root_demo_path / "tiff2dose"
+    tiff2dose_demo_path = root_demo_path / "tiff2dose" / "scan"
     if not tiff2dose_demo_path.exists():
         os.makedirs(tiff2dose_demo_path)
-    analysis_demo_path = root_demo_path / "analysis"
+    analysis_demo_path = root_demo_path / "analysis" / "scan"
     if not analysis_demo_path.exists():
         os.makedirs(analysis_demo_path)
 

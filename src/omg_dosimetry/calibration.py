@@ -238,7 +238,8 @@ class LUT:
         retrieve_demo_file("C14_calib-18h-1_001.tif")
         retrieve_demo_file("C14_calib-18h-2_001.tif")
 
-        demo_path = Path(__file__).parent / "demo_files" / "calibration"      # Folder containing scanned images
+        # Folder containing scanned images
+        demo_path = Path(__file__).parent / "demo_files" / "calibration" / "scan"
         outname = 'Demo_calib'                                 ## Name of the calibration file to produce
 
         #%% Set calibration parameters
@@ -272,7 +273,7 @@ class LUT:
         #LUT.plot_roi()  # To display films and ROIs used for calibration
         #LUT.plot_fit()  # To display a plot of the calibration curve and the fitted algebraic function
         #lut.publish_pdf(filename=os.path.join(demo_path, outname +'_report.pdf'), open_file=True)            # Generate a PDF report
-        save_lut(lut, filename=os.path.join(demo_path, outname + '.pkl'), use_compression=True)  # Save the LUT file. use_compression allows a reduction  
+        save_lut(lut, filename=os.path.join(demo_path.parent, outname + '.pkl'), use_compression=True)  # Save the LUT file. use_compression allows a reduction  
                                                                                                         # in file size by a factor of ~10, but slows down the operation.
         lut.show_results(io.BytesIO(), show = True)
 
