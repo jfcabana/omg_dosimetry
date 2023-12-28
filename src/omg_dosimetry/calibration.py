@@ -215,13 +215,15 @@ class LUT:
             self.select_film()
 
     @staticmethod
-    def run_demo(film_detect = True) -> None:
+    def run_demo(film_detect = True, show = True) -> None:
         """Run the LUT demo by loading the demo images and print results.
         
         Parameters
         ----------
         film_detect : bool
             True to attempt automatic film detection, or False to make a manual selection.
+        show : bools
+            Display a summary of the results.
         """
 
         info = dict(author = 'Demo Physicist',
@@ -275,7 +277,7 @@ class LUT:
         #lut.publish_pdf(filename=os.path.join(demo_path, outname +'_report.pdf'), open_file=True)            # Generate a PDF report
         save_lut(lut, filename=os.path.join(demo_path.parent, outname + '.pkl'), use_compression=True)  # Save the LUT file. use_compression allows a reduction  
                                                                                                         # in file size by a factor of ~10, but slows down the operation.
-        lut.show_results(io.BytesIO(), show = True)
+        lut.show_results(io.BytesIO(), show = show)
 
     def load_images(self,path,filt):
         """ Load all images in a folder. Average multiple copies of same image
