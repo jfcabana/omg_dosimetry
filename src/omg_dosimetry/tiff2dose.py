@@ -36,7 +36,7 @@ from pathlib import Path
 #from .i_o import retrieve_demo_file
 
 from imageRGB import load, load_multiples
-from calibration import load_lut
+from calibration import load_lut, LUT
 from i_o import retrieve_demo_file
 
 class Gaf:
@@ -150,7 +150,7 @@ class Gaf:
             self.dose_consistency.crop_edges(threshold=crop_edges)
 
     @staticmethod
-    def run_demo() -> None:
+    def run_demo(show=True) -> None:
         """Run the Gaf demo by loading the demo image and print results."""
 
         # Define general information
@@ -175,6 +175,9 @@ class Gaf:
 
         # Path to LUT film to use
         lut_file = Path(__file__).parent / "demo_files" / "calibration" / "Demo_calib.pkl"
+        if not lut_file.exists():
+            print("Running LUT.run_demo()...")
+            LUT.run_demo(show=False)
 
         # Function type used for fitting calibration curve. 'rational' (recommended) or 'spline'
         fit_type = 'rational'
@@ -191,6 +194,8 @@ class Gaf:
         # We save the optimized dose (dose_opt). Other options include individual channels 
         # (dose_r, dose_g, dose_b) and individual channels doses average (dose_ave).
         gaf1.dose_opt.save(filename_tif)
+
+        gaf1.show_results(io.BytesIO(), show=show)
 
         filename_pdf = demo_path / str(outname + ".pdf")
         gaf1.publish_pdf(str(filename_pdf), open_file=True)
