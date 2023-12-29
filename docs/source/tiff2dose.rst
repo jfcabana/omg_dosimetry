@@ -20,6 +20,7 @@ To run the demo, import the main class and run the demo method:
 
     Gaf.run_demo()
 
+
 Usage
 -----
 
@@ -78,6 +79,7 @@ Display a figure with the different converted dose maps and metrics.
 .. code-block:: python
 
     gaf.show_results()
+
 
 API Documentation
 -----------------

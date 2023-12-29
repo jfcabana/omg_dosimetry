@@ -43,8 +43,10 @@ from scipy.interpolate import UnivariateSpline
 from pathlib import Path
 import webbrowser
 from .imageRGB import load, load_folder, stack_images
+
 import bz2
 from .i_o import retrieve_demo_file
+
 
 class LUT:
     """
