@@ -31,13 +31,13 @@ import io
 from matplotlib.widgets  import RectangleSelector, MultiCursor
 import webbrowser
 from pathlib import Path
-#from .imageRGB import load, load_multiples
-#from .calibration import load_lut
-#from .i_o import retrieve_demo_file
+from .imageRGB import load, load_multiples
+from .calibration import load_lut, LUT
+from .i_o import retrieve_demo_file
 
-from imageRGB import load, load_multiples
-from calibration import load_lut, LUT
-from i_o import retrieve_demo_file
+#from imageRGB import load, load_multiples
+#from calibration import load_lut, LUT
+#from i_o import retrieve_demo_file
 
 class Gaf:
     """Base class for gafchromic films converted to dose.
@@ -150,7 +150,7 @@ class Gaf:
             self.dose_consistency.crop_edges(threshold=crop_edges)
 
     @staticmethod
-    def run_demo(show=True) -> None:
+    def run_demo() -> None:
         """Run the Gaf demo by loading the demo image and print results."""
 
         # Define general information
@@ -189,16 +189,16 @@ class Gaf:
         gaf1 = Gaf(path = demo_path, lut_file=lut_file, fit_type=fit_type, info=info, clip = clip)
 
         # Save dose and PDF report
-        filename_tif = demo_path.parent / str(outname + ".tif")
+        #filename_tif = demo_path.parent / str(outname + ".tif")
 
         # We save the optimized dose (dose_opt). Other options include individual channels 
         # (dose_r, dose_g, dose_b) and individual channels doses average (dose_ave).
-        gaf1.dose_opt.save(filename_tif)
+        #gaf1.dose_opt.save(filename_tif)
 
-        gaf1.show_results(io.BytesIO(), show=show)
+        #filename_pdf = demo_path / str(outname + ".pdf")
+        #gaf1.publish_pdf(str(filename_pdf), open_file=True)
 
-        filename_pdf = demo_path / str(outname + ".pdf")
-        gaf1.publish_pdf(str(filename_pdf), open_file=True)
+        gaf1.show_results(io.BytesIO(), show=True)
 
     def load_files(self, path):
         """ Load image files found in path. 
@@ -341,7 +341,7 @@ class Gaf:
         self.dose_rg = load((dose_r+dose_g)/2., dpi=self.img.dpi)  
         self.dose_consistency = load(((dose_r-dose_g)**2 + (dose_r-dose_b)**2 + (dose_b-dose_g)**2)**0.5, dpi=self.img.dpi)  
         
-    def show_results(self, show = True):
+    def show_results(self, savefile = None, show = True):
         """ Display a figure with the different converted dose maps and metrics.
         """
 
@@ -363,6 +363,8 @@ class Gaf:
         self.dose_opt_RE.plotCB(ax9, clim = [0, np.percentile(self.dose_opt_RE.array, [99.5])[0]], cmap='gray', title='Residuals')
         
         fig.tight_layout()
+        
+        if savefile: plt.savefig(savefile)
         if show: 
             plt.multi = MultiCursor(None, (axes), color='r', lw=1, horizOn=True)
             plt.show()
