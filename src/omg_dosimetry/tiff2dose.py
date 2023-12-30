@@ -35,9 +35,6 @@ from .imageRGB import load, load_multiples
 from .calibration import load_lut, LUT
 from .i_o import retrieve_demo_file
 
-#from imageRGB import load, load_multiples
-#from calibration import load_lut, LUT
-#from i_o import retrieve_demo_file
 
 class Gaf:
     """Base class for gafchromic films converted to dose.
@@ -502,16 +499,20 @@ class Gaf:
     #         self.wait = False
     #         return
 
+
 def rational_func(x, a, b, c):
     return -c + b/(x-a)
 
+
 def drational_func(x, a, b, c):
     return -b/(x-a)**2
+
 
 def save_dose(dose, filename):
     dose.filename = filename
     with open(filename, 'wb') as output:
         pickle.dump(dose, output, pickle.HIGHEST_PROTOCOL)
+
 
 def load_dose(filename):
     with open(filename, 'rb') as input:
