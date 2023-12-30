@@ -16,7 +16,7 @@ To run the demo, import the main class and run the demo method:
 .. plot::
     :include-source:
 
-    from omg_dosimetry import LUT
+    from omg_dosimetry.calibration import LUT
 
     LUT.run_demo()
 
