@@ -327,10 +327,7 @@ class Gaf:
             if lut.lateral_correction:
                 for i in range(0, len(lut.doses)):  # loop over all doses
                     for j in range(2, 6):  # loop over all channels (mean, R, G, B)
-                        lut.lut[j, i, :] = medfilt(
-                            lut.lut[j, i, :],
-                            kernel_size=(lut_filt)
-                        )
+                        lut.lut[j, i, :] = medfilt(lut.lut[j, i, :], kernel_size=(lut_filt))
             else:
                 pass
 
@@ -351,6 +348,7 @@ class Gaf:
                 p_lut = lut.lut[:, :, i]
                 xdata = p_lut[:, :]
                 ydata = p_lut[1, :]
+
             else:
                 p_lut = lut.lut[:, :]
                 xdata = p_lut[:]
@@ -358,12 +356,14 @@ class Gaf:
 
             if fit_type == 'rational':
                 Dm, Am = lut.get_dose_and_derivative_from_fit(
-                    xdata[2, :], ydata,
+                    xdata[2, :],
+                    ydata,
                     np.mean(row, axis=-1)
                 )
                 Dr, Ar = lut.get_dose_and_derivative_from_fit(xdata[3, :], ydata, row[:, 0])
                 Dg, Ag = lut.get_dose_and_derivative_from_fit(xdata[4, :], ydata, row[:, 1])
                 Db, Ab = lut.get_dose_and_derivative_from_fit(xdata[5, :], ydata, row[:, 2])
+
             elif fit_type == 'spline':
                 Dm, Am = lut.get_dose_and_derivative_from_spline(xdata[2, :], ydata, np.mean(row, axis=-1), k=k, ext=ext, s=s)
                 Dr, Ar = lut.get_dose_and_derivative_from_spline(xdata[3, :], ydata, row[:, 0], k=k, ext=ext, s=s)
@@ -628,7 +628,7 @@ def rational_func(x, a, b, c):
 
 
 def drational_func(x, a, b, c):
-    return -b /(x-a)**2
+    return -b/(x-a)**2
 
 
 def save_dose(dose, filename):
