@@ -23,10 +23,8 @@ To run the demo, import the main class and run the demo method:
 API Documentation
 =================
 
-Main classes
-------------
-
-These are the classes a typical user may interface with.
+Main class
+----------
 
 .. autoclass:: omg_dosimetry.tiff2dose.Gaf
     :members:
