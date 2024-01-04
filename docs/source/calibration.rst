@@ -29,7 +29,7 @@ Import :class:`~omg_dosimetry.calibration.LUT` and Path
 
 .. code-block:: python
 
-    from omg_dosimetry import LUT
+    from omg_dosimetry.calibration import LUT
     from pathlib import Path
     import matplotlib.pyplot as plt
 
