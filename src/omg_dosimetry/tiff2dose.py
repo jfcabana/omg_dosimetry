@@ -640,3 +640,10 @@ def save_dose(dose, filename):
 def load_dose(filename):
     with open(filename, 'rb') as input:
         return pickle.load(input)
+
+
+def from_demo_image() -> Path:
+    """Load the demo images and return the path to the content folder."""
+
+    img = retrieve_demo_file("A1A_Multi_6cm_001.tif")
+    return img.parent
