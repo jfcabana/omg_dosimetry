@@ -399,8 +399,8 @@ class Gaf:
 
             # Compute residual error (eq. 2)
             RE[i, :] = (( Dr + Ar*delta[i, :] - dose_opt[i, :] )**2 +
-                ( Dg + Ag*delta[i, :] - dose_opt[i, :] )**2 + 
-                ( Db + Ab*delta[i, :] - dose_opt[i, :] )**2 )**0.5
+                        ( Dg + Ag*delta[i, :] - dose_opt[i, :] )**2 + 
+                        ( Db + Ab*delta[i, :] - dose_opt[i, :] )**2 )**0.5
 
         if self.clip is not None:
             dose_m[dose_m > self.clip] = self.clip
