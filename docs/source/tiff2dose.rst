@@ -29,21 +29,22 @@ Import :class:`~omg_dosimetry.tiff2dose.Gaf` and Path:
 
     from omg_dosimetry.tiff2dose import Gaf
     from pathlib import Path
-    import matplotlib.pyplot as plt
 
 Define the folder containing the scanned tiff images, and path to LUT file
 
 .. code-block:: python
 
-    my_path = Path(r"C:/my/folder/QA")
-    path_to_lut = Path(r"/my/folder/lut_calib.pkl")
+    path_to_tif_folder = Path(r"C:/my/folder/tifQA")
+    path_to_lut_file = Path(r"/my/folder/lut_calib.pkl")
 
-If you don't have an image you can load the demo image and run LUT.run_demo():
+If you don't have an image you can load the demo image and lut files:
 
 .. code-block:: python
 
     from omg_dosimetry import tiff2dose
-    my_path = tiff2dose.from_demo_image()
+
+    path_to_tif_folder = tiff2dose.from_demo_image()
+    path_to_lut_file = tiff2dose.from_demo_lut()
 
 .. plot::
 
@@ -70,19 +71,19 @@ Produce the Gaf object
 
 .. code-block:: python
 
-    gaf = Gaf(my_path, lut_file=path_to_lut, fit_type=fit_type, clip=clip)
+    gaf = Gaf(path_to_tif_folder, lut_file=path_to_lut_file, fit_type=fit_type, clip=clip)
 
 Display a figure with the different converted dose maps and metrics.
 
 .. code-block:: python
 
-    gaf.show_results(show=True)
+    gaf.show_results()
 
 API Documentation
-=================
+-----------------
 
 Main class
-----------
+^^^^^^^^^^
 
 .. autoclass:: omg_dosimetry.tiff2dose.Gaf
     :members:
