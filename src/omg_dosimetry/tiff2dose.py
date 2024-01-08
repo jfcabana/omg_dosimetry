@@ -324,10 +324,7 @@ class Gaf:
         # Apply median filter on all image channels if needed
         if img_filt:
             for i in range(0, 3):
-                img.array[:, :, i] = medfilt(
-                    img.array[:, :, i],
-                    kernel_size=(img_filt, img_filt)
-                )
+                img.array[:, :, i] = medfilt(img.array[:, :, i],kernel_size=(img_filt, img_filt))
 
         # Apply median filter on LUT if needed
         if lut_filt:
@@ -362,11 +359,7 @@ class Gaf:
                 ydata = p_lut[1]
 
             if fit_type == 'rational':
-                Dm, Am = lut.get_dose_and_derivative_from_fit(
-                    xdata[2, :],
-                    ydata,
-                    np.mean(row, axis=-1)
-                )
+                Dm, Am = lut.get_dose_and_derivative_from_fit(xdata[2, :],ydata,np.mean(row, axis=-1))
                 Dr, Ar = lut.get_dose_and_derivative_from_fit(xdata[3, :], ydata, row[:, 0])
                 Dg, Ag = lut.get_dose_and_derivative_from_fit(xdata[4, :], ydata, row[:, 1])
                 Db, Ab = lut.get_dose_and_derivative_from_fit(xdata[5, :], ydata, row[:, 2])
@@ -405,11 +398,9 @@ class Gaf:
             delta[i, :] = ( (dose_temp-Dr)*Ar + (dose_temp-Dg)*Ag + (dose_temp-Db)*Ab ) / sum_Ak2  # eq. 7
 
             # Compute residual error (eq. 2)
-            RE[i, :] = (
-                ( Dr + Ar*delta[i, :] - dose_opt[i, :] )**2
-                + ( Dg + Ag*delta[i, :] - dose_opt[i, :] )**2
-                + ( Db + Ab*delta[i, :] - dose_opt[i, :] )**2
-            )**0.5
+            RE[i, :] = (( Dr + Ar*delta[i, :] - dose_opt[i, :] )**2 +
+                ( Dg + Ag*delta[i, :] - dose_opt[i, :] )**2 + 
+                ( Db + Ab*delta[i, :] - dose_opt[i, :] )**2 )**0.5
 
         if self.clip is not None:
             dose_m[dose_m > self.clip] = self.clip
