@@ -275,7 +275,8 @@ class LUT:
         #lut.publish_pdf(filename=os.path.join(demo_path, outname +'_report.pdf'), open_file=True)            # Generate a PDF report
         save_lut(lut, filename=os.path.join(demo_path.parent, outname + '.pkl'), use_compression=True)  # Save the LUT file. use_compression allows a reduction  
                                                                                                         # in file size by a factor of ~10, but slows down the operation.
-        lut.show_results(io.BytesIO(), show = show)
+        if show:
+            lut.show_results(io.BytesIO())
 
     def load_images(self,path,filt):
         """ Load all images in a folder. Average multiple copies of same image

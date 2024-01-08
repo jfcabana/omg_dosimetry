@@ -17,8 +17,10 @@ Features:
     - Output metrics for evaluation of dose conversion quality: disturbance map, residual error, consistency map
     - Publish PDF report
 
-Written by Jean-Francois Cabana, copyright 2018
-Modified by Peter Truong (CISSSO) and Luis Alfonso Olivares Jimenez
+Written by Jean-Francois Cabana, copyright 2018.
+
+Modified by Peter Truong (CISSSO) and Luis Alfonso Olivares Jimenez.
+
 Version: 2024-01-03
 """
 
@@ -196,8 +198,14 @@ class Gaf:
             self.dose_consistency.crop_edges(threshold=crop_edges)
 
     @staticmethod
-    def run_demo() -> None:
-        """Run the Gaf demo by loading the demo image and print results."""
+    def run_demo(show = True) -> None:
+        """Run the Gaf demo by loading the demo image and print results.
+
+        Parameters
+        ----------
+        show : bools
+            Display a summary of the results.
+        """
 
         # Define general information
         info = dict(
@@ -221,10 +229,7 @@ class Gaf:
         # outname = "Demo_dose"
 
         # Path to LUT film to use
-        lut_file = Path(__file__).parent / "demo_files" / "calibration" / "Demo_calib.pkl"
-        if not lut_file.exists():
-            print("Running LUT.run_demo()...")
-            LUT.run_demo(show=False)
+        lut_file = from_demo_lut()
 
         # Function type used for fitting calibration curve. 'rational' (recommended)
         # or 'spline'
@@ -253,7 +258,8 @@ class Gaf:
         # filename_pdf = demo_path / str(outname + ".pdf")
         # gaf1.publish_pdf(str(filename_pdf), open_file=True)
 
-        gaf1.show_results(io.BytesIO(), show=True)
+        if show:
+            gaf1.show_results(io.BytesIO())
 
     def load_files(self, path):
         """
@@ -312,7 +318,8 @@ class Gaf:
 
         # Check that image and LUT sizes match (if lateral correction is used)
         if lut.lateral_correction:
-            raise ValueError("Image dimension does not match LUT resolution!")
+            if ysize != lut.npixel:
+                raise ValueError("Image dimension does not match LUT resolution!")
 
         # Apply median filter on all image channels if needed
         if img_filt:
@@ -647,3 +654,14 @@ def from_demo_image() -> Path:
 
     img = retrieve_demo_file("A1A_Multi_6cm_001.tif")
     return img.parent
+
+
+def from_demo_lut() -> Path:
+    """Load the demo lut and return the path to the file."""
+
+    lut_file_path = Path(__file__).parent / "demo_files" / "calibration" / "Demo_calib.pkl"
+    if not lut_file_path.exists():
+        print("Running LUT.run_demo()...")
+        LUT.run_demo(show=False)
+
+    return lut_file_path
