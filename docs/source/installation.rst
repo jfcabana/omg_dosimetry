@@ -16,6 +16,7 @@ to avoid dependency version conflicts. The following commands will install a ded
 .. code-block:: bash
 
     $ conda create --name omg_d python=3.10
+    $ conda activate omg_d
     $ pip install omg-dosimetry
 
 .. _dependencies:
