@@ -16,7 +16,7 @@ To run the demo, import the main class and run the demo method:
 .. plot::
     :include-source:
 
-    from omg_dosimetry import LUT
+    from omg_dosimetry.calibration import LUT
 
     LUT.run_demo()
 
@@ -29,11 +29,13 @@ Import :class:`~omg_dosimetry.calibration.LUT` and Path
 
 .. code-block:: python
 
-    from omg_dosimetry import LUT
+    from omg_dosimetry.calibration import LUT
     from pathlib import Path
     import matplotlib.pyplot as plt
 
 Define the folder containing the scanned tiff images, and the nominal doses [cGy] imparted to the films
+
+.. note:: Only 16-bit/channel RGB tiff images are supported.
 
 .. code-block:: python
 
