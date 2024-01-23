@@ -14,7 +14,6 @@ author = 'Jean-François Cabana, Luis Alfonso Olivares Jiménez and Peter Truong
 version = "1.6"
 # The full version, including alpha/beta/rc tags.
 release = "1.6.1"
->>>>>>> OMG_master
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
 
