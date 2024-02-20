@@ -4,7 +4,7 @@
 """
 __author__ = "Peter Truong"
 __contact__ = "petertruong.cissso@ssss.gouv.qc.ca"
-__version__ = "27 novembre 2023"
+__version__ = "19 février 2024"
 
 from omg_dosimetry import analysis, tiff2dose
 import os, sys, ctypes, pickle
@@ -19,31 +19,25 @@ plt.ion()           # Interactive Mode: ON
 
 ### Parameter Initialization
 info = dict(author = "PT", 
-            unit = "CL3", 
+            unit = "CL4", 
             film_lot = "EBT-3 C2",
             scanner_id = "Epson 10000XL", 
-            date_exposed = "2023-11-16",
-            date_scanned = "2023-11-17",
+            date_exposed = "2024-02-06",
+            date_scanned = "2024-02-07",
             wait_time = "24h", 
-            notes = "Patient QA")
+            notes = "Test Gamma with Time")
 
 ### Look-up Table (LUT) Path Initialization
 landscape = False
 LatCor = True
 if landscape: # Landscape Orientation
-    # lut_file = (r"\\SVWCT2Out0455\Phys\Répertoires communs\Radiotherapie Externe\Film_QA\Calibration_LUT"
-    #             r"\2022-10-04\C2_3Gy_72dpi_landscape.pkl")
-    lut_file = (r"\\SVWCT2Out0455\Phys\Répertoires communs\Radiotherapie Externe\Film_QA\CRIC Testing"
-                r"\0001-Drolet_039086\C2_3Gy_72dpi_landscape_CRIC.pkl")
+    lut_file = (r"\\SVWCT2Out0455\Phys\Répertoires communs\Radiotherapie Externe\Film_QA\Calibration_LUT"
+                r"\2022-10-04\C2_3Gy_72dpi_landscape.pkl")
 else: # Portrait Orientation    
-    # if LatCor: lut_file = (r"\\SVWCT2Out0455\Phys\Répertoires communs\Radiotherapie Externe\Film_QA\Calibration_LUT"
-    #                        r"\2023-09-12 (C2 LatCor)\C2_3Gy_LUT_LatCor_9MeV_2023-09-12.pkl")
-    # else: lut_file = (r"\\SVWCT2Out0455\Phys\Répertoires communs\Radiotherapie Externe\Film_QA\Calibration_LUT"
-    #                   r"\2023-09-12 (C2 LatCor)\Sans LatCor\C2_3Gy_LUT_9MeV_2023-09-12.pkl")
-    if LatCor: lut_file = (r"\\SVWCT2Out0455\Phys\Répertoires communs\Radiotherapie Externe\Film_QA"
-                           r"\CRIC Testing\2023-09-12 (C2 LatCor)\C2_3Gy_LUT_LatCor_9MeV_2023-09-12.pkl")
-    else: lut_file = (r"\\SVWCT2Out0455\Phys\Répertoires communs\Radiotherapie Externe\Film_QA"
-                      r"\CRIC Testing\2023-09-12 (C2 LatCor)\Sans LatCor\C2_3Gy_LUT_9MeV_2023-09-12.pkl")
+    if LatCor: lut_file = (r"\\SVWCT2Out0455\Phys\Répertoires communs\Radiotherapie Externe\Film_QA\Calibration_LUT"
+                            r"\2023-09-12 (C2 LatCor)\C2_3Gy_LUT_LatCor_9MeV_2023-09-12.pkl")
+    else: lut_file = (r"\\SVWCT2Out0455\Phys\Répertoires communs\Radiotherapie Externe\Film_QA\Calibration_LUT"
+                      r"\2023-09-12 (C2 LatCor)\Sans LatCor\C2_3Gy_LUT_9MeV_2023-09-12.pkl")
     
 
 ### Tiff2Dose Parameters
@@ -51,11 +45,12 @@ tiff_2_dose, tiff_2_dose_show_pdf = 1, 0
 clip = 600
 if landscape: rot_scan = 1
 else: rot_scan = 0
+normFilm_selection = False
 
 ### Tiff2Analysis Parameters
 dose_2_analysis, dose_2_analysis_show_pdf = 1, 0
-analysis_publish_pdf = True
-pickle_save = True
+analysis_publish_pdf = False
+pickle_save = False
 crop_film = 1
 flipLR, flipUD = 1, 0
 rot90 = 0
@@ -94,17 +89,20 @@ def main():
     scan_name = os.path.basename(os.path.splitext(path_scan)[0])
     
     ### Scanned Normalization Film Image Selection
-    response = ctypes.windll.user32.MessageBoxW(0, "Was the normalization film scanned separate? If so, would you " \
-                                                "wish to proceed with selecting the normalization film scan?", 
-                                                "Normalization Film Selection", 0x1000 | 0x20 | 0x3)
-    if response == 6: 
-        path_normFilm = filedialog.askopenfilename(parent = root, title = "Select Scanned Normalization Film " \
-                                                   "to Convert To Dose")
-        normFilm_name = os.path.basename(os.path.splitext(path_normFilm)[0])
-    elif response == 2: 
-        print("Cancel option was selected. Exiting Script..." )
-        sys.exit()
+    if normFilm_selection:
+        response = ctypes.windll.user32.MessageBoxW(0, "Was the normalization film scanned separate? If so, would you " \
+                                                    "wish to proceed with selecting the normalization film scan?", 
+                                                    "Normalization Film Selection", 0x1000 | 0x20 | 0x3)
+        if response == 6: 
+            path_normFilm = filedialog.askopenfilename(parent = root, title = "Select Scanned Normalization Film " \
+                                                       "to Convert To Dose")
+            normFilm_name = os.path.basename(os.path.splitext(path_normFilm)[0])
+        elif response == 2: 
+            print("Cancel option was selected. Exiting Script..." )
+            sys.exit()
+        else: path_normFilm = None
     else: path_normFilm = None
+    
     ### Reference Eclipse Dose Plan File Selection
     path_doseEclipse = filedialog.askopenfilename(parent = root, title = "Select Reference Eclipse Dose Plan File", 
                                                   filetypes = [("Eclipse Dose Plane DICOM File", ".dcm")], 

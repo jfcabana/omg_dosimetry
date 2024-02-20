@@ -384,8 +384,10 @@ class DoseAnalysis():
             ref_dose.normalize(norm_val)
             
         # set coordinates [mm]
-        x_coord = (np.array(range(0, self.ref_dose.shape[0])) / self.ref_dose.dpmm - self.ref_dose.physical_shape[0]/2).tolist()
-        y_coord = (np.array(range(0, self.ref_dose.shape[1])) / self.ref_dose.dpmm - self.ref_dose.physical_shape[1]/2).tolist()
+        # x_coord = (np.array(range(0, self.ref_dose.shape[0])) / self.ref_dose.dpmm - self.ref_dose.physical_shape[0]/2).tolist()
+        # y_coord = (np.array(range(0, self.ref_dose.shape[1])) / self.ref_dose.dpmm - self.ref_dose.physical_shape[1]/2).tolist()
+        x_coord = (np.array(range(0, self.ref_dose.shape[0])) / self.ref_dose.dpmm).tolist()
+        y_coord = (np.array(range(0, self.ref_dose.shape[1])) / self.ref_dose.dpmm).tolist()
         axes_reference, axes_evaluation = (x_coord, y_coord), (x_coord, y_coord)
         dose_reference, dose_evaluation = ref_dose.array, film_dose.array
 
