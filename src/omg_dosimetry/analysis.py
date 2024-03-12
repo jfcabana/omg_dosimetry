@@ -636,28 +636,24 @@ class DoseAnalysis():
         """        
 
         film, ref = self.film_dose.array, self.ref_dose.array
-        v_ligne = None
-        if position is None: position = [np.floor(self.ref_dose.shape[1] / 2).astype(int), 
-                                         np.floor(self.ref_dose.shape[0] / 2).astype(int)]
+
         if profile == 'x':
-            film_prof, ref_prof = film[position[1],:], ref[position[1],:] 
-            v_ligne = position[0] / self.film_dose.dpmm
+            if position is None: position = int(self.film_dose.center.y)
+            film_prof, ref_prof = film[position,:], ref[position,:] 
         elif profile == 'y':
-            film_prof, ref_prof = film[:,position[0]], ref[:,position[0]]
-            v_ligne = position[1] / self.film_dose.dpmm        
+            if position is None: position = int(self.film_dose.center.x)
+            film_prof, ref_prof = film[:,position], ref[:,position]
         
         x_axis = (np.array(range(0, len(film_prof))) / self.film_dose.dpmm).tolist()
-        y_max = max(np.concatenate((film_prof, ref_prof)))
         
         if ax is None: fig, ax = plt.subplots()    
         ax.clear()
         ax.plot([i+offset for i in x_axis], film_prof,'r-', linewidth=2)
         ax.plot(x_axis, ref_prof,'b--', linewidth=2)
-        if v_ligne: ax.plot((v_ligne, v_ligne), (0, y_max * 1.10), 'k:', linewidth = 1)
         
         if title is None:
-            if profile == 'x': title='Horizontal Profile (y = {} mm)'.format(int(position[1] / self.film_dose.dpmm))
-            if profile == 'y': title='Vertical Profile (x = {} mm)'.format(int(position[0] / self.film_dose.dpmm))
+            if profile == 'x': title='Horizontal Profile (y = {} mm)'.format(int(position / self.film_dose.dpmm))
+            if profile == 'y': title='Vertical Profile (x = {} mm)'.format(int(position / self.film_dose.dpmm))
         ax.set_title(title)
         ax.set_xlabel('Position (mm)')
         ax.set_ylabel('Dose (cGy)')
@@ -723,8 +719,13 @@ class DoseAnalysis():
             at a given x/y coordinates, and draw lines on the dose distribution maps
             to show where the profile is taken.
         """
-        self.plot_profile(ax=axes[-2], profile='x', position=[x, y])
-        self.plot_profile(ax=axes[-1], profile='y', position=[x, y])
+        ax_x = axes[-2]
+        ax_y = axes[-1]
+        self.plot_profile(ax=ax_x, profile='x', position=y)
+        self.plot_profile(ax=ax_y, profile='y', position=x)
+        
+        ax_x.plot((y / self.film_dose.dpmm, y / self.film_dose.dpmm), ax_x.get_ylim(), 'k:', linewidth = 1)
+        ax_y.plot((x / self.film_dose.dpmm, x / self.film_dose.dpmm), ax_y.get_ylim(), 'k:', linewidth = 1)
         
         for i in range(0,4):
             ax = axes[i]
@@ -1174,23 +1175,44 @@ class DoseAnalysis():
         canvas.finish()
         if open_file: webbrowser.open(filename)       
 
-    def get_profile_offsets(self):
+    def get_profile_offsets(self, position_x=None, position_y=None):
         """ Starts an interactive process where the user can move
             the measured profile with respect to the reference profile
             in order to compute the spatial offset between the two.
             The process is repeated four times to get offsets on both
             sides in the x and y directions.
+            
+            Parameters
+            ----------
+            position_x : int, optional
+                The x position of the profile to plot, in pixels.
+                If None, position is set to the center of the reference dose.
+                Default is None
+                
+            position_y : int, optional
+                The y position of the profile to plot, in pixels.
+                If None, position is set to the center of the reference dose.
+                Default is None
         """
-        self.get_profile_offset(direction='x', side='left')
+        self.get_profile_offset(direction='x', side='left', position=position_y)
         self.offset_x_gauche = self.offset
-        self.get_profile_offset(direction='x', side='right')
+        self.get_profile_offset(direction='x', side='right', position=position_y)
         self.offset_x_droite = self.offset
-        self.get_profile_offset(direction='y', side='left')
+        self.get_profile_offset(direction='y', side='left', position=position_x)
         self.offset_y_gauche = self.offset
-        self.get_profile_offset(direction='y', side='right')
+        self.get_profile_offset(direction='y', side='right', position=position_x)
         self.offset_y_droite = self.offset
+        
+        self.offset_x = -1.0*((self.offset_x_gauche + self.offset_x_droite) / 2.0)
+        self.offset_y = -1.0*((self.offset_y_gauche + self.offset_y_droite) / 2.0)
+        self.diff_grandeur_x = self.offset_x_gauche - self.offset_x_droite
+        self.diff_grandeur_y = self.offset_y_gauche - self.offset_y_droite
+        
+        print("X: Décalage = {:.2f} mm; Diff grandeur = {:.2f} mm".format(self.offset_x, self.diff_grandeur_x))
+        print("Y: Décalage = {:.2f} mm; Diff grandeur = {:.2f} mm".format(self.offset_y, self.diff_grandeur_y))
+        
 
-    def get_profile_offset(self, direction='x', side='left'):
+    def get_profile_offset(self, direction='x', side='left', position=None):
         """ Opens an interactive plot where the user can move
             the measured profile with respect to the reference profile
             in order to compute the spatial offset between the two.
@@ -1206,12 +1228,19 @@ class DoseAnalysis():
             The side on the profile that will be matched.
             Either 'left' or 'right'.
             Default is left. 
+            
+        position : int, optional
+            The position of the profile to plot, in pixels, in the direction perpendicular to the profile.
+            eg. if profile='x' and position=400, a profile in the x direction is showed, at position y=400.
+            If None, position is set to the center of the reference dose.
+            Default is None
         """
         msg = '\nUse left/right keyboard arrows to move profile and fit on ' + side + ' side. Press Enter when done.'
         print(msg)
         self.offset = 0
         self.direction = direction
-        self.plot_profile(profile=direction, diff=True, offset=0, title='Fit profiles on ' + side + ' side')
+        self.position = position
+        self.plot_profile(profile=direction, position=position, diff=False, offset=0, title='Fit profiles on ' + side + ' side')
         self.fig = plt.gcf()
         self.cid = self.fig.canvas.mpl_connect('key_press_event', self.move_profile_ontype)
         self.wait = True
@@ -1226,18 +1255,19 @@ class DoseAnalysis():
         """
         fig = plt.gcf()
         ax = plt.gca()
+        position = self.position
         
         if event.key == 'left':
             self.offset -= 0.1
-            self.plot_profile(ax=ax, profile=self.direction, position=None, title=None, diff=False, offset=self.offset)
+            self.plot_profile(ax=ax, profile=self.direction, position=position, title='Shift = ' + str(self.offset) + ' mm', diff=False, offset=self.offset)
             fig.canvas.draw_idle()
-            ax.set_title('Shift = ' + str(self.offset) + ' mm')
+            # ax.set_title('Shift = ' + str(self.offset) + ' mm')
             
         if event.key == 'right':
             self.offset += 0.1
-            self.plot_profile(ax=ax, profile=self.direction, position=None, title=None, diff=False, offset=self.offset)
+            self.plot_profile(ax=ax, profile=self.direction, position=position, title='Shift = ' + str(self.offset) + ' mm', diff=False, offset=self.offset)
             fig.canvas.draw_idle()
-            ax.set_title('Shift = ' + str(self.offset) + ' mm')
+            # ax.set_title('Shift = ' + str(self.offset) + ' mm')
         
         if event.key == 'enter':
             self.fig.canvas.mpl_disconnect(self.cid)
