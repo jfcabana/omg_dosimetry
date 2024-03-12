@@ -138,7 +138,7 @@ class DoseAnalysis():
         mean_film = np.mean(self.film_dose.array[indices])          
         self.apply_film_factor(film_dose_factor = mean_ref / mean_film )
         
-    def apply_factor_from_roi(self, norm_dose = None):
+    def apply_factor_from_roi(self, norm_dose=None, apply=True):
         """ Apply film normalisation factor from a rectangle ROI.
             Brings up an interactive plot, where the user must define a rectangle ROI
             that will be used to compute a film normalisation factor.
@@ -173,12 +173,26 @@ class DoseAnalysis():
             self.roi_ymin, self.roi_ymax = min(y1,y2), max(y1,y2)
         
         self.rs = RectangleSelector(ax, select_box, useblit=True, button=[1], minspanx=5, minspany=5, spancoords='pixels', interactive=True)  
-        self.cid = self.fig.canvas.mpl_connect('key_press_event', self.apply_factor_from_roi_press_enter)
+        if apply: self.cid = self.fig.canvas.mpl_connect('key_press_event', self.apply_factor_from_roi_press_enter)
+        else: self.cid = self.fig.canvas.mpl_connect('key_press_event', self.get_factor_from_roi_press_enter)
         
         self.wait = True
         while self.wait: plt.pause(1)
         plt.close(self.fig)
         return
+
+    def get_factor_from_roi_press_enter(self, event):
+        """ Function called from apply_factor_from_roi() when ''enter'' is pressed. """      
+        if event.key == 'enter':
+            roi_film = np.median(self.film_dose.array[self.roi_ymin:self.roi_ymax, self.roi_xmin:self.roi_xmax])
+            roi_ref = np.median(self.ref_dose.array[self.roi_ymin:self.roi_ymax, self.roi_xmin:self.roi_xmax])
+            relative_diff = (roi_film-roi_ref)/roi_ref * 100
+            print("Median film dose = {} cGy; median ref dose = {} cGy; Relative diff = {}%".format(roi_film, roi_ref, relative_diff))
+            
+            if hasattr(self, "rs"): del self.rs                
+            self.fig.canvas.mpl_disconnect(self.cid)
+            self.wait = False
+            return
 
     def apply_factor_from_roi_press_enter(self, event):
         """ Function called from apply_factor_from_roi() when ''enter'' is pressed. """      
@@ -560,7 +574,7 @@ class DoseAnalysis():
         ax.set_title("Gamma pass rate vs dose")
         ax.set_xticks(bins)
         
-    def plot_gamma_stats(self, figsize=(10, 10), show_hist=True, show_pass_hist=True, show_varDistTA=True, show_varDoseTA=True):
+    def plot_gamma_stats(self, figsize=(10, 10), show_hist=True, show_pass_hist=True, show_varDistTA=False, show_varDoseTA=False):
         """ Displays a figure with 4 subplots showing gamma analysis statistics:
             1- Gamma map histogram, 
             2- Gamma pass rate vs dose histogram
