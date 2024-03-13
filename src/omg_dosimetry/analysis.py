@@ -712,8 +712,13 @@ class DoseAnalysis():
         plt.multi = MultiCursor(None, (axes[0],axes[1],axes[2],axes[3]), color='r', lw=1, horizOn=True)
         
         fig.canvas.mpl_connect('button_press_event', lambda event: self.set_profile(event, axes))
+        fig.canvas.mpl_connect('key_press_event', self.show_results_ontype)
         if show: plt.show()
         
+    def show_results_ontype(self, event):
+        if event.key == 'enter':
+            self.get_profile_offsets(position_x=self.prof_x, position_y=self.prof_y)
+    
     def show_profiles(self, axes, x, y):
         """ This function is called by show_results and set_profile to draw dose profiles
             at a given x/y coordinates, and draw lines on the dose distribution maps
@@ -724,8 +729,8 @@ class DoseAnalysis():
         self.plot_profile(ax=ax_x, profile='x', position=y)
         self.plot_profile(ax=ax_y, profile='y', position=x)
         
-        ax_x.plot((y / self.film_dose.dpmm, y / self.film_dose.dpmm), ax_x.get_ylim(), 'k:', linewidth = 1)
-        ax_y.plot((x / self.film_dose.dpmm, x / self.film_dose.dpmm), ax_y.get_ylim(), 'k:', linewidth = 1)
+        ax_x.plot((x / self.film_dose.dpmm, x / self.film_dose.dpmm), ax_x.get_ylim(), 'k:', linewidth = 1)
+        ax_y.plot((y / self.film_dose.dpmm, y / self.film_dose.dpmm), ax_y.get_ylim(), 'k:', linewidth = 1)
         
         for i in range(0,4):
             ax = axes[i]
@@ -740,15 +745,16 @@ class DoseAnalysis():
             on mouse click (if cursor is not set to zoom or pan).
         """
         if event.button == 1 and plt.gcf().canvas.cursor().shape() == 0:   # 0 is the arrow, which means we are not zooming or panning.
-            if event.inaxes in axes[0:4]:
-                self.prof_x = int(event.xdata)
-                self.prof_y = int(event.ydata)
-            elif event.inaxes == axes[4]: self.prof_x = int(event.xdata * self.film_dose.dpmm)
-            elif event.inaxes == axes[5]: self.prof_y = int(event.xdata * self.film_dose.dpmm)
-            
-            self.show_profiles(axes,x=self.prof_x, y=self.prof_y)    
-            plt.gcf().canvas.draw_idle()
+                if event.inaxes in axes[0:4]:
+                    self.prof_x = int(event.xdata)
+                    self.prof_y = int(event.ydata)
+                elif event.inaxes == axes[4]: self.prof_x = int(event.xdata * self.film_dose.dpmm)
+                elif event.inaxes == axes[5]: self.prof_y = int(event.xdata * self.film_dose.dpmm)
+                
+                self.show_profiles(axes,x=self.prof_x, y=self.prof_y)    
+                plt.gcf().canvas.draw_idle()
         else: print('\nZoom/pan is currently selected.\nNote: Unable to set profile when this tool is active.')
+        
         
     def register(self, shift_x=0, shift_y=0, threshold=10, register_using_gradient=False, markers_center=None, rot=0):
         """ Starts the registration procedure between film and reference dose.
