@@ -700,14 +700,14 @@ class DoseAnalysis():
         max_dose_comp = np.percentile(self.ref_dose.array,[98])[0].round(decimals=-1)
         clim = [0, max_dose_comp]
 
-        self.film_dose.plotCB(ax1, clim=clim, title='Film Dose ({})'.format(os.path.basename(self.film_dose.path)))
-        self.ref_dose.plotCB(ax2, clim=clim, title='Reference Dose ({})'.format(os.path.basename(self.ref_dose.path)))
-        self.GammaMap.plotCB(ax3, clim=[0,2], cmap='bwr', title='Gamma Map ({:.2f}% Pass; {:.2f} Mean)'.format(self.GammaMap.passRate, self.GammaMap.mean))
+        self.film_dose.plot(ax1, clim=clim, title='Film Dose ({})'.format(os.path.basename(self.film_dose.path)), colorbar=True)
+        self.ref_dose.plot(ax2, clim=clim, title='Reference Dose ({})'.format(os.path.basename(self.ref_dose.path)), colorbar=True)
+        self.GammaMap.plot(ax3, clim=[0,2], cmap='bwr', title='Gamma Map ({:.2f}% Pass; {:.2f} Mean)'.format(self.GammaMap.passRate, self.GammaMap.mean), colorbar=True)
         ax3.set_facecolor('k')
         min_value = max(-20, np.percentile(self.DiffMap.array,[1])[0].round(decimals=0))
         max_value = min(20, np.percentile(self.DiffMap.array,[99])[0].round(decimals=0))
         clim = [min_value, max_value]    
-        self.RelError.plotCB(ax4, cmap='jet', clim=clim, title='Relative Error (%) (RMSE = {:.2f})'.format(self.DiffMap.RMSE))
+        self.RelError.plot(ax4, cmap='jet', clim=clim, title='Relative Error (%) (RMSE = {:.2f})'.format(self.DiffMap.RMSE), colorbar=True)
         self.show_profiles(axes, x=self.prof_x, y=self.prof_y)
         plt.multi = MultiCursor(None, (axes[0],axes[1],axes[2],axes[3]), color='r', lw=1, horizOn=True)
         

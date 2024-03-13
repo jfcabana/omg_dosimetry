@@ -335,18 +335,21 @@ class BaseImage:
                 date = 'Unknown'
         return date
 
-    def plot(self, ax=None, show=True, cmap='inferno', clim=None, title='', **kwargs):
+    def plot(self, ax=None, show=True, cmap='inferno', clim=None, title='', colorbar=False, **kwargs):
         if ax is None:
             fig, ax = plt.subplots()
         if clim is None:
             min_value = np.percentile(self.array,[0.1])[0].round(decimals=-1)
             max_value = np.percentile(self.array,[99.9])[0].round(decimals=-1)
             clim = [min_value, max_value]               
+        fig = plt.gcf()
+        
         if self.array.ndim > 2 and self.array.max() > 255:
             cax = ax.imshow(self.array / 65535., cmap=cmap, **kwargs) 
         else:
             cax = ax.imshow(self.array, cmap=cmap, **kwargs)
         cax.set_clim(clim) 
+        if colorbar: fig.colorbar(cax, ax=ax)
         ax.set_title(title)
         ax.axis('image')      
         if show:
@@ -354,24 +357,25 @@ class BaseImage:
         return cax
     
     def plotCB(self, ax=None, show=True, cmap='inferno', clim=None, title='', **kwargs):
-        if ax is None:
-            fig, ax = plt.subplots()
-        if clim is None:
-            min_value = np.percentile(self.array,[0.1])[0].round(decimals=-0)
-            max_value = np.percentile(self.array,[99.9])[0].round(decimals=-0)
-            clim = [min_value, max_value]    
-        fig = plt.gcf()
+        self.plot(ax=ax, show=show, cmap=cmap, clim=clim, title=title, colorbar=True, **kwargs)
+    #     if ax is None:
+    #         fig, ax = plt.subplots()
+    #     if clim is None:
+    #         min_value = np.percentile(self.array,[0.1])[0].round(decimals=-0)
+    #         max_value = np.percentile(self.array,[99.9])[0].round(decimals=-0)
+    #         clim = [min_value, max_value]    
+    #     fig = plt.gcf()
             
-        if self.array.ndim > 2 and self.array.max() > 255:
-            cax = ax.imshow(self.array / 65535., cmap=cmap, interpolation='nearest', **kwargs) 
-        else:
-            cax = ax.imshow(self.array, cmap=cmap, interpolation='nearest', **kwargs)
-        cax.set_clim(clim)
-        fig.colorbar(cax, ax=ax)   
-        ax.set_title(title)
-        ax.axis('image')      
-        if show: plt.show(block = False)
-        return cax
+    #     if self.array.ndim > 2 and self.array.max() > 255:
+    #         cax = ax.imshow(self.array / 65535., cmap=cmap, interpolation='nearest', **kwargs) 
+    #     else:
+    #         cax = ax.imshow(self.array, cmap=cmap, interpolation='nearest', **kwargs)
+    #     cax.set_clim(clim)
+    #     fig.colorbar(cax, ax=ax)   
+    #     ax.set_title(title)
+    #     ax.axis('image')      
+    #     if show: plt.show(block = False)
+    #     return cax
 
     # @value_accept(kind=('median', 'gaussian'))
     def filter(self, size=0.05, kind='median'):
