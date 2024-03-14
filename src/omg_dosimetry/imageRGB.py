@@ -356,11 +356,11 @@ class BaseImage:
             plt.show()
         return cax
     
-    def plot_isodoses(self, ax=None, levels=[], colors='red', show=True, title='', labels=True, **kwargs):
+    def plot_isodoses(self, ax=None, levels=[], colors='red', show=True, title='', labels=True, inline=True, **kwargs):
         if ax is None:
             fig, ax = plt.subplots()            
         contours = ax.contour(self.array, levels=levels, colors=colors, **kwargs)  # Courbes de contour
-        if labels: ax.clabel(contours, inline=True, fontsize=10, inline_spacing=5)
+        if labels: ax.clabel(contours, inline=inline, fontsize=10, inline_spacing=1)
         ax.set_title(title)
         ax.axis('image')   
         if show:

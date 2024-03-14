@@ -35,6 +35,7 @@ import webbrowser
 from .imageRGB import load, ArrayImage, equate_images
 import bz2
 import time
+from .tools import Ruler
 
 class DoseAnalysis(): 
     """Base class for analysis film dose vs reference dose.
@@ -664,7 +665,7 @@ class DoseAnalysis():
             ax_diff.set_ylabel("Difference (cGy)")
             ax_diff.plot(x_axis, diff_prof,'g-', linewidth=0.25)
     
-    def plot_isodoses(self, ax=None, levels=None, colors=None):
+    def plot_isodoses(self, ax=None, levels=None, colors=None, show_ruler=True):
         if ax is None:
             fig, ax = plt.subplots()
         if levels is None:
@@ -672,11 +673,14 @@ class DoseAnalysis():
             levels = [d_max * l for l in np.arange(0.2, 1.0, 0.2)]
         if colors is None:
             colors = plt.cm.tab10(np.linspace(0, 1, 5))
-        self.film_dose.plot_isodoses(ax=ax, levels=levels, colors=colors, linestyles='dashdot', linewidths=0.5)
-        self.ref_dose.plot_isodoses(ax=ax, levels=levels, colors=colors, linestyles='solid', linewidths=0.5, labels=False)
+        extent = [0, self.ref_dose.physical_shape[1], 0, self.ref_dose.physical_shape[0]]
+        self.film_dose.plot_isodoses(ax=ax, levels=levels, colors=colors, linestyles='dashdot', linewidths=0.5, extent=extent, inline=False)
+        self.ref_dose.plot_isodoses(ax=ax, levels=levels, colors=colors, linestyles='solid', linewidths=0.5, labels=False, extent=extent)
         legend_lines = [plt.Line2D([0], [0], linestyle='dotted', color='black', label='Film Dose'),
                         plt.Line2D([0], [0], linestyle='solid', color='black', label='Reference Dose')]
         plt.legend(handles=legend_lines)
+        if show_ruler:
+            self.ruler = add_ruler(ax)
 
     def show_results(self, fig=None, x=None, y=None, show = True):
         """ Display an interactive figure showing the results of a gamma analysis.
@@ -1293,7 +1297,7 @@ class DoseAnalysis():
             self.fig.canvas.mpl_disconnect(self.cid)
             self.wait = False
             return self.offset
-
+        
 ########################### End class DoseAnalysis ############################## 
     
 def line_intersection(line1, line2):
@@ -1352,3 +1356,10 @@ def save_analysis(analysis, filename, use_compression=True):
         file = open(filename, 'wb')
     pickle.dump(analysis, file, pickle.HIGHEST_PROTOCOL)
     file.close()
+
+def add_ruler(ax=None):
+    if ax is None: ax = plt.gca()
+    markerprops = dict(marker='o', markersize=5, markeredgecolor='red')
+    lineprops = dict(color='red', linewidth=2)
+    ruler = Ruler(ax=ax, useblit=True, markerprops=markerprops, lineprops=lineprops)
+    return ruler
