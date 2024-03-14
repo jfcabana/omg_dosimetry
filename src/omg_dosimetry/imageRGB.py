@@ -356,6 +356,17 @@ class BaseImage:
             plt.show()
         return cax
     
+    def plot_isodoses(self, ax=None, levels=[], colors='red', show=True, title='', labels=True, **kwargs):
+        if ax is None:
+            fig, ax = plt.subplots()            
+        contours = ax.contour(self.array, levels=levels, colors=colors, **kwargs)  # Courbes de contour
+        if labels: ax.clabel(contours, inline=True, fontsize=10, inline_spacing=5)
+        ax.set_title(title)
+        ax.axis('image')   
+        if show:
+            plt.show()
+        return contours
+
     def plotCB(self, ax=None, show=True, cmap='inferno', clim=None, title='', **kwargs):
         self.plot(ax=ax, show=show, cmap=cmap, clim=clim, title=title, colorbar=True, **kwargs)
     #     if ax is None:

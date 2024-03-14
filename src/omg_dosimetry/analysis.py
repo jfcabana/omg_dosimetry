@@ -664,6 +664,20 @@ class DoseAnalysis():
             ax_diff.set_ylabel("Difference (cGy)")
             ax_diff.plot(x_axis, diff_prof,'g-', linewidth=0.25)
     
+    def plot_isodoses(self, ax=None, levels=None, colors=None):
+        if ax is None:
+            fig, ax = plt.subplots()
+        if levels is None:
+            d_max = self.ref_dose.array.max()
+            levels = [d_max * l for l in np.arange(0.2, 1.0, 0.2)]
+        if colors is None:
+            colors = plt.cm.tab10(np.linspace(0, 1, 5))
+        self.film_dose.plot_isodoses(ax=ax, levels=levels, colors=colors, linestyles='dashdot', linewidths=0.5)
+        self.ref_dose.plot_isodoses(ax=ax, levels=levels, colors=colors, linestyles='solid', linewidths=0.5, labels=False)
+        legend_lines = [plt.Line2D([0], [0], linestyle='dotted', color='black', label='Film Dose'),
+                        plt.Line2D([0], [0], linestyle='solid', color='black', label='Reference Dose')]
+        plt.legend(handles=legend_lines)
+
     def show_results(self, fig=None, x=None, y=None, show = True):
         """ Display an interactive figure showing the results of a gamma analysis.
             The figure contains 6 axis, which are, from left to right and top to bottom:
