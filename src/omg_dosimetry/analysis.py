@@ -157,14 +157,14 @@ class DoseAnalysis():
         ax = plt.gca()  
         if self.norm_film_dose:
             self.norm_film_dose.plot(ax=ax)  
-            ax.plot((0,self.norm_film_dose.shape[1]),(self.norm_film_dose.center.y,self.norm_film_dose.center.y),'k--')
-            ax.set_xlim(0, self.norm_film_dose.shape[1])
-            ax.set_ylim(self.norm_film_dose.shape[0],0)
+            # ax.plot((0,self.norm_film_dose.shape[1]),(self.norm_film_dose.center.y,self.norm_film_dose.center.y),'k--')
+            # ax.set_xlim(0, self.norm_film_dose.shape[1])
+            # ax.set_ylim(self.norm_film_dose.shape[0],0)
         else:
             self.film_dose.plot(ax=ax)  
-            ax.plot((0,self.film_dose.shape[1]),(self.film_dose.center.y,self.film_dose.center.y),'k--')
-            ax.set_xlim(0, self.film_dose.shape[1])
-            ax.set_ylim(self.film_dose.shape[0],0)
+            # ax.plot((0,self.film_dose.shape[1]),(self.film_dose.center.y,self.film_dose.center.y),'k--')
+            # ax.set_xlim(0, self.film_dose.shape[1])
+            # ax.set_ylim(self.film_dose.shape[0],0)
         ax.set_title(msg)
         print(msg)
         
@@ -194,6 +194,7 @@ class DoseAnalysis():
             if hasattr(self, "rs"): del self.rs                
             self.fig.canvas.mpl_disconnect(self.cid)
             self.wait = False
+            self.roi_relative_diff = relative_diff
             return
 
     def apply_factor_from_roi_press_enter(self, event):
@@ -1155,6 +1156,8 @@ class DoseAnalysis():
         ax1.plot((0,self.ref_dose.shape[1]),(y,y),'w--', linewidth=1)
         self.plot_profile(ax=ax2, profile='x', position=y, diff=True)
         self.plot_profile(ax=ax3, profile='y', position=x, diff=True)
+        ax2.plot((x / self.film_dose.dpmm, x / self.film_dose.dpmm), ax2.get_ylim(), 'k:', linewidth = 1)
+        ax3.plot((y / self.film_dose.dpmm, y / self.film_dose.dpmm), ax3.get_ylim(), 'k:', linewidth = 1)
         fig = plt.gcf()
         fig.savefig(filename)
         plt.close(fig)
@@ -1189,7 +1192,7 @@ class DoseAnalysis():
         fig.savefig(filename)
         plt.close(fig)
             
-    def publish_pdf(self, filename=None, author=None, unit=None, notes=None, open_file=False, x=None, y=None, profiles_coord='detect', clusters_threshold=0.8, iso_levels=None, **kwargs):
+    def publish_pdf(self, filename=None, author=None, unit=None, notes=None, open_file=False, x=None, y=None, plot_clusters_analysis=True, iso_levels=None, **kwargs):
         """Publish a PDF report of the calibration. The report includes basic
         file information, the image and determined ROIs, and the calibration curves
 
@@ -1211,10 +1214,7 @@ class DoseAnalysis():
         if filename is None:
             filename = os.path.join(self.path, 'Report.pdf')
         
-        if profiles_coord == 'detect':
-            centers_of_mass = self.ref_dose.detect_clusters(threshold=clusters_threshold)
-            x = int(centers_of_mass[0][1])
-            y = int(centers_of_mass[0][0])
+        
         
         title='Film Analysis Report'
         canvas = pdf.PylinacCanvas(filename, page_title=title, logo=Path(__file__).parent / 'OMG_Logo.png')
@@ -1234,13 +1234,19 @@ class DoseAnalysis():
         self.save_analyzed_image(data, x=x, y=y, show = False)
         canvas.add_image(image_data=data, location=(0.5, 3), dimensions=(19, 19))
 
-        for com in centers_of_mass:      
-            x = int(com[1])
-            y = int(com[0])
-            canvas.add_new_page()
-            data = io.BytesIO()
-            self.save_profile(data, x=x, y=y)
-            canvas.add_image(image_data=data, location=(0.5, 3), dimensions=(20, 24))
+        if plot_clusters_analysis:   
+            for cluster in self.clusters_analysis:      
+                canvas.add_new_page()
+                canvas.add_text(text='Cluser analysis', location=(1, 25.5), font_size=12)
+                text = ['Cluster center: X={:.1f} mm, Y={:.1f} mm'.format(cluster['x_mm'], cluster['y_mm']),
+                        'Median dose difference: {:.2f} %'.format(cluster['Dose diff']),
+                        'Profile offset: X={:.2f} mm, Y={:.2f} mm'.format(cluster['Offset x'], cluster['Offset y']),
+                        'Profile width difference: X={:.2f} mm, Y={:.2f} mm'.format(cluster['Diff width x'], cluster['Diff width y'])
+                       ]
+                canvas.add_text(text=text, location=(1, 25), font_size=10)
+                data = io.BytesIO()
+                self.save_profile(data, x=cluster['x_px'], y=cluster['y_px'])
+                canvas.add_image(image_data=data, location=(0.5, 0), dimensions=(20, 24))
 
         canvas.add_new_page()
         canvas.add_text(text='Isodoses plot', location=(1, 25), font_size=10)
@@ -1249,8 +1255,6 @@ class DoseAnalysis():
         canvas.add_image(image_data=data, location=(0.5, 3), dimensions=(20, 20))
         
         canvas.add_new_page()
-        canvas.add_text(text='Analysis infos:', location=(1, 25.5), font_size=12)
-        canvas.add_text(text=text, location=(1, 25), font_size=10)
         data = io.BytesIO()
         self.save_analyzed_gamma(data, figsize=(10, 10))
         canvas.add_image(image_data=data, location=(0.5, 2), dimensions=(20, 20))
@@ -1357,6 +1361,28 @@ class DoseAnalysis():
             self.wait = False
             return self.offset
         
+    def analyse_clusters(self, clusters_threshold=0.8):
+        self.clusters_analysis = []
+        centers_of_mass = self.ref_dose.detect_clusters(threshold=clusters_threshold)  
+        for com in centers_of_mass:
+            x = int(com[1])
+            y = int(com[0])
+            x_mm = x / self.ref_dose.dpmm
+            y_mm = y / self.ref_dose.dpmm
+            self.ref_dose.plot()
+            fig = plt.gcf()
+            ax = plt.gca()
+            ax.plot((x,x),(0,self.ref_dose.shape[0]),'w--', linewidth=1)
+            ax.plot((0,self.ref_dose.shape[1]),(y,y),'w--', linewidth=1)
+            self.apply_factor_from_roi(apply=False)
+            self.get_profile_offsets(position_x=x, position_y=y)
+            self.clusters_analysis.append({'x_px': x, 'y_px': y, 'x_mm': x_mm, 'y_mm': y_mm,
+                                           'Dose diff': self.roi_relative_diff,
+                                           'Offset x': self.offset_x, 'Offset y': self.offset_y,
+                                           'Diff width x': self.diff_grandeur_x, 'Diff width y': self.diff_grandeur_y })
+            plt.close(fig)
+            
+        
 ########################### End class DoseAnalysis ############################## 
     
 def line_intersection(line1, line2):
@@ -1409,6 +1435,7 @@ def load_analysis(filename):
 
 def save_analysis(analysis, filename, use_compression=True):
     print("\nSaving analysis file as {}...".format(filename))
+    if hasattr(analysis, "ruler"): del analysis.ruler
     if use_compression:
         file = bz2.open(filename, 'wb')
     else:
