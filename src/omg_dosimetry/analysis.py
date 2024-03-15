@@ -36,6 +36,7 @@ from .imageRGB import load, ArrayImage, equate_images
 import bz2
 import time
 from .tools import Ruler
+from scipy import ndimage
 
 class DoseAnalysis(): 
     """Base class for analysis film dose vs reference dose.
@@ -665,14 +666,14 @@ class DoseAnalysis():
             ax_diff.set_ylabel("Difference (cGy)")
             ax_diff.plot(x_axis, diff_prof,'g-', linewidth=0.25)
     
-    def plot_isodoses(self, ax=None, levels=None, colors=None, show_ruler=True):
+    def plot_isodoses(self, ax=None, levels=None, colors=None, show_ruler=True, figsize=(10,10)):
         if ax is None:
-            fig, ax = plt.subplots()
+            fig, ax = plt.subplots(figsize=figsize)
         if levels is None:
             d_max = self.ref_dose.array.max()
             levels = [d_max * l for l in np.arange(0.2, 1.0, 0.2)]
         if colors is None:
-            colors = plt.cm.tab10(np.linspace(0, 1, 5))
+            colors = plt.cm.tab10(np.linspace(0, 1, 10))
         extent = [0, self.ref_dose.physical_shape[1], 0, self.ref_dose.physical_shape[0]]
         self.film_dose.plot_isodoses(ax=ax, levels=levels, colors=colors, linestyles='dashdot', linewidths=0.5, extent=extent, inline=False)
         self.ref_dose.plot_isodoses(ax=ax, levels=levels, colors=colors, linestyles='solid', linewidths=0.5, labels=False, extent=extent)
@@ -682,7 +683,7 @@ class DoseAnalysis():
         if show_ruler:
             self.ruler = add_ruler(ax)
 
-    def show_results(self, fig=None, x=None, y=None, show = True):
+    def show_results(self, fig=None, x=None, y=None, show=True):
         """ Display an interactive figure showing the results of a gamma analysis.
             The figure contains 6 axis, which are, from left to right and top to bottom:
             Film dose, reference dose, gamma map, relative error, x profile and y profile.
@@ -705,10 +706,12 @@ class DoseAnalysis():
         elif x == 'max':
             a = np.unravel_index(self.ref_dose.array.argmax(), self.ref_dose.array.shape)
             self.prof_x = a[1]
+        else: self.prof_x = x
         if y is None: self.prof_y = np.floor(self.ref_dose.shape[0] / 2).astype(int)
         elif y == 'max':
             if a is None: a = np.unravel_index(self.ref_dose.array.argmax(), self.ref_dose.array.shape)
             self.prof_y = a[0]
+        else: self.prof_y = y
          
         fig, ((ax1,ax2),(ax3,ax4),(ax5,ax6)) = plt.subplots(3,2, figsize=(10, 8))
         fig.tight_layout()
@@ -737,7 +740,7 @@ class DoseAnalysis():
         if event.key == 'enter':
             self.get_profile_offsets(position_x=self.prof_x, position_y=self.prof_y)
     
-    def show_profiles(self, axes, x, y):
+    def show_profiles(self, axes, x, y, figsize=(10,10)):
         """ This function is called by show_results and set_profile to draw dose profiles
             at a given x/y coordinates, and draw lines on the dose distribution maps
             to show where the profile is taken.
@@ -1135,6 +1138,27 @@ class DoseAnalysis():
         fig.savefig(filename)
         plt.close(fig)
         
+    def save_profile(self, filename, x=None, y=None, figsize=(10, 20), **kwargs):
+        """Save the analyzed image to a file.
+
+        Parameters
+        ----------
+        filename : str
+            The location and filename to save to.
+        kwargs
+            Keyword arguments are passed to plt.savefig().
+        """
+        
+        fig, (ax1, ax2, ax3) = plt.subplots(3,1, figsize=figsize, gridspec_kw={'height_ratios': [1, 2, 2]})
+        self.ref_dose.plot(ax=ax1)
+        ax1.plot((x,x),(0,self.ref_dose.shape[0]),'w--', linewidth=1)
+        ax1.plot((0,self.ref_dose.shape[1]),(y,y),'w--', linewidth=1)
+        self.plot_profile(ax=ax2, profile='x', position=y, diff=True)
+        self.plot_profile(ax=ax3, profile='y', position=x, diff=True)
+        fig = plt.gcf()
+        fig.savefig(filename)
+        plt.close(fig)
+        
     def save_analyzed_gamma(self, filename, **kwargs):
         """Save the analyzed image to a file.
 
@@ -1149,8 +1173,23 @@ class DoseAnalysis():
         fig = plt.gcf()
         fig.savefig(filename)
         plt.close(fig)
+        
+    def save_isodoses_plot(self, filename, **kwargs):
+        """Save the analyzed image to a file.
+
+        Parameters
+        ----------
+        filename : str
+            The location and filename to save to.
+        kwargs
+            Keyword arguments are passed to plt.savefig().
+        """
+        self.plot_isodoses(**kwargs)
+        fig = plt.gcf()
+        fig.savefig(filename)
+        plt.close(fig)
             
-    def publish_pdf(self, filename=None, author=None, unit=None, notes=None, open_file=False, x=None, y=None, **kwargs):
+    def publish_pdf(self, filename=None, author=None, unit=None, notes=None, open_file=False, x=None, y=None, profiles_coord='detect', clusters_threshold=0.8, iso_levels=None, **kwargs):
         """Publish a PDF report of the calibration. The report includes basic
         file information, the image and determined ROIs, and the calibration curves
 
@@ -1171,6 +1210,12 @@ class DoseAnalysis():
         """
         if filename is None:
             filename = os.path.join(self.path, 'Report.pdf')
+        
+        if profiles_coord == 'detect':
+            centers_of_mass = self.ref_dose.detect_clusters(threshold=clusters_threshold)
+            x = int(centers_of_mass[0][1])
+            y = int(centers_of_mass[0][0])
+        
         title='Film Analysis Report'
         canvas = pdf.PylinacCanvas(filename, page_title=title, logo=Path(__file__).parent / 'OMG_Logo.png')
         canvas.add_text(text='Film infos:', location=(1, 25.5), font_size=12)
@@ -1188,14 +1233,28 @@ class DoseAnalysis():
         data = io.BytesIO()
         self.save_analyzed_image(data, x=x, y=y, show = False)
         canvas.add_image(image_data=data, location=(0.5, 3), dimensions=(19, 19))
+
+        for com in centers_of_mass:      
+            x = int(com[1])
+            y = int(com[0])
+            canvas.add_new_page()
+            data = io.BytesIO()
+            self.save_profile(data, x=x, y=y)
+            canvas.add_image(image_data=data, location=(0.5, 3), dimensions=(20, 24))
+
+        canvas.add_new_page()
+        canvas.add_text(text='Isodoses plot', location=(1, 25), font_size=10)
+        data = io.BytesIO()
+        self.save_isodoses_plot(data, figsize=(10, 10), levels=iso_levels)
+        canvas.add_image(image_data=data, location=(0.5, 3), dimensions=(20, 20))
         
         canvas.add_new_page()
         canvas.add_text(text='Analysis infos:', location=(1, 25.5), font_size=12)
         canvas.add_text(text=text, location=(1, 25), font_size=10)
         data = io.BytesIO()
-        self.save_analyzed_gamma(data, figsize=(10, 10), **kwargs)
+        self.save_analyzed_gamma(data, figsize=(10, 10))
         canvas.add_image(image_data=data, location=(0.5, 2), dimensions=(20, 20))
-
+        
         canvas.finish()
         if open_file: webbrowser.open(filename)       
 

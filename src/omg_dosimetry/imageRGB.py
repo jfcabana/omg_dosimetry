@@ -359,7 +359,7 @@ class BaseImage:
     def plot_isodoses(self, ax=None, levels=[], colors='red', show=True, title='', labels=True, inline=True, **kwargs):
         if ax is None:
             fig, ax = plt.subplots()            
-        contours = ax.contour(self.array, levels=levels, colors=colors, **kwargs)  # Courbes de contour
+        contours = ax.contour(self.array, levels=levels, colors=colors, origin='image', **kwargs)  # Courbes de contour
         if labels: ax.clabel(contours, inline=inline, fontsize=10, inline_spacing=1)
         ax.set_title(title)
         ax.axis('image')   
@@ -367,26 +367,24 @@ class BaseImage:
             plt.show()
         return contours
 
+    # The following function is to be removed starting from v2.x
     def plotCB(self, ax=None, show=True, cmap='inferno', clim=None, title='', **kwargs):
         self.plot(ax=ax, show=show, cmap=cmap, clim=clim, title=title, colorbar=True, **kwargs)
-    #     if ax is None:
-    #         fig, ax = plt.subplots()
-    #     if clim is None:
-    #         min_value = np.percentile(self.array,[0.1])[0].round(decimals=-0)
-    #         max_value = np.percentile(self.array,[99.9])[0].round(decimals=-0)
-    #         clim = [min_value, max_value]    
-    #     fig = plt.gcf()
-            
-    #     if self.array.ndim > 2 and self.array.max() > 255:
-    #         cax = ax.imshow(self.array / 65535., cmap=cmap, interpolation='nearest', **kwargs) 
-    #     else:
-    #         cax = ax.imshow(self.array, cmap=cmap, interpolation='nearest', **kwargs)
-    #     cax.set_clim(clim)
-    #     fig.colorbar(cax, ax=ax)   
-    #     ax.set_title(title)
-    #     ax.axis('image')      
-    #     if show: plt.show(block = False)
-    #     return cax
+
+    def detect_clusters(self, threshold=0.8):
+        data = self.array
+        mask = data > threshold * self.array.max()
+
+        labeled_regions, num_features = ndimage.label(mask)
+
+        clusters = []
+        for region_label in range(1, num_features + 1):  # Commence à 1 car le fond est labelisé 0
+            region_mask = labeled_regions == region_label
+            coords = np.argwhere(region_mask)
+            center_of_mass = np.mean(coords, axis=0)
+            clusters.append(center_of_mass)
+        self.clusters = clusters
+        return clusters    
 
     # @value_accept(kind=('median', 'gaussian'))
     def filter(self, size=0.05, kind='median'):
