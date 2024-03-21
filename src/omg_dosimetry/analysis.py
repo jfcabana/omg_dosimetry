@@ -577,7 +577,7 @@ class DoseAnalysis():
         ax.set_title("Gamma pass rate vs dose")
         ax.set_xticks(bins)
         
-    def plot_gamma_stats(self, figsize=(10, 10), show_hist=True, show_pass_hist=True, show_varDistTA=False, show_varDoseTA=False):
+    def show_gamma_stats(self, figsize=(10, 10), show_hist=True, show_pass_hist=True, show_varDistTA=False, show_varDoseTA=False):
         """ Displays a figure with 4 subplots showing gamma analysis statistics:
             1- Gamma map histogram, 
             2- Gamma pass rate vs dose histogram
@@ -602,7 +602,7 @@ class DoseAnalysis():
         if show_varDoseTA:
             self.plot_gamma_varDoseTA(ax=axes[i])
         
-    def plot_profile(self, ax=None, profile='x', position=None, title=None, diff=False, offset=0):
+    def plot_profile(self, ax=None, profile='x', position=None, title=None, diff=False, offset=0, vertical_line=None, xlim=None, ylim='auto'):
         """ Plot a line profile of reference dose and film dose at a given position.
 
             Parameters
@@ -636,6 +636,12 @@ class DoseAnalysis():
                 to account for this offset. For example, a film exposed at a fixed gantry angle coud have a known 
                 offset due to gantry sag, and you could want to correct for it on the profile.
                 Default is 0 mm
+                
+            vertical_line : int, optional
+                If set to True, a dashed vertical line is plotted on the profile at this position
+                
+            xlim : tuple, optional
+                If given, xlim will be passed to ax.set_xlim(xlim) to set the x axis limits
         """        
 
         film, ref = self.film_dose.array, self.ref_dose.array
@@ -666,8 +672,16 @@ class DoseAnalysis():
             diff_prof = film_prof - ref_prof
             ax_diff.set_ylabel("Difference (cGy)")
             ax_diff.plot(x_axis, diff_prof,'g-', linewidth=0.25)
+            
+        if vertical_line:
+            ax.plot((vertical_line / self.film_dose.dpmm, vertical_line / self.film_dose.dpmm), ax.get_ylim(), 'k:', linewidth = 1)
+            
+        if xlim:
+            ax.set_xlim(xlim)
+        if ylim == 'auto':
+            ax.set_ylim((0,self.ref_dose.array.max() * 1.05))
     
-    def plot_isodoses(self, ax=None, levels=None, colors=None, show_ruler=True, figsize=(10,10)):
+    def show_isodoses(self, ax=None, levels=None, colors=None, show_ruler=True, figsize=(15,15)):
         if ax is None:
             fig, ax = plt.subplots(figsize=figsize)
         if levels is None:
@@ -675,12 +689,13 @@ class DoseAnalysis():
             levels = [d_max * l for l in np.arange(0.2, 1.0, 0.2)]
         if colors is None:
             colors = plt.cm.tab10(np.linspace(0, 1, 10))
-        extent = [0, self.ref_dose.physical_shape[1], 0, self.ref_dose.physical_shape[0]]
+        extent = [0, self.ref_dose.physical_shape[1], self.ref_dose.physical_shape[0], 0]
         self.film_dose.plot_isodoses(ax=ax, levels=levels, colors=colors, linestyles='dashdot', linewidths=0.5, extent=extent, inline=False)
         self.ref_dose.plot_isodoses(ax=ax, levels=levels, colors=colors, linestyles='solid', linewidths=0.5, labels=False, extent=extent)
         legend_lines = [plt.Line2D([0], [0], linestyle='dotted', color='black', label='Film Dose'),
                         plt.Line2D([0], [0], linestyle='solid', color='black', label='Reference Dose')]
         plt.legend(handles=legend_lines)
+        ax.invert_yaxis()
         if show_ruler:
             self.ruler = add_ruler(ax)
 
@@ -740,7 +755,7 @@ class DoseAnalysis():
     def show_results_ontype(self, event):
         if event.key == 'enter':
             self.get_profile_offsets(position_x=self.prof_x, position_y=self.prof_y)
-    
+        
     def show_profiles(self, axes, x, y, figsize=(10,10)):
         """ This function is called by show_results and set_profile to draw dose profiles
             at a given x/y coordinates, and draw lines on the dose distribution maps
@@ -748,11 +763,8 @@ class DoseAnalysis():
         """
         ax_x = axes[-2]
         ax_y = axes[-1]
-        self.plot_profile(ax=ax_x, profile='x', position=y)
-        self.plot_profile(ax=ax_y, profile='y', position=x)
-        
-        ax_x.plot((x / self.film_dose.dpmm, x / self.film_dose.dpmm), ax_x.get_ylim(), 'k:', linewidth = 1)
-        ax_y.plot((y / self.film_dose.dpmm, y / self.film_dose.dpmm), ax_y.get_ylim(), 'k:', linewidth = 1)
+        self.plot_profile(ax=ax_x, profile='x', position=y, vertical_line=x)
+        self.plot_profile(ax=ax_y, profile='y', position=x, vertical_line=y)
         
         for i in range(0,4):
             ax = axes[i]
@@ -778,6 +790,7 @@ class DoseAnalysis():
         else: print('\nZoom/pan is currently selected.\nNote: Unable to set profile when this tool is active.')
         
         
+    #=================== Registration functions ======================
     def register(self, shift_x=0, shift_y=0, threshold=10, register_using_gradient=False, markers_center=None, rot=0):
         """ Starts the registration procedure between film and reference dose.
             
@@ -1124,7 +1137,7 @@ class DoseAnalysis():
             self.wait = False
             return
             
-    def save_analyzed_image(self, filename,  x=None, y=None, **kwargs):
+    def save_current_figure(self, filename, **kwargs):
         """Save the analyzed image to a file.
 
         Parameters
@@ -1134,65 +1147,44 @@ class DoseAnalysis():
         kwargs
             Keyword arguments are passed to plt.savefig().
         """
-        self.show_results(x=x, y=y, **kwargs)
         fig = plt.gcf()
-        fig.savefig(filename)
+        fig.savefig(filename, **kwargs)
         plt.close(fig)
         
-    def save_profile(self, filename, x=None, y=None, figsize=(10, 20), **kwargs):
-        """Save the analyzed image to a file.
+    def show_cluster_analysis(self, cluster_id=0, xlim_margin_mm=10, figsize=(10,10)):
+        # Get coordinates of slected cluster
+        x = self.clusters_analysis[cluster_id]['x_px']
+        y = self.clusters_analysis[cluster_id]['y_px']
+        x_mm = self.clusters_analysis[cluster_id]['x_mm']
+        y_mm = self.clusters_analysis[cluster_id]['y_mm']
+    
+        coords = self.ref_dose.clusters[cluster_id]['coords']
+        coords_mm = coords / self.ref_dose.dpmm
+        x_xlim = (min(coords_mm[:,1])-xlim_margin_mm, max(coords_mm[:,1])+xlim_margin_mm)
+        y_xlim = (min(coords_mm[:,0])-xlim_margin_mm, max(coords_mm[:,0])+xlim_margin_mm)
+        
+        # Show full dose distribution and location of selected cluster
+        fig, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2,2, figsize=figsize)
+        extent = [0, self.ref_dose.physical_shape[1], self.ref_dose.physical_shape[0], 0]
+        self.ref_dose.plot(ax=ax1, extent=extent)
+        ax1.plot((x_mm, x_mm),(0,self.ref_dose.shape[0]),'w--', linewidth=1)
+        ax1.plot((0, self.ref_dose.shape[1]),(y_mm, y_mm),'w--', linewidth=1)
+        
+        rect = plt.Rectangle((min(x_xlim[0], x_xlim[1]), min(y_xlim[0], y_xlim[1])), abs(x_xlim[0]-x_xlim[1]), abs(y_xlim[0]-y_xlim[1]), linewidth=1, edgecolor='w', linestyle='--', fill=False)
+        ax1.add_patch(rect)
+        
+        # Plot the isodoses
+        self.show_isodoses(ax=ax2)
+        ax2.set_xlim(x_xlim)
+        ax2.set_ylim(y_xlim[1], y_xlim[0])
+        
+        # Plot profiles
+        self.plot_profile(ax=ax3, profile='x', position=y, diff=True, xlim=x_xlim, vertical_line=x)
+        self.plot_profile(ax=ax4, profile='y', position=x, diff=True, xlim=y_xlim, vertical_line=y)
+        
 
-        Parameters
-        ----------
-        filename : str
-            The location and filename to save to.
-        kwargs
-            Keyword arguments are passed to plt.savefig().
-        """
-        
-        fig, (ax1, ax2, ax3) = plt.subplots(3,1, figsize=figsize, gridspec_kw={'height_ratios': [1, 2, 2]})
-        self.ref_dose.plot(ax=ax1)
-        ax1.plot((x,x),(0,self.ref_dose.shape[0]),'w--', linewidth=1)
-        ax1.plot((0,self.ref_dose.shape[1]),(y,y),'w--', linewidth=1)
-        self.plot_profile(ax=ax2, profile='x', position=y, diff=True)
-        self.plot_profile(ax=ax3, profile='y', position=x, diff=True)
-        ax2.plot((x / self.film_dose.dpmm, x / self.film_dose.dpmm), ax2.get_ylim(), 'k:', linewidth = 1)
-        ax3.plot((y / self.film_dose.dpmm, y / self.film_dose.dpmm), ax3.get_ylim(), 'k:', linewidth = 1)
-        fig = plt.gcf()
-        fig.savefig(filename)
-        plt.close(fig)
-        
-    def save_analyzed_gamma(self, filename, **kwargs):
-        """Save the analyzed image to a file.
-
-        Parameters
-        ----------
-        filename : str
-            The location and filename to save to.
-        kwargs
-            Keyword arguments are passed to plt.savefig().
-        """
-        self.plot_gamma_stats(**kwargs)
-        fig = plt.gcf()
-        fig.savefig(filename)
-        plt.close(fig)
-        
-    def save_isodoses_plot(self, filename, **kwargs):
-        """Save the analyzed image to a file.
-
-        Parameters
-        ----------
-        filename : str
-            The location and filename to save to.
-        kwargs
-            Keyword arguments are passed to plt.savefig().
-        """
-        self.plot_isodoses(**kwargs)
-        fig = plt.gcf()
-        fig.savefig(filename)
-        plt.close(fig)
             
-    def publish_pdf(self, filename=None, author=None, unit=None, notes=None, open_file=False, x=None, y=None, plot_clusters_analysis=True, iso_levels=None, **kwargs):
+    def publish_pdf(self, filename=None, author=None, unit=None, notes=None, open_file=False, x=None, y=None, plot_clusters_analysis=True, iso_levels=None, xlim_margin_mm=10, **kwargs):
         """Publish a PDF report of the calibration. The report includes basic
         file information, the image and determined ROIs, and the calibration curves
 
@@ -1214,8 +1206,6 @@ class DoseAnalysis():
         if filename is None:
             filename = os.path.join(self.path, 'Report.pdf')
         
-        
-        
         title='Film Analysis Report'
         canvas = pdf.PylinacCanvas(filename, page_title=title, logo=Path(__file__).parent / 'OMG_Logo.png')
         canvas.add_text(text='Film infos:', location=(1, 25.5), font_size=12)
@@ -1231,38 +1221,96 @@ class DoseAnalysis():
                ]
         canvas.add_text(text=text, location=(1, 25), font_size=10)
         data = io.BytesIO()
-        self.save_analyzed_image(data, x=x, y=y, show = False)
+        self.show_results(x=x, y=y, show = False)
+        self.save_current_figure(data)
         canvas.add_image(image_data=data, location=(0.5, 3), dimensions=(19, 19))
 
         if plot_clusters_analysis:   
-            for cluster in self.clusters_analysis:      
+            canvas.add_new_page()
+            text = ['Detected dose clusters']
+            canvas.add_text(text=text, location=(1, 25), font_size=10)
+            data = io.BytesIO()
+            self.ref_dose.plot_clusters()
+            self.save_current_figure(data)
+            canvas.add_image(image_data=data, location=(0.5, 0), dimensions=(20, 24))
+            
+            for i, cluster in enumerate(self.clusters_analysis):      
                 canvas.add_new_page()
-                canvas.add_text(text='Cluser analysis', location=(1, 25.5), font_size=12)
-                text = ['Cluster center: X={:.1f} mm, Y={:.1f} mm'.format(cluster['x_mm'], cluster['y_mm']),
+                canvas.add_text(text='Cluster analysis', location=(1, 25.5), font_size=12)
+                text = ['Cluster center: X = {:.1f} mm, Y = {:.1f} mm'.format(cluster['x_mm'], cluster['y_mm']),
                         'Median dose difference: {:.2f} %'.format(cluster['Dose diff']),
-                        'Profile offset: X={:.2f} mm, Y={:.2f} mm'.format(cluster['Offset x'], cluster['Offset y']),
-                        'Profile width difference: X={:.2f} mm, Y={:.2f} mm'.format(cluster['Diff width x'], cluster['Diff width y'])
+                        'Profile offset: X = {:.2f} mm, Y = {:.2f} mm'.format(cluster['Offset x'], cluster['Offset y']),
+                        'Profile width difference: X = {:.2f} mm, Y = {:.2f} mm'.format(cluster['Diff width x'], cluster['Diff width y'])
                        ]
                 canvas.add_text(text=text, location=(1, 25), font_size=10)
                 data = io.BytesIO()
-                self.save_profile(data, x=cluster['x_px'], y=cluster['y_px'])
+                self.show_cluster_analysis(cluster_id=i)
+                self.save_current_figure(data)
                 canvas.add_image(image_data=data, location=(0.5, 0), dimensions=(20, 24))
 
         canvas.add_new_page()
         canvas.add_text(text='Isodoses plot', location=(1, 25), font_size=10)
         data = io.BytesIO()
-        self.save_isodoses_plot(data, figsize=(10, 10), levels=iso_levels)
+        self.show_isodoses(figsize=(10, 10), levels=iso_levels, show_ruler=False)
+        self.save_current_figure(data)
         canvas.add_image(image_data=data, location=(0.5, 3), dimensions=(20, 20))
         
         canvas.add_new_page()
         data = io.BytesIO()
-        self.save_analyzed_gamma(data, figsize=(10, 10))
+        self.show_gamma_stats(figsize=(10, 10))
+        self.save_current_figure(data)
         canvas.add_image(image_data=data, location=(0.5, 2), dimensions=(20, 20))
         
         canvas.finish()
         if open_file: webbrowser.open(filename)       
 
-    def get_profile_offsets(self, position_x=None, position_y=None):
+
+    #=================== Clusters analysis ======================
+    def analyse_clusters(self, clusters_threshold=0.6, xlim_margin_mm=10):
+        self.clusters_analysis = []
+        clusters = self.ref_dose.detect_clusters(threshold=clusters_threshold) 
+        self.ref_dose.plot_clusters()
+        self.fig = plt.gcf()
+        self.ax = plt.gca()
+        for cluster in clusters:
+            com = cluster['center_of_mass']
+            mask = cluster['region_mask']
+            coords = cluster['coords']
+            coords_mm = coords / self.ref_dose.dpmm
+            x = int(com[1])
+            y = int(com[0])
+            x_mm = x / self.ref_dose.dpmm
+            y_mm = y / self.ref_dose.dpmm
+            
+            # self.ref_dose.plot()
+            # fig = plt.gcf()
+            # ax = plt.gca()
+            # contours = plt.contour(mask, levels=[0.5], colors='red', linestyles='dashed')
+            while len(self.ax.lines) > 0: self.ax.lines[-1].remove() 
+            self.ax.plot((x,x),(0,self.ref_dose.shape[0]),'w--', linewidth=1)
+            self.ax.plot((0,self.ref_dose.shape[1]),(y,y),'w--', linewidth=1)
+            self.fig.canvas.draw_idle()
+            # self.fig.show()
+            plt.pause(0.01)
+                        
+            median_film_dose = np.median(self.film_dose.array[mask.astype(bool)])
+            median_ref_dose = np.median(self.ref_dose.array[mask.astype(bool)])
+            relative_diff = (median_film_dose-median_ref_dose)/median_ref_dose * 100
+            print("Median film dose = {} cGy; median ref dose = {} cGy; Relative diff = {}%".format(median_film_dose, median_ref_dose, relative_diff))
+            
+            x_xlim = (min(coords_mm[:,1])-xlim_margin_mm, max(coords_mm[:,1])+xlim_margin_mm)
+            y_xlim = (min(coords_mm[:,0])-xlim_margin_mm, max(coords_mm[:,0])+xlim_margin_mm)
+            
+            self.get_profile_offsets(x=x, y=y, x_xlim=x_xlim, y_xlim=y_xlim)
+            self.clusters_analysis.append({'x_px': x, 'y_px': y, 'x_mm': x_mm, 'y_mm': y_mm,
+                                           'Dose diff': relative_diff,
+                                           'Offset x': self.offset_x, 'Offset y': self.offset_y,
+                                           'Diff width x': self.diff_grandeur_x, 'Diff width y': self.diff_grandeur_y })
+        plt.close(self.fig)
+                
+    
+    #=================== Profile analysis ======================
+    def get_profile_offsets(self, x=None, y=None, x_xlim=None, y_xlim=None):
         """ Starts an interactive process where the user can move
             the measured profile with respect to the reference profile
             in order to compute the spatial offset between the two.
@@ -1271,23 +1319,29 @@ class DoseAnalysis():
             
             Parameters
             ----------
-            position_x : int, optional
+            x : int, optional
                 The x position of the profile to plot, in pixels.
                 If None, position is set to the center of the reference dose.
                 Default is None
                 
-            position_y : int, optional
+            y : int, optional
                 The y position of the profile to plot, in pixels.
                 If None, position is set to the center of the reference dose.
                 Default is None
+                
+            xlim : tuple, optional
+                
         """
-        self.get_profile_offset(direction='x', side='left', position=position_y)
+        if x is None: x = np.floor(self.ref_dose.shape[1] / 2).astype(int)
+        if y is None: y = np.floor(self.ref_dose.shape[0] / 2).astype(int)
+        
+        self.get_profile_offset(x=x, y=y, direction='x', side='left', xlim=x_xlim)
         self.offset_x_gauche = self.offset
-        self.get_profile_offset(direction='x', side='right', position=position_y)
+        self.get_profile_offset(x=x, y=y, direction='x', side='right', xlim=x_xlim)
         self.offset_x_droite = self.offset
-        self.get_profile_offset(direction='y', side='left', position=position_x)
+        self.get_profile_offset(x=x, y=y, direction='y', side='left', xlim=y_xlim)
         self.offset_y_gauche = self.offset
-        self.get_profile_offset(direction='y', side='right', position=position_x)
+        self.get_profile_offset(x=x, y=y, direction='y', side='right', xlim=y_xlim)
         self.offset_y_droite = self.offset
         
         self.offset_x = -1.0*((self.offset_x_gauche + self.offset_x_droite) / 2.0)
@@ -1299,7 +1353,7 @@ class DoseAnalysis():
         print("Y: Décalage = {:.2f} mm; Diff grandeur = {:.2f} mm".format(self.offset_y, self.diff_grandeur_y))
         
 
-    def get_profile_offset(self, direction='x', side='left', position=None):
+    def get_profile_offset(self, x, y, direction, side='left', xlim=None):
         """ Opens an interactive plot where the user can move
             the measured profile with respect to the reference profile
             in order to compute the spatial offset between the two.
@@ -1326,9 +1380,20 @@ class DoseAnalysis():
         print(msg)
         self.offset = 0
         self.direction = direction
-        self.position = position
-        self.plot_profile(profile=direction, position=position, diff=False, offset=0, title='Fit profiles on ' + side + ' side')
+        self.xlim = xlim
+        
+        if direction == 'x':
+            self.position = y
+            self.line = x
+            self.plot_profile(profile='x', position=y, vertical_line=x, title=direction + ': Fit profiles on ' + side + ' side', xlim=xlim)
+        elif direction == 'y':
+            self.position = x
+            self.line = y
+            self.plot_profile(profile='y', position=x, vertical_line=y, title=direction + ': Fit profiles on ' + side + ' side', xlim=xlim)
+
         self.fig = plt.gcf()
+        fig_manager = plt.get_current_fig_manager()
+        fig_manager.window.showMaximized()
         self.cid = self.fig.canvas.mpl_connect('key_press_event', self.move_profile_ontype)
         self.wait = True
         while self.wait: plt.pause(1)
@@ -1346,45 +1411,28 @@ class DoseAnalysis():
         
         if event.key == 'left':
             self.offset -= 0.1
-            self.plot_profile(ax=ax, profile=self.direction, position=position, title='Shift = ' + str(self.offset) + ' mm', diff=False, offset=self.offset)
+            self.plot_profile(ax=ax, profile=self.direction, position=position, title='Shift = ' + str(self.offset) + ' mm', diff=False, offset=self.offset, vertical_line=self.line, xlim=self.xlim)
             fig.canvas.draw_idle()
-            # ax.set_title('Shift = ' + str(self.offset) + ' mm')
             
         if event.key == 'right':
             self.offset += 0.1
-            self.plot_profile(ax=ax, profile=self.direction, position=position, title='Shift = ' + str(self.offset) + ' mm', diff=False, offset=self.offset)
+            self.plot_profile(ax=ax, profile=self.direction, position=position, title='Shift = ' + str(self.offset) + ' mm', diff=False, offset=self.offset, vertical_line=self.line, xlim=self.xlim)
             fig.canvas.draw_idle()
-            # ax.set_title('Shift = ' + str(self.offset) + ' mm')
         
         if event.key == 'enter':
             self.fig.canvas.mpl_disconnect(self.cid)
             self.wait = False
             return self.offset
-        
-    def analyse_clusters(self, clusters_threshold=0.8):
-        self.clusters_analysis = []
-        centers_of_mass = self.ref_dose.detect_clusters(threshold=clusters_threshold)  
-        for com in centers_of_mass:
-            x = int(com[1])
-            y = int(com[0])
-            x_mm = x / self.ref_dose.dpmm
-            y_mm = y / self.ref_dose.dpmm
-            self.ref_dose.plot()
-            fig = plt.gcf()
-            ax = plt.gca()
-            ax.plot((x,x),(0,self.ref_dose.shape[0]),'w--', linewidth=1)
-            ax.plot((0,self.ref_dose.shape[1]),(y,y),'w--', linewidth=1)
-            self.apply_factor_from_roi(apply=False)
-            self.get_profile_offsets(position_x=x, position_y=y)
-            self.clusters_analysis.append({'x_px': x, 'y_px': y, 'x_mm': x_mm, 'y_mm': y_mm,
-                                           'Dose diff': self.roi_relative_diff,
-                                           'Offset x': self.offset_x, 'Offset y': self.offset_y,
-                                           'Diff width x': self.diff_grandeur_x, 'Diff width y': self.diff_grandeur_y })
-            plt.close(fig)
-            
-        
+
 ########################### End class DoseAnalysis ############################## 
-    
+  
+
+
+
+
+
+
+  
 def line_intersection(line1, line2):
     """ Get the coordinates of the intersection of two lines.
 

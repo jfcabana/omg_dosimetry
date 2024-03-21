@@ -345,9 +345,9 @@ class BaseImage:
         fig = plt.gcf()
         
         if self.array.ndim > 2 and self.array.max() > 255:
-            cax = ax.imshow(self.array / 65535., cmap=cmap, **kwargs) 
+            cax = ax.imshow(self.array / 65535., cmap=cmap, origin='upper', **kwargs) 
         else:
-            cax = ax.imshow(self.array, cmap=cmap, **kwargs)
+            cax = ax.imshow(self.array, cmap=cmap, origin='upper', **kwargs)
         cax.set_clim(clim) 
         if colorbar: fig.colorbar(cax, ax=ax)
         ax.set_title(title)
@@ -356,10 +356,13 @@ class BaseImage:
             plt.show()
         return cax
     
-    def plot_isodoses(self, ax=None, levels=[], colors='red', show=True, title='', labels=True, inline=True, **kwargs):
+    def plot_isodoses(self, ax=None, levels=None, colors='red', show=True, title='', labels=True, inline=True, **kwargs):
         if ax is None:
-            fig, ax = plt.subplots()            
-        contours = ax.contour(self.array, levels=levels, colors=colors, origin='image', **kwargs)  # Courbes de contour
+            fig, ax = plt.subplots()    
+        if levels is None:
+            d_max = self.array.max()
+            levels = [d_max * l for l in np.arange(0.2, 1.0, 0.2)]
+        contours = ax.contour(self.array, levels=levels, colors=colors, origin='upper', **kwargs)  # Courbes de contour
         if labels: ax.clabel(contours, inline=inline, fontsize=10, inline_spacing=1)
         ax.set_title(title)
         ax.axis('image')   
@@ -371,20 +374,30 @@ class BaseImage:
     def plotCB(self, ax=None, show=True, cmap='inferno', clim=None, title='', **kwargs):
         self.plot(ax=ax, show=show, cmap=cmap, clim=clim, title=title, colorbar=True, **kwargs)
 
-    def detect_clusters(self, threshold=0.8):
+    def detect_clusters(self, threshold=0.6):
         data = self.array
         mask = data > threshold * self.array.max()
-
         labeled_regions, num_features = ndimage.label(mask)
 
         clusters = []
         for region_label in range(1, num_features + 1):  # Commence à 1 car le fond est labelisé 0
-            region_mask = labeled_regions == region_label
-            coords = np.argwhere(region_mask)
-            center_of_mass = np.mean(coords, axis=0)
-            clusters.append(center_of_mass)
+            cluster = {}    
+            cluster['region_mask'] = labeled_regions == region_label
+            cluster['coords'] = np.argwhere(cluster['region_mask'])
+            cluster['center_of_mass'] = np.mean(cluster['coords'], axis=0)
+            clusters.append(cluster)
         self.clusters = clusters
         return clusters    
+    
+    def plot_clusters(self):
+        self.plot()
+        for cluster in self.clusters:
+            com = cluster['center_of_mass']
+            mask = cluster['region_mask']
+            fig = plt.gcf()
+            ax = plt.gca()
+            contours = plt.contour(mask, levels=[0.5], colors='red', linestyles='dashed')
+            ax.scatter(com[1], com[0], color='blue', marker='o', label='Center')
 
     # @value_accept(kind=('median', 'gaussian'))
     def filter(self, size=0.05, kind='median'):
