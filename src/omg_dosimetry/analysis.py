@@ -754,7 +754,7 @@ class DoseAnalysis():
         
     def show_results_ontype(self, event):
         if event.key == 'enter':
-            self.get_profile_offsets(position_x=self.prof_x, position_y=self.prof_y)
+            self.get_profile_offsets(x=self.prof_x, y=self.prof_y)
         
     def show_profiles(self, axes, x, y, figsize=(10,10)):
         """ This function is called by show_results and set_profile to draw dose profiles
@@ -1151,7 +1151,7 @@ class DoseAnalysis():
         fig.savefig(filename, **kwargs)
         plt.close(fig)
         
-    def show_cluster_analysis(self, cluster_id=0, xlim_margin_mm=10, figsize=(10,10)):
+    def show_cluster_analysis(self, cluster_id=0, xlim_margin_mm=10, figsize=(10,10), levels=None):
         # Get coordinates of slected cluster
         x = self.clusters_analysis[cluster_id]['x_px']
         y = self.clusters_analysis[cluster_id]['y_px']
@@ -1174,7 +1174,7 @@ class DoseAnalysis():
         ax1.add_patch(rect)
         
         # Plot the isodoses
-        self.show_isodoses(ax=ax2)
+        self.show_isodoses(ax=ax2, levels=levels)
         ax2.set_xlim(x_xlim)
         ax2.set_ylim(y_xlim[1], y_xlim[0])
         
@@ -1244,7 +1244,7 @@ class DoseAnalysis():
                        ]
                 canvas.add_text(text=text, location=(1, 25), font_size=10)
                 data = io.BytesIO()
-                self.show_cluster_analysis(cluster_id=i)
+                self.show_cluster_analysis(cluster_id=i, levels=iso_levels)
                 self.save_current_figure(data)
                 canvas.add_image(image_data=data, location=(0.5, 0), dimensions=(20, 24))
 
@@ -1270,7 +1270,7 @@ class DoseAnalysis():
         self.clusters_analysis = []
         clusters = self.ref_dose.detect_clusters(threshold=clusters_threshold) 
         self.ref_dose.plot_clusters()
-        self.fig = plt.gcf()
+        fig = plt.gcf()
         self.ax = plt.gca()
         for cluster in clusters:
             com = cluster['center_of_mass']
@@ -1289,8 +1289,7 @@ class DoseAnalysis():
             while len(self.ax.lines) > 0: self.ax.lines[-1].remove() 
             self.ax.plot((x,x),(0,self.ref_dose.shape[0]),'w--', linewidth=1)
             self.ax.plot((0,self.ref_dose.shape[1]),(y,y),'w--', linewidth=1)
-            self.fig.canvas.draw_idle()
-            # self.fig.show()
+            fig.canvas.draw_idle()
             plt.pause(0.01)
                         
             median_film_dose = np.median(self.film_dose.array[mask.astype(bool)])
@@ -1306,7 +1305,7 @@ class DoseAnalysis():
                                            'Dose diff': relative_diff,
                                            'Offset x': self.offset_x, 'Offset y': self.offset_y,
                                            'Diff width x': self.diff_grandeur_x, 'Diff width y': self.diff_grandeur_y })
-        plt.close(self.fig)
+        plt.close(fig)
                 
     
     #=================== Profile analysis ======================
