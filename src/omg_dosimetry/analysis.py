@@ -779,14 +779,14 @@ class DoseAnalysis():
             on mouse click (if cursor is not set to zoom or pan).
         """
         if event.button == 1 and plt.gcf().canvas.cursor().shape() == 0:   # 0 is the arrow, which means we are not zooming or panning.
-                if event.inaxes in axes[0:4]:
-                    self.prof_x = int(event.xdata)
-                    self.prof_y = int(event.ydata)
-                elif event.inaxes == axes[4]: self.prof_x = int(event.xdata * self.film_dose.dpmm)
-                elif event.inaxes == axes[5]: self.prof_y = int(event.xdata * self.film_dose.dpmm)
-                
-                self.show_profiles(axes,x=self.prof_x, y=self.prof_y)    
-                plt.gcf().canvas.draw_idle()
+            if event.inaxes in axes[0:4]:
+                self.prof_x = int(event.xdata)
+                self.prof_y = int(event.ydata)
+            elif event.inaxes == axes[4]: self.prof_x = int(event.xdata * self.film_dose.dpmm)
+            elif event.inaxes == axes[5]: self.prof_y = int(event.xdata * self.film_dose.dpmm)
+            
+            self.show_profiles(axes,x=self.prof_x, y=self.prof_y)    
+            plt.gcf().canvas.draw_idle()
         else: print('\nZoom/pan is currently selected.\nNote: Unable to set profile when this tool is active.')
         
         
