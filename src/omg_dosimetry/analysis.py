@@ -1184,7 +1184,7 @@ class DoseAnalysis():
         
 
             
-    def publish_pdf(self, filename=None, author=None, unit=None, notes=None, open_file=False, x=None, y=None, plot_clusters_analysis=True, iso_levels=None, xlim_margin_mm=10, **kwargs):
+    def publish_pdf(self, filename=None, author=None, unit=None, notes=None, open_file=False, x=None, y=None, plot_clusters_analysis=False, iso_levels=None, xlim_margin_mm=10, **kwargs):
         """Publish a PDF report of the calibration. The report includes basic
         file information, the image and determined ROIs, and the calibration curves
 
