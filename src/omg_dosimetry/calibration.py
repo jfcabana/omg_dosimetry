@@ -136,12 +136,14 @@ class LUT:
     LUT.lut : numpy array
         When lateral correction is applied:
 
-        3D array of size (nDoses, nPixel, 6), where nDoses is the number of calibration doses used,
-        nPixel is the number of pixels in the lateral scanner direction, and the last dimension contains
-        [doses, output/profile corrected doses, mean channel, R channel, G channel, B channel].
-        Without lateral correct:
+        3D array of size (6, nDoses, nPixel). The first dimension contains 
+        [doses, output/profile corrected doses, mean channel, R channel, G channel, B channel]. 
+        nDoses is the number of calibration doses used, and
+        nPixel is the number of pixels in the lateral scanner direction.
         
-        2D array of size (nDoses, 6), defined as above, except that a single LUT is stored
+        Without lateral correctoin:
+
+        2D array of size (6, nDoses), defined as above, except that a single LUT is stored
         by taking the median values over the ROIs, instead of one LUT for each scanner pixel.
     LUT.channel_mean : 2D array of size (nDoses, nPixel)
         Contains the average RGB value for each dose, at each pixel location.
