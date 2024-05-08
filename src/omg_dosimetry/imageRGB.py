@@ -374,13 +374,31 @@ class BaseImage:
     def plotCB(self, ax=None, show=True, cmap='inferno', clim=None, title='', **kwargs):
         self.plot(ax=ax, show=show, cmap=cmap, clim=clim, title=title, colorbar=True, **kwargs)
 
-    def detect_clusters(self, threshold=0.6):
+    def detect_clusters(self, threshold=0.6) -> list:
+        """
+        Detect clusters based on a threshold value.
+
+        Parameters
+        ----------
+        threshold : float, optional
+            Threshold value as a percentage [0 - 1] to be used with respect to the maximum dose. Defaults to 0.6 (60 %).
+
+        Returns
+        -------
+        clusters : list
+            A list containing dictionaries, each representing a detected cluster.
+            Each dictionary contains the following keys:
+            - 'region_mask': A boolean mask indicating the region of the cluster.
+            - 'coords': An array of coordinates of the cluster points.
+            - 'center_of_mass': The center of mass of the cluster.
+        """
+
         data = self.array
         mask = data > threshold * self.array.max()
         labeled_regions, num_features = ndimage.label(mask)
 
         clusters = []
-        for region_label in range(1, num_features + 1):  # Commence à 1 car le fond est labelisé 0
+        for region_label in range(1, num_features + 1):  # Starts at 1 because the background is labeled 0.
             cluster = {}    
             cluster['region_mask'] = labeled_regions == region_label
             cluster['coords'] = np.argwhere(cluster['region_mask'])
