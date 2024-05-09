@@ -20,6 +20,7 @@ import numpy as np
 from PIL import Image as pImage
 from scipy import ndimage
 from skimage.transform import rotate
+from skimage.measure import regionprops
 import scipy.ndimage.filters as spf
 
 from pylinac.core.utilities import is_close
@@ -405,8 +406,31 @@ class BaseImage:
             cluster['center_of_mass'] = np.mean(cluster['coords'], axis=0)
             clusters.append(cluster)
         self.clusters = clusters
-        return clusters    
-    
+        return clusters
+
+    def discard_small_clusters(self, minimum_length):
+        """
+        Discard cluster with an axis_minor_length less than a given value.
+
+        Parameters
+        ----------
+        minimum_length : float
+            The minimum length in milimeters for retaining clusters.
+        """    
+        new_clusters = []
+        # Calculate the size threshold in pixels
+        size_threshold = minimum_length*self.dpmm
+
+        for region in self.clusters:
+            if region['coords'].shape[0] == 1: # Skip one pixel size clusters.
+                pass
+            region_prop = regionprops(region['region_mask'].astype(int))
+            if region_prop[0]['axis_minor_length'] < size_threshold:
+                pass
+            else:
+                new_clusters.append(region)
+        self.clusters = new_clusters
+
     def plot_clusters(self):
         self.plot()
         for cluster in self.clusters:
