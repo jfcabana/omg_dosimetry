@@ -642,6 +642,11 @@ class DoseAnalysis():
                 
             xlim : tuple, optional
                 If given, xlim will be passed to ax.set_xlim(xlim) to set the x axis limits
+                
+            ylim : tuple, 'max' or 'auto' (default), optional
+                If given a tuple, ylim will be passed to ax.set_ylim(ylim) to set the y axis limits
+                If 'max', ylim goes from 0 to 105% of maximum reference dose
+                If 'auto', ylim goes from 0 to 105% of maximum of either the current reference or film dose profile.
         """        
 
         film, ref = self.film_dose.array, self.ref_dose.array
@@ -678,8 +683,12 @@ class DoseAnalysis():
             
         if xlim:
             ax.set_xlim(xlim)
-        if ylim == 'auto':
-            ax.set_ylim((0,self.ref_dose.array.max() * 1.05))
+        if ylim == 'max':
+            ax.set_ylim((0, self.ref_dose.array.max() * 1.05))
+        elif ylim == 'auto':
+            ax.set_ylim((0, 1.05 * max(np.concatenate((film_prof, ref_prof)))))
+        else:
+            ax.set_ylim(ylim)
     
     def show_isodoses(self, ax=None, levels=None, colors=None, show_ruler=True, figsize=(15,15)):
         if ax is None:
