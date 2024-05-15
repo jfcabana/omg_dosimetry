@@ -1251,11 +1251,12 @@ class DoseAnalysis():
                         'Profile offset: X = {:.2f} mm, Y = {:.2f} mm'.format(cluster['Offset x'], cluster['Offset y']),
                         'Profile width difference: X = {:.2f} mm, Y = {:.2f} mm'.format(cluster['Diff width x'], cluster['Diff width y'])
                        ]
-                canvas.add_text(text=text, location=(1, 25), font_size=10)
+                
                 data = io.BytesIO()
                 self.show_cluster_analysis(cluster_id=i, levels=iso_levels)
                 self.save_current_figure(data)
-                canvas.add_image(image_data=data, location=(0.5, 0), dimensions=(20, 24))
+                canvas.add_image(image_data=data, location=(0.5, 5), dimensions=(20, 20))
+                canvas.add_text(text=text, location=(1, 25), font_size=10)
 
         canvas.add_new_page()
         canvas.add_text(text='Isodoses plot', location=(1, 25), font_size=10)
