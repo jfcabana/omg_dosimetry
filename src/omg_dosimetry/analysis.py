@@ -14,7 +14,7 @@ Features:
     
 Written by Jean-Francois Cabana, copyright 2018
 Modified by Peter Truong (CISSSO)
-Version: 2023-12-15
+Version: 2024-05-21
 """
 
 import numpy as np
@@ -36,7 +36,6 @@ from .imageRGB import load, ArrayImage, equate_images
 import bz2
 import time
 from .tools import Ruler
-from scipy import ndimage
 
 class DoseAnalysis(): 
     """Base class for analysis film dose vs reference dose.
@@ -157,14 +156,8 @@ class DoseAnalysis():
         ax = plt.gca()  
         if self.norm_film_dose:
             self.norm_film_dose.plot(ax=ax)  
-            # ax.plot((0,self.norm_film_dose.shape[1]),(self.norm_film_dose.center.y,self.norm_film_dose.center.y),'k--')
-            # ax.set_xlim(0, self.norm_film_dose.shape[1])
-            # ax.set_ylim(self.norm_film_dose.shape[0],0)
         else:
             self.film_dose.plot(ax=ax)  
-            # ax.plot((0,self.film_dose.shape[1]),(self.film_dose.center.y,self.film_dose.center.y),'k--')
-            # ax.set_xlim(0, self.film_dose.shape[1])
-            # ax.set_ylim(self.film_dose.shape[0],0)
         ax.set_title(msg)
         print(msg)
         
@@ -678,17 +671,14 @@ class DoseAnalysis():
             ax_diff.set_ylabel("Difference (cGy)")
             ax_diff.plot(x_axis, diff_prof,'g-', linewidth=0.25)
             
-        if vertical_line:
-            ax.plot((vertical_line / self.film_dose.dpmm, vertical_line / self.film_dose.dpmm), ax.get_ylim(), 'k:', linewidth = 1)
+        if xlim: ax.set_xlim(xlim)
+        if ylim == 'max': ax.set_ylim((0, self.ref_dose.array.max() * 1.05))
+        elif ylim == 'auto': ax.set_ylim((0, max(np.concatenate((film_prof, ref_prof))) * 1.05))
+        else: ax.set_ylim(ylim)
             
-        if xlim:
-            ax.set_xlim(xlim)
-        if ylim == 'max':
-            ax.set_ylim((0, self.ref_dose.array.max() * 1.05))
-        elif ylim == 'auto':
-            ax.set_ylim((0, 1.05 * max(np.concatenate((film_prof, ref_prof)))))
-        else:
-            ax.set_ylim(ylim)
+        if vertical_line:
+            ax.plot((vertical_line / self.film_dose.dpmm, vertical_line / self.film_dose.dpmm), 
+                    ax.get_ylim(), 'k:', linewidth = 1)
     
     def show_isodoses(self, ax=None, levels=None, colors=None, show_ruler=True, figsize=(15,15)):
         if ax is None:
@@ -1434,14 +1424,6 @@ class DoseAnalysis():
             return self.offset
 
 ########################### End class DoseAnalysis ############################## 
-  
-
-
-
-
-
-
-  
 def line_intersection(line1, line2):
     """ Get the coordinates of the intersection of two lines.
 
