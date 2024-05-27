@@ -20,6 +20,7 @@ import numpy as np
 from PIL import Image as pImage
 from scipy import ndimage
 from skimage.transform import rotate
+from skimage.measure import regionprops
 import scipy.ndimage.filters as spf
 
 from pylinac.core.utilities import is_close
@@ -335,43 +336,110 @@ class BaseImage:
                 date = 'Unknown'
         return date
 
-    def plot(self, ax=None, show=True, cmap='inferno', clim=None, title='', **kwargs):
+    def plot(self, ax=None, show=True, cmap='inferno', clim=None, title='', colorbar=False, **kwargs):
         if ax is None:
             fig, ax = plt.subplots()
         if clim is None:
             min_value = np.percentile(self.array,[0.1])[0].round(decimals=-1)
             max_value = np.percentile(self.array,[99.9])[0].round(decimals=-1)
             clim = [min_value, max_value]               
+        fig = plt.gcf()
+        
         if self.array.ndim > 2 and self.array.max() > 255:
-            cax = ax.imshow(self.array / 65535., cmap=cmap, **kwargs) 
+            cax = ax.imshow(self.array / 65535., cmap=cmap, origin='upper', **kwargs) 
         else:
-            cax = ax.imshow(self.array, cmap=cmap, **kwargs)
+            cax = ax.imshow(self.array, cmap=cmap, origin='upper', **kwargs)
         cax.set_clim(clim) 
+        if colorbar: fig.colorbar(cax, ax=ax)
         ax.set_title(title)
         ax.axis('image')      
         if show:
             plt.show()
         return cax
     
-    def plotCB(self, ax=None, show=True, cmap='inferno', clim=None, title='', **kwargs):
+    def plot_isodoses(self, ax=None, levels=None, colors='red', show=True, title='', labels=True, inline=True, **kwargs):
         if ax is None:
-            fig, ax = plt.subplots()
-        if clim is None:
-            min_value = np.percentile(self.array,[0.1])[0].round(decimals=-0)
-            max_value = np.percentile(self.array,[99.9])[0].round(decimals=-0)
-            clim = [min_value, max_value]    
-        fig = plt.gcf()
-            
-        if self.array.ndim > 2 and self.array.max() > 255:
-            cax = ax.imshow(self.array / 65535., cmap=cmap, interpolation='nearest', **kwargs) 
-        else:
-            cax = ax.imshow(self.array, cmap=cmap, interpolation='nearest', **kwargs)
-        cax.set_clim(clim)
-        fig.colorbar(cax, ax=ax)   
+            fig, ax = plt.subplots()    
+        if levels is None:
+            d_max = self.array.max()
+            levels = [d_max * l for l in np.arange(0.2, 1.0, 0.2)]
+        contours = ax.contour(self.array, levels=levels, colors=colors, origin='upper', **kwargs)  # Courbes de contour
+        if labels: ax.clabel(contours, inline=inline, fontsize=10, inline_spacing=1)
         ax.set_title(title)
-        ax.axis('image')      
-        if show: plt.show(block = False)
-        return cax
+        ax.axis('image')   
+        if show:
+            plt.show()
+        return contours
+
+    # The following function is to be removed starting from v2.x
+    def plotCB(self, ax=None, show=True, cmap='inferno', clim=None, title='', **kwargs):
+        self.plot(ax=ax, show=show, cmap=cmap, clim=clim, title=title, colorbar=True, **kwargs)
+
+    def detect_clusters(self, threshold=0.6) -> list:
+        """
+        Detect clusters based on a threshold value.
+
+        Parameters
+        ----------
+        threshold : float, optional
+            Threshold value as a percentage [0 - 1] to be used with respect to the maximum dose. Defaults to 0.6 (60 %).
+
+        Returns
+        -------
+        clusters : list
+            A list containing dictionaries, each representing a detected cluster.
+            Each dictionary contains the following keys:
+            - 'region_mask': A boolean mask indicating the region of the cluster.
+            - 'coords': An array of coordinates of the cluster points.
+            - 'center_of_mass': The center of mass of the cluster.
+        """
+
+        data = self.array
+        mask = data > threshold * self.array.max()
+        labeled_regions, num_features = ndimage.label(mask)
+
+        clusters = []
+        for region_label in range(1, num_features + 1):  # Starts at 1 because the background is labeled 0.
+            cluster = {}    
+            cluster['region_mask'] = labeled_regions == region_label
+            cluster['coords'] = np.argwhere(cluster['region_mask'])
+            cluster['center_of_mass'] = np.mean(cluster['coords'], axis=0)
+            clusters.append(cluster)
+        self.clusters = clusters
+        return clusters
+
+    def discard_small_clusters(self, minimum_length):
+        """
+        Discard cluster with an axis_minor_length less than a given value.
+
+        Parameters
+        ----------
+        minimum_length : float
+            The minimum length in milimeters for retaining clusters.
+        """    
+        new_clusters = []
+        # Calculate the size threshold in pixels
+        size_threshold = minimum_length*self.dpmm
+
+        for region in self.clusters:
+            if region['coords'].shape[0] == 1: # Skip one pixel size clusters.
+                pass
+            region_prop = regionprops(region['region_mask'].astype(int))
+            if region_prop[0]['axis_minor_length'] < size_threshold:
+                pass
+            else:
+                new_clusters.append(region)
+        self.clusters = new_clusters
+
+    def plot_clusters(self):
+        self.plot()
+        for cluster in self.clusters:
+            com = cluster['center_of_mass']
+            mask = cluster['region_mask']
+            fig = plt.gcf()
+            ax = plt.gca()
+            contours = plt.contour(mask, levels=[0.5], colors='red', linestyles='dashed')
+            ax.scatter(com[1], com[0], color='blue', marker='o', label='Center')
 
     # @value_accept(kind=('median', 'gaussian'))
     def filter(self, size=0.05, kind='median'):

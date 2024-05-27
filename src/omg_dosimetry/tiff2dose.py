@@ -435,38 +435,41 @@ class Gaf:
         fig, ((ax1,ax2,ax3), (ax4,ax5,ax6), (ax7,ax8,ax9)) = plt.subplots(3, 3, figsize=(14, 9))
         axes = [ax1, ax2, ax3, ax4, ax5, ax6, ax7, ax8, ax9]
 
-        self.dose_r.plotCB(ax1, clim=clim, title='Red channel dose')
-        self.dose_g.plotCB(ax2, clim=clim, title='Green channel dose')
-        self.dose_b.plotCB(ax3, clim=clim, title='Blue channel dose')
-        self.dose_m.plotCB(ax4, clim=clim, title='Mean channel dose')
-        self.dose_rg.plotCB(ax5, clim=clim, title='Red+Green Average dose')
+        self.dose_r.plot(ax1, clim=clim, title='Red channel dose', colorbar=True)
+        self.dose_g.plot(ax2, clim=clim, title='Green channel dose', colorbar=True)
+        self.dose_b.plot(ax3, clim=clim, title='Blue channel dose', colorbar=True)
+        self.dose_m.plot(ax4, clim=clim, title='Mean channel dose', colorbar=True)
+        self.dose_rg.plot(ax5, clim=clim, title='Red+Green Average dose', colorbar=True)
 
-        self.dose_consistency.plotCB(
-            ax6,
+        self.dose_consistency.plot(ax6,
             clim = [0, np.percentile(self.dose_consistency.array, [99.5])[0]],
             cmap='gray',
-            title='Consistency'
+            title='Consistency', 
+            colorbar=True
         )
 
-        self.dose_opt.plotCB(
+        self.dose_opt.plot(
             ax7,
             clim=clim,
-            title='Multichannel optimized dose'
+            title='Multichannel optimized dose',
+            colorbar=True
         )
 
-        self.dose_opt_delta.plotCB(
+        self.dose_opt_delta.plot(
             ax8,
             clim = [np.percentile(self.dose_opt_delta.array, [0.5])[0],
                     np.percentile(self.dose_opt_delta.array, [99.5])[0]],
             cmap='gray',
-            title='Disturbance'
+            title='Disturbance',
+            colorbar=True
         )
 
-        self.dose_opt_RE.plotCB(
+        self.dose_opt_RE.plot(
             ax9,
             clim = [0, np.percentile(self.dose_opt_RE.array, [99.5])[0]],
             cmap='gray',
-            title='Residuals'
+            title='Residuals',
+            colorbar=True
         )
 
         fig.tight_layout()
