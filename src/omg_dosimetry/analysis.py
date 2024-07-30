@@ -227,6 +227,7 @@ class DoseAnalysis():
         ax.set_ylim(self.film_dose.shape[0],0)
         ax.set_title(msg)
         print(msg)
+        plt.cursor = Cursor(ax, useblit=True, color='white', linewidth=1)
         
         self.fig.canvas.mpl_connect('button_press_event', self.onclick_norm)
         self.cid = self.fig.canvas.mpl_connect('key_press_event', self.apply_factor_from_roi_press_enter)         
@@ -240,8 +241,8 @@ class DoseAnalysis():
         if event.dblclick:
             size_px = self.norm_roi_size * self.film_dose.dpmm / 2
             self.roi_center = ([int(event.xdata), int(event.ydata)])
-            self.roi_xmin, self.roi_xmax = int(event.xdata) - size_px, int(event.xdata) + size_px
-            self.roi_ymin, self.roi_ymax = int(event.ydata) - size_px, int(event.ydata) + size_px
+            self.roi_xmin, self.roi_xmax = int(event.xdata - size_px), int(event.xdata + size_px)
+            self.roi_ymin, self.roi_ymax = int(event.ydata - size_px), int(event.ydata + size_px)
             
             rect = plt.Rectangle( (min(self.roi_xmin,self.roi_xmax),min(self.roi_ymin,self.roi_ymax)), np.abs(self.roi_xmin-self.roi_xmax), np.abs(self.roi_ymin-self.roi_ymax), fill=False )
             ax.add_patch(rect)    
@@ -733,7 +734,7 @@ class DoseAnalysis():
         axes = [ax1,ax2,ax3,ax4,ax5,ax6]
         fig.canvas.manager.set_window_title("Facteur{:.2f}_Filtre{}_Gamma{}%-{}mm".format(self.film_dose_factor, self.film_filt, self.doseTA, self.distTA))
         
-        max_dose_comp = np.percentile(self.ref_dose.array,[98])[0].round(decimals=-1)
+        max_dose_comp = np.percentile(self.ref_dose.array,[99.9])[0].round(decimals=-1)
         clim = [0, max_dose_comp]
 
         self.film_dose.plot(ax1, clim=clim, title='Film Dose ({})'.format(os.path.basename(self.film_dose.path)), colorbar=True)
