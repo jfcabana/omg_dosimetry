@@ -842,7 +842,7 @@ class DoseAnalysis():
         self.markers = []
         ax = plt.gca()
         print('\nPlease double-click on each marker. Press ''enter'' when done')
-        print('Keyboard shortcuts: Right arrow = Rotate 90 degrees; Left arrow = Flip horizontally; Up arrow = Flip vertically')
+        print('Keyboard shortcuts: Numpad arrows: Move last placed marker; r = Rotate 90 degrees; h = Flip horizontally; v = Flip vertically')
         ax.set_title('Marker 1 = ; Marker 2 = ; Marker 3 = ; Marker 4 = ')
         self.fig.canvas.mpl_connect('button_press_event', self.onclick)
         self.cid = self.fig.canvas.mpl_connect('key_press_event', self.ontype)
@@ -860,21 +860,18 @@ class DoseAnalysis():
         """
         if event.dblclick and len(self.markers) < 4: 
             self.markers.append([int(event.xdata), int(event.ydata)])
-            self.plot_markers()
-            
+            self.plot_markers()            
+
     def plot_markers(self):
         """ This function is called by self.onclick() and self.ontype() when 
             self.markers need to be plotted onto figure
         """
-        if len(self.markers) == 0: 
-            print("\nplot_markers was called with no markers found in self.markers")
-            return
-        
         ax = plt.gca()
         l = 20                              # Length of crosshair/marker
         m_i = len(self.markers) - 1         # last marker indice
-        ax.plot((self.markers[m_i][0]-l,self.markers[m_i][0]+l),(self.markers[m_i][1],self.markers[m_i][1]),'w', linewidth=1)
-        ax.plot((self.markers[m_i][0],self.markers[m_i][0]),(self.markers[m_i][1]-l,self.markers[m_i][1]+l),'w', linewidth=1)
+        for m in self.markers:
+            ax.plot((m[0]-l,m[0]+l),(m[1],m[1]),'w', linewidth=1)
+            ax.plot((m[0],m[0]),(m[1]-l,m[1]+l),'w', linewidth=1)
         if m_i == 0: ax.set_title('Marker 1 = {}; Marker 2 =  ; Marker 3 =  ; Marker 4 =  '.format(self.markers[0]))
         elif m_i == 1: ax.set_title('Marker 1 = {}; Marker 2 = {}; Marker 3 =  ; Marker 4 =  '.format(self.markers[0], self.markers[1]))
         elif m_i == 2: ax.set_title('Marker 1 = {}; Marker 2 = {}; Marker 3 = {}; Marker 4 =  '.format(self.markers[0], self.markers[1], self.markers[2]))
@@ -886,59 +883,74 @@ class DoseAnalysis():
             process when "enter" is pressed on the keyboard.
         """
         def reset_markers(reason = "change"):
-            """ This subfunction will reset self.markers and add marker text/title
-                to the figure
-            """
+            """ Resets self.markers and updates the marker text/title in the figure. """
             if reason == "change": print('\nFilm dose array has updated...')
             elif reason == "less": print('\n{} markers were selected when 4 were expected...'.format(len(self.markers)))
             print('Please start over...')
             print('Please double-click on each marker. Press ''enter'' when done')
             self.markers = []
-            ax.set_title('Marker 1 = ; Marker 2 = ; Marker 3 = ; Marker 4 = ')        
+            ax.set_title('Marker 1 = ; Marker 2 = ; Marker 3 = ; Marker 4 = ')      
             
-        fig = plt.gcf()
-        ax = plt.gca()
-        if event.key == 'right':
+        def update_markers():
+            """ Updates the markers on the plot. """
+            # Remove prior crosshairs (if any)
+            for line in ax.lines:
+                line.remove()
+            self.plot_markers()
+
+        fig, ax = plt.gcf(), plt.gca()
+        
+        # Handle key actions for rotation and flipping
+        key_actions = {
+            'r': lambda: setattr(self.film_dose, 'array', np.rot90(self.film_dose.array, k=1)),
+            'h': lambda: setattr(self.film_dose, 'array', np.fliplr(self.film_dose.array)),
+            'v': lambda: setattr(self.film_dose, 'array', np.flipud(self.film_dose.array))
+        }
+        
+        if event.key in key_actions:
             ax.clear()
-            self.film_dose.array = np.rot90(self.film_dose.array, k=1)
-            self.film_dose.plot(ax=ax)
+            key_actions[event.key]()  # Apply the respective transformation
             reset_markers()
             fig.canvas.draw_idle()
-        elif event.key == 'left':
-            ax.clear()
-            self.film_dose.array = np.fliplr(self.film_dose.array)
             self.film_dose.plot(ax=ax)
-            reset_markers()
-            fig.canvas.draw_idle()
-        elif event.key == 'up':
-            ax.clear()
-            self.film_dose.array = np.flipud(self.film_dose.array)
-            self.film_dose.plot(ax=ax)
-            reset_markers()
-            fig.canvas.draw_idle()
-        elif event.key == 'enter':
+            return  # Exit early to avoid processing other key events
+                
+        # Handle marker movement
+        direction_map = {
+            '8': (0, -1),  # Move up
+            '2': (0, 1),   # Move down
+            '4': (-1, 0),  # Move left
+            '6': (1, 0)    # Move right
+        }
+        
+        i = len(self.markers) - 1  # Last marker index
+        if i >= 0 and event.key in direction_map:
+            dx, dy = direction_map[event.key]
+            self.markers[i][0] += dx
+            self.markers[i][1] += dy
+            update_markers()
+            return  # Exit early to avoid processing other key events
+            
+        if event.key == 'enter':
             if len(self.markers) == 0:
-                max_x = np.floor(self.film_dose.array.shape[1]).astype(int)
-                max_y = np.floor(self.film_dose.array.shape[0]).astype(int)
+                max_x, max_y = self.film_dose.array.shape[1], self.film_dose.array.shape[0]
                 self.markers = [[max_x/2, 0], [max_x, max_y/2], [max_x/2, max_y], [0, max_y/2]]
                 print("\nNo markers selected.\nCenter of film dose array selected for markers."
                       "\nAdjust registration as needed.")
             elif len(self.markers) != 4:
-                ax.clear()
                 self.film_dose.plot(ax=ax)
                 reset_markers("less")
                 fig.canvas.draw_idle()
             
-            if len(self.markers) == 4:
-                print("Marker 1: {}; Marker 2: {}; Marker 3: {}; Marker 4 = {}.".format(self.markers[0], self.markers[1],
-                                                                                        self.markers[2], self.markers[3]))
+            else:
+                print(f"Marker 1: {self.markers[0]}; Marker 2: {self.markers[1]}; "
+                      f"Marker 3: {self.markers[2]}; Marker 4: {self.markers[3]}.")
                 self.fig.canvas.mpl_disconnect(self.cid)
                 self.move_iso_center()
                 self.remove_rotation()
                 if self.ref_dose is not None: self.apply_shifts_ref()
                 if self.rot: self.film_dose.rotate(self.rot)
                 self.wait = False
-            return
                 
     def move_iso_center(self):
         """ Register the film dose and reference dose by moving the reference
