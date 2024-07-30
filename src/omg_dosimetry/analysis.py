@@ -36,6 +36,7 @@ from .imageRGB import load, ArrayImage, equate_images
 import bz2
 import time
 from .tools import Ruler
+import sys
 
 class DoseAnalysis(): 
     """Base class for analysis film dose vs reference dose.
@@ -835,53 +836,55 @@ class DoseAnalysis():
         self.tune_registration()
         
     def select_markers(self):
-        """ This function is called by self.register() to start the interactive plot
-            where the 4 markes on the film must be identified.
-        """
-        self.fig = plt.gcf()
+        """ Start the interactive plot where the 4 markers on the film must be identified. """
+        self.fig, self.ax = plt.gcf(), plt.gca()
         self.markers = []
-        ax = plt.gca()
-        print('\nPlease double-click on each marker. Press ''enter'' when done')
+        
+        print('\nPlease double-click on each marker. Press "Enter" when done')
         print('Keyboard shortcuts: Numpad arrows: Move last placed marker; r = Rotate 90 degrees; h = Flip horizontally; v = Flip vertically')
-        ax.set_title('Marker 1 = ; Marker 2 = ; Marker 3 = ; Marker 4 = ')
-        self.fig.canvas.mpl_connect('button_press_event', self.onclick)
-        self.cid = self.fig.canvas.mpl_connect('key_press_event', self.ontype)
-        plt.cursor = Cursor(ax, useblit=True, color='white', linewidth=1)
+        self.ax.set_title('Marker 1 = ; Marker 2 = ; Marker 3 = ; Marker 4 = ')
+        
+        self.cid = self.fig.canvas.mpl_connect('button_press_event', self.onclick)
+        self.fig.canvas.mpl_connect('key_press_event', self.ontype)
+        self.fig.canvas.mpl_connect('close_event', self.onclose)
+        self.cursor = Cursor(self.ax, useblit=True, color='white', linewidth=1)
         plt.show()
         
         self.wait = True
-        while self.wait: plt.pause(1)
-        plt.close(self.fig)
-        return
+        while self.wait and plt.fignum_exists(self.fig.number): plt.pause(1)
+        self.cleanup()
         
+    def cleanup(self):
+        if self.fig:
+            self.fig.canvas.mpl_disconnect(self.cid)
+            plt.close(self.fig)
+    
+    def onclose(self, event):
+        """ Handle the figure close event. """
+        self.wait = False
+    
     def onclick(self, event):
-        """ This function is called by self.select_markers() to set the markers
-            coordinates when the mouse is double-cliked.
-        """
+        """ Set the markers' coordinates when the mouse is double-clicked. """
         if event.dblclick and len(self.markers) < 4: 
             self.markers.append([int(event.xdata), int(event.ydata)])
             self.plot_markers()            
 
-    def plot_markers(self):
-        """ This function is called by self.onclick() and self.ontype() when 
-            self.markers need to be plotted onto figure
-        """
-        ax = plt.gca()
-        l = 20                              # Length of crosshair/marker
-        m_i = len(self.markers) - 1         # last marker indice
+    def plot_markers(self):      
+        """ Plot the markers on the figure. """
+        l = 20  # Length of crosshair/marker
+        
         for m in self.markers:
-            ax.plot((m[0]-l,m[0]+l),(m[1],m[1]),'w', linewidth=1)
-            ax.plot((m[0],m[0]),(m[1]-l,m[1]+l),'w', linewidth=1)
-        if m_i == 0: ax.set_title('Marker 1 = {}; Marker 2 =  ; Marker 3 =  ; Marker 4 =  '.format(self.markers[0]))
-        elif m_i == 1: ax.set_title('Marker 1 = {}; Marker 2 = {}; Marker 3 =  ; Marker 4 =  '.format(self.markers[0], self.markers[1]))
-        elif m_i == 2: ax.set_title('Marker 1 = {}; Marker 2 = {}; Marker 3 = {}; Marker 4 =  '.format(self.markers[0], self.markers[1], self.markers[2]))
-        elif m_i == 3: ax.set_title('Marker 1 = {}; Marker 2 = {}; Marker 3 = {}; Marker 4 = {}'.format(self.markers[0], self.markers[1], self.markers[2], self.markers[3]))
-        plt.gcf().canvas.draw_idle()
+            self.ax.plot((m[0] - l, m[0] + l), (m[1], m[1]), 'w', linewidth=1)
+            self.ax.plot((m[0], m[0]), (m[1] - l, m[1] + l), 'w', linewidth=1)
+        
+        marker_titles = [f"Marker {i + 1} = {m}" for i, m in enumerate(self.markers)]
+        title = "; ".join(marker_titles) + " ; " * (4 - len(self.markers))
+        self.ax.set_title(title)
+        self.fig.canvas.draw_idle()
         
     def ontype(self, event):
-        """ This function is called by self.select_markers() to continue the registration
-            process when "enter" is pressed on the keyboard.
-        """
+        """ Handle keyboard events for rotation, flipping, and marker movement. """
+        
         def reset_markers(reason = "change"):
             """ Resets self.markers and updates the marker text/title in the figure. """
             if reason == "change": print('\nFilm dose array has updated...')
@@ -889,16 +892,13 @@ class DoseAnalysis():
             print('Please start over...')
             print('Please double-click on each marker. Press ''enter'' when done')
             self.markers = []
-            ax.set_title('Marker 1 = ; Marker 2 = ; Marker 3 = ; Marker 4 = ')      
+            self.ax.set_title('Marker 1 = ; Marker 2 = ; Marker 3 = ; Marker 4 = ')
+            self.fig.canvas.draw_idle()    
             
         def update_markers():
             """ Updates the markers on the plot. """
-            # Remove prior crosshairs (if any)
-            for line in ax.lines:
-                line.remove()
+            for line in self.ax.lines: line.remove()
             self.plot_markers()
-
-        fig, ax = plt.gcf(), plt.gca()
         
         # Handle key actions for rotation and flipping
         key_actions = {
@@ -908,12 +908,12 @@ class DoseAnalysis():
         }
         
         if event.key in key_actions:
-            ax.clear()
+            self.ax.clear()
             key_actions[event.key]()  # Apply the respective transformation
             reset_markers()
-            fig.canvas.draw_idle()
-            self.film_dose.plot(ax=ax)
-            return  # Exit early to avoid processing other key events
+            self.fig.canvas.draw_idle()
+            self.film_dose.plot(ax=self.ax)
+            return
                 
         # Handle marker movement
         direction_map = {
@@ -923,29 +923,23 @@ class DoseAnalysis():
             '6': (1, 0)    # Move right
         }
         
-        i = len(self.markers) - 1  # Last marker index
-        if i >= 0 and event.key in direction_map:
+        if len(self.markers) > 0 and event.key in direction_map:
             dx, dy = direction_map[event.key]
-            self.markers[i][0] += dx
-            self.markers[i][1] += dy
+            self.markers[-1][0] += dx
+            self.markers[-1][1] += dy
             update_markers()
-            return  # Exit early to avoid processing other key events
+            return
             
         if event.key == 'enter':
             if len(self.markers) == 0:
                 max_x, max_y = self.film_dose.array.shape[1], self.film_dose.array.shape[0]
                 self.markers = [[max_x/2, 0], [max_x, max_y/2], [max_x/2, max_y], [0, max_y/2]]
-                print("\nNo markers selected.\nCenter of film dose array selected for markers."
-                      "\nAdjust registration as needed.")
+                print("\nNo markers selected. \nCenter of film dose array selected for markers. \nAdjust registration as needed.")
             elif len(self.markers) != 4:
-                self.film_dose.plot(ax=ax)
+                self.film_dose.plot(ax=self.ax)
                 reset_markers("less")
-                fig.canvas.draw_idle()
-            
             else:
-                print(f"Marker 1: {self.markers[0]}; Marker 2: {self.markers[1]}; "
-                      f"Marker 3: {self.markers[2]}; Marker 4: {self.markers[3]}.")
-                self.fig.canvas.mpl_disconnect(self.cid)
+                print(f"Marker 1: {self.markers[0]}; Marker 2: {self.markers[1]}; Marker 3: {self.markers[2]}; Marker 4: {self.markers[3]}.")
                 self.move_iso_center()
                 self.remove_rotation()
                 if self.ref_dose is not None: self.apply_shifts_ref()
@@ -963,17 +957,12 @@ class DoseAnalysis():
         
         # Find the indices of markers on top, bottom, left, right of the film.
         x, y = [m[0] for m in self.markers], [m[1] for m in self.markers]
-        t, b = y.index(min(y)), y.index(max(y))
-        l, r = x.index(min(x)), x.index(max(x))
+        t, b, l, r = y.index(min(y)), y.index(max(y)), x.index(min(x)), x.index(max(x))
         
-        # Find intersection of the lines top-bottom and left-right
-        # and set the reference point (x0, y0).
-        line1 = ((x[t],y[t]),(x[b],y[b]))
-        line2 = ((x[r],y[r]),(x[l],y[l]))
-        (x0,y0) = line_intersection(line1, line2)
-        
-        self.x0 = int(np.around(x0))
-        self.y0 = int(np.around(y0))
+        # Find intersection of the lines top-bottom and left-right and set the reference point (x0, y0).
+        line1, line2 = ((x[t],y[t]),(x[b],y[b])), ((x[r],y[r]),(x[l],y[l]))
+        (x0,y0) = line_intersection(line1, line2)    
+        self.x0, self.y0 = int(np.around(x0)), int(np.around(y0))
         
         # Make (x0, y0) the center of image by padding
         self.film_dose.move_pixel_to_center(x0, y0) 
@@ -981,41 +970,34 @@ class DoseAnalysis():
         # Move the reference point in the reference dose to the center
         # NOTE: This section is made to work with planar dose exported from RayStation
         # in DICOM format. It will probably need to be changed if you use a different TPS.
-        if self.markers_center is not None:
-            self.ref_dose.position = [float(i) for i in self.ref_dose.metadata.ImagePositionPatient]
-            self.ref_dose.sizeX = self.ref_dose.metadata.Columns
-            self.ref_dose.sizeY = self.ref_dose.metadata.Rows
-            self.ref_dose.orientation = self.ref_dose.metadata.SeriesDescription
+        markers_center = self.markers_center
+        if markers_center is not None:
+            pos = [float(i) for i in self.ref_dose.metadata.ImagePositionPatient]
+            sizeX, sizeY = self.ref_dose.metadata.Columns, self.ref_dose.metadata.Rows
+            orientation = self.ref_dose.metadata.SeriesDescription
+            dpmm = self.ref_dose.dpmm
+            
+            if 'Transversal' in orientation:
+                x_corner, y_corner = pos[0], -pos[1]
+                x_marker, y_marker = markers_center[0], markers_center[2]
+            elif 'Sagittal' in orientation:
+                x_corner, y_corner = -pos[1], pos[2]
+                x_marker, y_marker = markers_center[2], markers_center[1]
+            elif 'Coronal' in orientation:
+                x_corner, y_corner = pos[0], pos[2]
+                x_marker, y_marker = markers_center[0], markers_center[1]
+            else:
+                raise ValueError("Unsupported orientation")
 
-            if 'Transversal' in self.ref_dose.orientation:
-                x_corner = self.ref_dose.position[0]
-                y_corner = -1.0 * self.ref_dose.position[1]
-                x_marker = self.markers_center[0]
-                y_marker = self.markers_center[2]
-                x_pos_mm = x_marker - x_corner
-                y_pos_mm = y_corner - y_marker
-                x0 = int(np.around(x_pos_mm * self.ref_dose.dpmm))
-                y0 = int(np.around(y_pos_mm * self.ref_dose.dpmm))
-
-            if 'Sagittal' in self.ref_dose.orientation:
-                x_corner = -1.0 * self.ref_dose.position[1]
-                y_corner = self.ref_dose.position[2]
-                x_marker = self.markers_center[2]
-                y_marker = self.markers_center[1]
-                x_pos_mm = x_marker - x_corner
-                y_pos_mm = y_marker - y_corner
-                x0 = self.ref_dose.sizeX + int(np.around(x_pos_mm * self.ref_dose.dpmm))
-                y0 = self.ref_dose.sizeY - int(np.around(y_pos_mm * self.ref_dose.dpmm))
-
-            if 'Coronal' in self.ref_dose.orientation:
-                x_corner = self.ref_dose.position[0]
-                y_corner = self.ref_dose.position[2]
-                x_marker = self.markers_center[0]
-                y_marker = self.markers_center[1]
-                x_pos_mm = x_marker - x_corner
-                y_pos_mm = y_marker - y_corner
-                x0 = int(np.around(x_pos_mm * self.ref_dose.dpmm))
-                y0 = self.ref_dose.sizeY - int(np.around(y_pos_mm * self.ref_dose.dpmm))
+            x_pos_mm, y_pos_mm = x_marker - x_corner, y_marker - y_corner
+            
+            x0 = int(np.around(x_pos_mm * dpmm))
+            if 'Sagittal' in orientation:
+                x0 = sizeX + int(np.around(x_pos_mm * dpmm))
+            
+            y0 = sizeY - int(np.around(y_pos_mm * dpmm))
+            if 'Transversal' in orientation:
+                y0 = int(np.around(y_pos_mm * dpmm))
 
             self.ref_dose.move_pixel_to_center(x0, y0)
             
@@ -1023,33 +1005,31 @@ class DoseAnalysis():
         """ Rotates the film around the center so that left/right
             and top/bottom markers are horizontally and vertically aligned.  
         """
+        # Find the indices of markers on top, bottom, left, right of the film.
         x, y = [m[0] for m in self.markers], [m[1] for m in self.markers]
-        t, b = y.index(min(y)), y.index(max(y))
-        l, r = x.index(min(x)), x.index(max(x))
+        t, b, l, r = y.index(min(y)), y.index(max(y)), x.index(min(x)), x.index(max(x))
         
-        # Find rotation angle
-        angle1 = math.degrees( math.atan( (x[b]-x[t]) / (y[b]-y[t]) ) )
-        angle2 = math.degrees( math.atan( (y[l]-y[r]) / (x[r]-x[l]) ) )
+        # Calculate rotation angles for vertical and horizontal alignment
+        angle1 = math.degrees(math.atan2(x[b] - x[t], y[b] - y[t]))
+        angle2 = math.degrees(math.atan2(y[l] - y[r], x[r] - x[l]))
         
         # Appy inverse rotation
-        angleCorr = -1.0*(angle1+angle2)/2
-        print('Applying a rotation of {} degrees'.format(angleCorr))
-        self.film_dose.rotate(angleCorr)
+        angle_corr = -0.5 * (angle1 + angle2)
+        print(f'Applying a rotation of {angle_corr} degrees')
+        self.film_dose.rotate(angle_corr)
             
     def apply_shifts_ref(self):
-        """ Apply shifts given in self.shifts by padding the reference image.
-        """
+        """ Apply shifts given in self.shifts by padding the reference image. """
         pad_x_pixels =  int(round(self.shifts[0] * self.ref_dose.dpmm )) *2
         pad_y_pixels =  int(round(self.shifts[1] * self.ref_dose.dpmm )) *2
-        
-        if pad_x_pixels > 0:
-            self.ref_dose.pad(pixels=pad_x_pixels, value=0, edges='left')
-        if pad_x_pixels < 0:
-            self.ref_dose.pad(pixels=abs(pad_x_pixels), value=0, edges='right')
-        if pad_y_pixels > 0:
-            self.ref_dose.pad(pixels=pad_y_pixels, value=0, edges='top')
-        if pad_y_pixels < 0:
-            self.ref_dose.pad(pixels=abs(pad_y_pixels), value=0, edges='bottom')
+
+        # Apply padding to the reference image based on calculated pixel shifts
+        if pad_x_pixels != 0:
+            edge = 'left' if pad_x_pixels > 0 else 'right'
+            self.ref_dose.pad(pixels=abs(pad_x_pixels), value=0, edges=edge)
+        if pad_y_pixels != 0:
+            edge = 'top' if pad_y_pixels > 0 else 'bottom'
+            self.ref_dose.pad(pixels=abs(pad_y_pixels), value=0, edges=edge)
     
     def tune_registration(self): 
         """ Starts the registration fine tuning process.
@@ -1060,94 +1040,82 @@ class DoseAnalysis():
         """
         if self.ref_dose is None:
             self.ref_dose = self.film_dose
-        film_dose_path = self.film_dose.path
-        ref_dose_path = self.ref_dose.path
+        film_dose_path, ref_dose_path = self.film_dose.path, self.ref_dose.path
         
-        (self.film_dose, self.ref_dose) = equate_images(self.film_dose, self.ref_dose)
-        self.film_dose.path = film_dose_path
-        self.ref_dose.path = ref_dose_path
+        # Make the film and reference images the same size
+        self.film_dose, self.ref_dose = equate_images(self.film_dose, self.ref_dose)
+        self.film_dose.path, self.ref_dose.path = film_dose_path, ref_dose_path
+
         print('\nFine tune registration using keyboard if needed. Arrow keys = move; ctrl+left/right = rotate. Press enter when done.')
-        self.fig = plt.figure()
-        ax = plt.gca()
+        
+        self.fig, ax = plt.subplots()
         self.cid = self.fig.canvas.mpl_connect('key_press_event', self.reg_ontype)
         img_array = self.film_dose.array - self.ref_dose.array
-        min_max = [np.percentile(img_array,[1])[0].round(decimals=-1), np.percentile(img_array,[99])[0].round(decimals=-1)] 
-        lim = abs(max(min_max, key=abs))
-        self.clim = [-1.0*lim, lim]
+        min_val, max_val = np.percentile(img_array, [1, 99]).round(decimals=-1)
+        lim = max(abs(min_val), abs(max_val))
+        self.clim = [-lim, lim]
         self.show_registration(ax=ax)
 
         self.wait = True
         while self.wait: plt.pause(1)
-        plt.close(self.fig)
-        return
+        self.cleanup()
         
     def show_registration(self, ax=None, cmap='bwr'):
-        """ This function is used by self.tune_registration() for showing
-            the superposition of the film and reference dose.
-            If self.register_using_gradient is set to True, a sobel filter is applied
-            to both reference and film dose in order to increase dose gradients visibility.
+        """ Show the superposition of the film and reference dose.
+            If self.register_using_gradient is set to True, a Sobel filter is applied
+            to both reference and film dose to increase dose gradients visibility.
         """
-        if ax==None:
-                plt.plot()
-                ax = plt.gca()
+        if ax is None: ax = plt.gca()
         ax.clear()
         
+        # Apply Sobel filter if using gradients
         if self.register_using_gradient:
-            ref_x = spf.sobel(self.ref_dose.as_type(np.float32), 1)
-            ref_y = spf.sobel(self.ref_dose.as_type(np.float32), 0)
-            ref_grad = np.hypot(ref_x, ref_y)
-            film_x = spf.sobel(self.film_dose.as_type(np.float32), 1)
-            film_y = spf.sobel(self.film_dose.as_type(np.float32), 0)
-            film_grad = np.hypot(film_x, film_y)
+            ref_grad = np.hypot(spf.sobel(self.ref_dose.as_type(np.float32), 1), spf.sobel(self.ref_dose.as_type(np.float32), 0))
+            film_grad = np.hypot(spf.sobel(self.film_dose.as_type(np.float32), 1), spf.sobel(self.film_dose.as_type(np.float32), 0))
             img_array = film_grad - ref_grad
         else:
             img_array = self.film_dose.array - self.ref_dose.array
         img = load(img_array, dpi=self.film_dose.dpi) 
         
-        RMSE =  (sum(sum(img.array**2)) / len(self.film_dose.array[(self.film_dose.array > 0)]))**0.5
-        
-        #clim = [np.percentile(img_array,[1])[0].round(decimals=-1), np.percentile(img_array,[99])[0].round(decimals=-1)]   
+        # rmse =  (sum(sum(img.array**2)) / len(self.film_dose.array[(self.film_dose.array > 0)]))**0.5
+        rmse = np.sqrt(np.mean(img_array**2))
+
         img.plot(ax=ax, clim=self.clim, cmap=cmap)     
         ax.plot((0, img.shape[1]), (img.center.y, img.center.y),'k--')
         ax.plot((img.center.x, img.center.x), (0, img.shape[0]),'k--')
         ax.set_xlim(0, img.shape[1])
         ax.set_ylim(img.shape[0],0)
-        ax.set_title('Fine tune registration. Arrow keys = move; ctrl+left/right = rotate. Press enter when done. RMSE = {}'.format(RMSE))
+        ax.set_title(f'Fine tune registration. Arrow keys = move; ctrl+left/right = rotate. Press enter when done. RMSE = {rmse:.2f}')
         
     def reg_ontype(self, event):
         """ Thie function is called by self.tune_registration() to apply translations
             and rotations, and to end the registration process when Enter is pressed.
         """
-        fig = plt.gcf()
-        ax = plt.gca()
-        if event.key == 'up':
-            self.film_dose.roll(direction='y', amount=-1)
-            self.show_registration(ax=ax)
-            fig.canvas.draw_idle()
-        if event.key == 'down':
-            self.film_dose.roll(direction='y', amount=1)
-            self.show_registration(ax=ax)
-            fig.canvas.draw_idle()
-        if event.key == 'left':
-            self.film_dose.roll(direction='x', amount=-1)
-            self.show_registration(ax=ax)
-            fig.canvas.draw_idle()
-        if event.key == 'right':
-            self.film_dose.roll(direction='x', amount=1)
-            self.show_registration(ax=ax)
-            fig.canvas.draw_idle()
-        if event.key == 'ctrl+right':
-            self.film_dose.rotate(-0.1)
-            self.show_registration(ax=ax)
-            fig.canvas.draw_idle()
-        if event.key == 'ctrl+left':
-            self.film_dose.rotate(0.1)
-            self.show_registration(ax=ax)
-            fig.canvas.draw_idle()
-        if event.key == 'enter':
+        fig, ax = plt.gcf(), plt.gca()
+        
+        def end_registration():
+            """ End the registration process by disconnecting the event and stopping the wait loop. """
             self.fig.canvas.mpl_disconnect(self.cid)
             self.wait = False
-            return
+            
+        # Define key actions
+        key_actions = {
+            'up': lambda: self.film_dose.roll(direction='y', amount=-1),
+            'down': lambda: self.film_dose.roll(direction='y', amount=1),
+            'left': lambda: self.film_dose.roll(direction='x', amount=-1),
+            'right': lambda: self.film_dose.roll(direction='x', amount=1),
+            'ctrl+right': lambda: self.film_dose.rotate(-0.1),
+            'ctrl+left': lambda: self.film_dose.rotate(0.1),
+            'enter': lambda: end_registration()
+        }
+        
+        # Apply action based on key event
+        action = key_actions.get(event.key)
+        if action:
+            action()
+            if event.key != 'enter':
+                self.show_registration(ax=ax)
+                fig.canvas.draw_idle()
             
     def save_current_figure(self, filename, **kwargs):
         """Save the analyzed image to a file.
@@ -1164,25 +1132,29 @@ class DoseAnalysis():
         plt.close(fig)
         
     def show_cluster_analysis(self, cluster_id=0, xlim_margin_mm=10, figsize=(10,10), levels=None):
-        # Get coordinates of slected cluster
-        x = self.clusters_analysis[cluster_id]['x_px']
-        y = self.clusters_analysis[cluster_id]['y_px']
-        x_mm = self.clusters_analysis[cluster_id]['x_mm']
-        y_mm = self.clusters_analysis[cluster_id]['y_mm']
-    
+        """ Display the dose distribution with cluster analysis, including dose distribution,
+           cluster location, isodoses, and profiles.
+       """
+        # Get coordinates of selected cluster
+        cluster = self.clusters_analysis[cluster_id]
+        x, y = cluster['x_px'], cluster['y_px']
+        x_mm, y_mm = cluster['x_mm'], cluster['y_mm']
         coords = self.ref_dose.clusters[cluster_id]['coords']
         coords_mm = coords / self.ref_dose.dpmm
-        x_xlim = (min(coords_mm[:,1])-xlim_margin_mm, max(coords_mm[:,1])+xlim_margin_mm)
-        y_xlim = (min(coords_mm[:,0])-xlim_margin_mm, max(coords_mm[:,0])+xlim_margin_mm)
         
-        # Show full dose distribution and location of selected cluster
+        # Define plot limits with margins
+        x_xlim = (min(coords_mm[:,1]) - xlim_margin_mm, max(coords_mm[:,1]) + xlim_margin_mm)
+        y_xlim = (min(coords_mm[:,0]) - xlim_margin_mm, max(coords_mm[:,0]) + xlim_margin_mm)
+        
+        # Plot full dose distribution and cluster location
         fig, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2,2, figsize=figsize)
         extent = [0, self.ref_dose.physical_shape[1], self.ref_dose.physical_shape[0], 0]
         self.ref_dose.plot(ax=ax1, extent=extent)
         ax1.plot((x_mm, x_mm),(0,self.ref_dose.shape[0]),'w--', linewidth=1)
         ax1.plot((0, self.ref_dose.shape[1]),(y_mm, y_mm),'w--', linewidth=1)
         
-        rect = plt.Rectangle((min(x_xlim[0], x_xlim[1]), min(y_xlim[0], y_xlim[1])), abs(x_xlim[0]-x_xlim[1]), abs(y_xlim[0]-y_xlim[1]), linewidth=1, edgecolor='w', linestyle='--', fill=False)
+        # rect = plt.Rectangle((min(x_xlim[0], x_xlim[1]), min(y_xlim[0], y_xlim[1])), abs(x_xlim[0]-x_xlim[1]), abs(y_xlim[0]-y_xlim[1]), linewidth=1, edgecolor='w', linestyle='--', fill=False)
+        rect = plt.Rectangle((x_xlim[0], y_xlim[0]), x_xlim[1] - x_xlim[0], y_xlim[1] - y_xlim[0], linewidth=1, edgecolor='w', linestyle='--', fill=False)
         ax1.add_patch(rect)
         
         # Plot the isodoses
@@ -1193,8 +1165,6 @@ class DoseAnalysis():
         # Plot profiles
         self.plot_profile(ax=ax3, profile='x', position=y, diff=True, xlim=x_xlim, vertical_line=x)
         self.plot_profile(ax=ax4, profile='y', position=x, diff=True, xlim=y_xlim, vertical_line=y)
-        
-
             
     def publish_pdf(self, filename=None, author=None, unit=None, notes=None, open_file=False, x=None, y=None, plot_clusters_analysis=False, iso_levels=None, xlim_margin_mm=10, **kwargs):
         """Publish a PDF report of the calibration. The report includes basic
