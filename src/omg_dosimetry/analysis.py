@@ -36,7 +36,6 @@ from .imageRGB import load, ArrayImage, equate_images
 import bz2
 import time
 from .tools import Ruler
-import sys
 
 class DoseAnalysis(): 
     """Base class for analysis film dose vs reference dose.
@@ -86,59 +85,50 @@ class DoseAnalysis():
 
     def __init__(self, film_dose=None, ref_dose=None, norm_film_dose = None, film_dose_factor=1, ref_dose_factor=1, flipLR=False, flipUD=False, rot90=0, ref_dose_sum=False):
         
-        if film_dose is not None: self.film_dose = load(film_dose)
-        if norm_film_dose is not None:  self.norm_film_dose = load(norm_film_dose)
-        else: self.norm_film_dose = None
-        if rot90: self.film_dose.array = np.rot90(self.film_dose.array, k=rot90)
-        if flipLR: self.film_dose.array = np.fliplr(self.film_dose.array)
-        if flipUD: self.film_dose.array = np.flipud(self.film_dose.array)
-        if ref_dose is None: self.ref_dose = None
-            
-        if ref_dose is not None:
-            # If need to add multiple plane dose images, assume all images in folder given by ref_dose
-            if ref_dose_sum:
-                files = os.listdir(ref_dose)
-                img_list = []
-                for file in files: 
-                    img_file = os.path.join(ref_dose, file)
-                    filebase, fileext = os.path.splitext(file)    
-                    if file == 'Thumbs.db': continue
-                    if os.path.isdir(img_file): continue       
-                    img_list.append(load(img_file))    
-                self.ref_dose = img_list[0]
-                new_array = np.stack(tuple(img.array for img in img_list), axis=-1)
-                self.ref_dose.array = np.sum(new_array, axis=-1) 
-            else: self.ref_dose = load(ref_dose)
-  
-        self.apply_film_factor(film_dose_factor = film_dose_factor)
-        self.apply_ref_factor(ref_dose_factor = ref_dose_factor)
+        self.film_dose = load(film_dose) if film_dose else None
+        self.norm_film_dose = load(norm_film_dose) if norm_film_dose else None        
+        self.ref_dose = self.load_reference_dose(ref_dose, ref_dose_sum) if ref_dose else None
+        self.apply_film_factor(film_dose_factor)
+        self.apply_ref_factor(ref_dose_factor)
+        if self.film_dose:
+            if rot90: self.film_dose.array = np.rot90(self.film_dose.array, k=rot90)
+            if flipLR: self.film_dose.array = np.fliplr(self.film_dose.array)
+            if flipUD: self.film_dose.array = np.flipud(self.film_dose.array)
+
+    def load_reference_dose(self, ref_dose_path, ref_dose_sum):
+        if ref_dose_sum:
+            # If needed to sum multiple plane dose images, assume all images in folder given by ref_dose_path
+            img_list = [load(os.path.join(ref_dose_path, file)) for file in os.listdir(ref_dose_path) if file != 'Thumbs.db' and not os.path.isdir(os.path.join(ref_dose_path, file))]
+            combined_array = np.stack([img.array for img in img_list], axis=-1)
+            ref_dose = img_list[0]
+            ref_dose.array = np.sum(combined_array, axis=-1)
+            return ref_dose
+        return load(ref_dose_path)
 
     def apply_film_factor(self, film_dose_factor = None):
         """ Apply a normalisation factor to film dose. """
-        if film_dose_factor is not None:
+        if film_dose_factor:
             self.film_dose_factor = film_dose_factor
-            self.film_dose.array = self.film_dose.array * self.film_dose_factor
-            print("\nApplied film normalisation factor = {}".format(self.film_dose_factor))
+            self.film_dose.array *= film_dose_factor
+            print(f"\nApplied film normalisation factor = {film_dose_factor:.2f}")
 
     def apply_ref_factor(self, ref_dose_factor = None):
         """ Apply a normalisation factor to reference dose. """
         if ref_dose_factor is not None:
             self.ref_dose_factor = ref_dose_factor
-            self.ref_dose.array = self.ref_dose.array * self.ref_dose_factor
-            print("Applied ref dose normalisation factor = {}".format(self.ref_dose_factor))
+            self.ref_dose.array *= ref_dose_factor
+            print(f"Applied ref dose normalisation factor = {ref_dose_factor:.2f}")
 
     def apply_factor_from_isodose(self, norm_isodose = 0):
         """ Apply film normalisation factor from a reference dose isodose [cGy].
             Mean dose inside regions where ref_dose > norm_isodose will be compared
             between film and ref_dose. A factor is computed and applied to film dose
-            so that average dose in this region is the same for both.
+            so that median dose in this region is the same for both.
         """
-        print("Computing normalisation factor from doses > {} cGy.".format(norm_isodose))
+        print(f"Computing normalisation factor from doses > {norm_isodose} cGy.")
         self.norm_dose = norm_isodose        
-        indices = np.where(self.ref_dose.array > self.norm_dose)
-        mean_ref = np.mean(self.ref_dose.array[indices])
-        mean_film = np.mean(self.film_dose.array[indices])          
-        self.apply_film_factor(film_dose_factor = mean_ref / mean_film )
+        indices = np.where(self.ref_dose.array > self.norm_dose)   
+        self.apply_film_factor(np.median(self.ref_dose.array[indices]) / np.median(self.film_dose.array[indices]))
         
     def apply_factor_from_roi(self, norm_dose=None, apply=True):
         """ Apply film normalisation factor from a rectangle ROI.
@@ -150,15 +140,11 @@ class DoseAnalysis():
         
         self.norm_dose = norm_dose      
         msg = '\nFactor from ROI: Click and drag to draw an ROI manually. Press ''enter'' when finished.'
-        self.roi_xmin, self.roi_xmax = [], []
-        self.roi_ymin, self.roi_ymax = [], []
+        self.roi_xmin, self.roi_xmax, self.roi_ymin, self.roi_ymax = [], [], [], []
 
         self.fig = plt.figure()
         ax = plt.gca()  
-        if self.norm_film_dose:
-            self.norm_film_dose.plot(ax=ax)  
-        else:
-            self.film_dose.plot(ax=ax)  
+        (self.norm_film_dose if self.norm_film_dose else self.film_dose).plot(ax=ax)
         ax.set_title(msg)
         print(msg)
         
@@ -174,51 +160,38 @@ class DoseAnalysis():
         
         self.wait = True
         while self.wait: plt.pause(1)
-        plt.close(self.fig)
-        return
+        self.cleanup()
 
     def get_factor_from_roi_press_enter(self, event):
         """ Function called from apply_factor_from_roi() when ''enter'' is pressed. """      
         if event.key == 'enter':
             roi_film = np.median(self.film_dose.array[self.roi_ymin:self.roi_ymax, self.roi_xmin:self.roi_xmax])
             roi_ref = np.median(self.ref_dose.array[self.roi_ymin:self.roi_ymax, self.roi_xmin:self.roi_xmax])
-            relative_diff = (roi_film-roi_ref)/roi_ref * 100
-            print("Median film dose = {} cGy; median ref dose = {} cGy; Relative diff = {}%".format(roi_film, roi_ref, relative_diff))
-            
-            if hasattr(self, "rs"): del self.rs                
-            self.fig.canvas.mpl_disconnect(self.cid)
+            relative_diff = (roi_film - roi_ref) / roi_ref * 100
+            print(f"Median film dose = {roi_film:.1f} cGy; median ref dose = {roi_ref:.1f} cGy; Relative diff = {relative_diff:.1f}%")
             self.wait = False
-            self.roi_relative_diff = relative_diff
-            return
 
     def apply_factor_from_roi_press_enter(self, event):
         """ Function called from apply_factor_from_roi() when ''enter'' is pressed. """      
         if event.key == 'enter':
-            if self.norm_film_dose: roi_film = np.median(self.norm_film_dose.array[self.roi_ymin:self.roi_ymax, self.roi_xmin:self.roi_xmax])
-            else: roi_film = np.median(self.film_dose.array[self.roi_ymin:self.roi_ymax, self.roi_xmin:self.roi_xmax])
+            film_dose_array = self.norm_film_dose.array if self.norm_film_dose else self.film_dose.array
+            roi_film = np.median(film_dose_array[self.roi_ymin:self.roi_ymax, self.roi_xmin:self.roi_xmax])
             
-            if self.norm_dose is None:  # If no normalisation dose is given, assume we normalisation on ref_dose
+            if self.norm_dose is None:  # If no normalisation dose is given, assume normalisation is on ref_dose
                 roi_ref = np.median(self.ref_dose.array[self.roi_ymin:self.roi_ymax, self.roi_xmin:self.roi_xmax])
-                factor = roi_ref/roi_film
-                print("Median film dose = {} cGy; median ref dose = {} cGy".format(roi_film, roi_ref))
-                
+                factor = roi_ref / roi_film
+                print(f"Median film dose = {roi_film:.1f} cGy; median ref dose = {roi_ref:.1f} cGy")    
             else: factor = self.norm_dose / roi_film            
             self.apply_film_factor(film_dose_factor = factor)
-            
-            if hasattr(self, "rs"): del self.rs                
-            self.fig.canvas.mpl_disconnect(self.cid)
             self.wait = False
-            return
 
     def apply_factor_from_norm_film(self, norm_dose = None, norm_roi_size = 10):
-        """ Define an ROI of norm_roi_size mm x norm_roi_size mm to compute dose factor from a normalisation film. """
+        """ Define an ROI of norm_roi_size mm x norm_roi_size mm to compute dose factor from a normalisation film (in the same scan). """
         
         self.norm_dose = norm_dose
         self.norm_roi_size = norm_roi_size
         msg = '\nFactor from normalisation film: Double-click at the center of the film markers. Press enter when done'
-        self.roi_center = []
-        self.roi_xmin, self.roi_xmax = [], []
-        self.roi_ymin, self.roi_ymax = [], []
+        self.roi_center, self.roi_xmin, self.roi_xmax, self.roi_ymin, self.roi_ymax = [], [], [], [], []
         
         self.fig = plt.figure()
         ax = plt.gca()  
@@ -234,8 +207,7 @@ class DoseAnalysis():
         self.cid = self.fig.canvas.mpl_connect('key_press_event', self.apply_factor_from_roi_press_enter)         
         self.wait = True
         while self.wait: plt.pause(1)
-        plt.close(self.fig)
-        return
+        self.cleanup()
             
     def onclick_norm(self, event):
         ax = plt.gca()
@@ -276,25 +248,22 @@ class DoseAnalysis():
         self.cid = self.fig.canvas.mpl_connect('key_press_event', self.crop_film_press_enter)
         self.wait = True
         while self.wait: plt.pause(1)
-        plt.close(self.fig)
-        return
+        self.cleanup()
         
     def crop_film_press_enter(self, event):
         """ Function called from crop_film() when ''enter'' is pressed. """      
-        if event.key == 'enter':
-            del self.rs                
-            left = self.roi_xmin
-            right = self.film_dose.shape[1] - self.roi_xmax
-            top = self.roi_ymin
-            bottom = self.film_dose.shape[0] - self.roi_ymax    
-            self.film_dose.crop(left,'left')
-            self.film_dose.crop(right,'right')
-            self.film_dose.crop(top,'top')
-            self.film_dose.crop(bottom,'bottom')  
-            
-            self.fig.canvas.mpl_disconnect(self.cid)
+        if event.key == 'enter':           
+            self.film_dose.crop(self.roi_xmin,'left')
+            self.film_dose.crop(self.film_dose.shape[1] - self.roi_xmax,'right')
+            self.film_dose.crop(self.roi_ymin,'top')
+            self.film_dose.crop(self.film_dose.shape[0] - self.roi_ymax,'bottom')  
             self.wait = False
-            return
+
+
+
+
+
+
         
     def gamma_analysis(self, film_filt=0, doseTA=3.0, distTA=3.0, threshold=0.1, norm_val='max', local_gamma=False, max_gamma=None, random_subset=None):
         """ Perform Gamma analysis between registered film_dose and ref_dose.
@@ -855,6 +824,7 @@ class DoseAnalysis():
         self.cleanup()
         
     def cleanup(self):
+        if hasattr(self, "rs"): del self.rs    
         if self.fig:
             self.fig.canvas.mpl_disconnect(self.cid)
             plt.close(self.fig)
