@@ -1151,9 +1151,7 @@ class DoseAnalysis():
         extent = [0, self.ref_dose.physical_shape[1], self.ref_dose.physical_shape[0], 0]
         self.ref_dose.plot(ax=ax1, extent=extent)
         ax1.plot((x_mm, x_mm),(0,self.ref_dose.shape[0]),'w--', linewidth=1)
-        ax1.plot((0, self.ref_dose.shape[1]),(y_mm, y_mm),'w--', linewidth=1)
-        
-        # rect = plt.Rectangle((min(x_xlim[0], x_xlim[1]), min(y_xlim[0], y_xlim[1])), abs(x_xlim[0]-x_xlim[1]), abs(y_xlim[0]-y_xlim[1]), linewidth=1, edgecolor='w', linestyle='--', fill=False)
+        ax1.plot((0, self.ref_dose.shape[1]),(y_mm, y_mm),'w--', linewidth=1)    
         rect = plt.Rectangle((x_xlim[0], y_xlim[0]), x_xlim[1] - x_xlim[0], y_xlim[1] - y_xlim[0], linewidth=1, edgecolor='w', linestyle='--', fill=False)
         ax1.add_patch(rect)
         
@@ -1250,46 +1248,44 @@ class DoseAnalysis():
 
     #=================== Clusters analysis ======================
     def analyse_clusters(self, clusters_threshold=0.6, xlim_margin_mm=10):
+        """ Analyze clusters in the reference dose and compute median dose differences. """
         self.clusters_analysis = []
         clusters = self.ref_dose.detect_clusters(threshold=clusters_threshold) 
         self.ref_dose.plot_clusters()
-        fig = plt.gcf()
-        self.ax = plt.gca()
+        
+        fig, ax = plt.gcf(), plt.gca()
+
         for cluster in clusters:
             com = cluster['center_of_mass']
             mask = cluster['region_mask']
             coords = cluster['coords']
             coords_mm = coords / self.ref_dose.dpmm
-            x = int(com[1])
-            y = int(com[0])
-            x_mm = x / self.ref_dose.dpmm
-            y_mm = y / self.ref_dose.dpmm
             
-            # self.ref_dose.plot()
-            # fig = plt.gcf()
-            # ax = plt.gca()
-            # contours = plt.contour(mask, levels=[0.5], colors='red', linestyles='dashed')
-            while len(self.ax.lines) > 0: self.ax.lines[-1].remove() 
-            self.ax.plot((x,x),(0,self.ref_dose.shape[0]),'w--', linewidth=1)
-            self.ax.plot((0,self.ref_dose.shape[1]),(y,y),'w--', linewidth=1)
+            x, y = int(com[1]), int(com[0])
+            x_mm, y_mm = x / self.ref_dose.dpmm, y / self.ref_dose.dpmm
+            
+            # Plot cluster center and lines
+            for line in ax.lines: line.remove()
+            ax.plot([x,x], [0, self.ref_dose.shape[0]], 'w--', linewidth=1)
+            ax.plot([0, self.ref_dose.shape[1]], [y,y], 'w--', linewidth=1)
             fig.canvas.draw_idle()
             plt.pause(0.01)
                         
+            # Calculate median doses and relative difference
             median_film_dose = np.median(self.film_dose.array[mask.astype(bool)])
             median_ref_dose = np.median(self.ref_dose.array[mask.astype(bool)])
-            relative_diff = (median_film_dose-median_ref_dose)/median_ref_dose * 100
-            print("Median film dose = {} cGy; median ref dose = {} cGy; Relative diff = {}%".format(median_film_dose, median_ref_dose, relative_diff))
+            relative_diff = (median_film_dose - median_ref_dose) / median_ref_dose * 100
+            print(f"Median film dose = {median_film_dose:.2f} cGy; median ref dose = {median_ref_dose:.2f} cGy; Relative diff = {relative_diff:.2f}%")
             
-            x_xlim = (min(coords_mm[:,1])-xlim_margin_mm, max(coords_mm[:,1])+xlim_margin_mm)
-            y_xlim = (min(coords_mm[:,0])-xlim_margin_mm, max(coords_mm[:,0])+xlim_margin_mm)
+            x_xlim = (min(coords_mm[:,1]) - xlim_margin_mm, max(coords_mm[:,1]) + xlim_margin_mm)
+            y_xlim = (min(coords_mm[:,0]) - xlim_margin_mm, max(coords_mm[:,0]) + xlim_margin_mm)
             
             self.get_profile_offsets(x=x, y=y, x_xlim=x_xlim, y_xlim=y_xlim)
             self.clusters_analysis.append({'x_px': x, 'y_px': y, 'x_mm': x_mm, 'y_mm': y_mm,
                                            'Dose diff': relative_diff,
                                            'Offset x': self.offset_x, 'Offset y': self.offset_y,
-                                           'Diff width x': self.diff_grandeur_x, 'Diff width y': self.diff_grandeur_y })
-        plt.close(fig)
-                
+                                           'Diff width x': self.diff_x, 'Diff width y': self.diff_y })
+        plt.close(fig)           
     
     #=================== Profile analysis ======================
     def get_profile_offsets(self, x=None, y=None, x_xlim=None, y_xlim=None):
@@ -1302,38 +1298,32 @@ class DoseAnalysis():
             Parameters
             ----------
             x : int, optional
-                The x position of the profile to plot, in pixels.
-                If None, position is set to the center of the reference dose.
-                Default is None
-                
+                The x position of the profile to plot, in pixels. Defaults to the center of the reference dose.
             y : int, optional
-                The y position of the profile to plot, in pixels.
-                If None, position is set to the center of the reference dose.
-                Default is None
-                
+                The y position of the profile to plot, in pixels. Defaults to the center of the reference dose.
             xlim : tuple, optional
-                
+                X-axis limits for X profile plotting.
+            y_xlim : tuple, optional
+                X-axis limits for Y profile plotting.
         """
-        if x is None: x = np.floor(self.ref_dose.shape[1] / 2).astype(int)
-        if y is None: y = np.floor(self.ref_dose.shape[0] / 2).astype(int)
+        if x is None: x = self.ref_dose.shape[1] // 2
+        if y is None: y = self.ref_dose.shape[0] // 2
         
-        self.get_profile_offset(x=x, y=y, direction='x', side='left', xlim=x_xlim)
-        self.offset_x_gauche = self.offset
-        self.get_profile_offset(x=x, y=y, direction='x', side='right', xlim=x_xlim)
-        self.offset_x_droite = self.offset
-        self.get_profile_offset(x=x, y=y, direction='y', side='left', xlim=y_xlim)
-        self.offset_y_gauche = self.offset
-        self.get_profile_offset(x=x, y=y, direction='y', side='right', xlim=y_xlim)
-        self.offset_y_droite = self.offset
+        # Compute offsets for each direction and side
+        self.offset_x_l = self.get_profile_offset(x=x, y=y, direction='x', side='left', xlim=x_xlim) 
+        self.offset_x_r = self.get_profile_offset(x=x, y=y, direction='x', side='right', xlim=x_xlim)
+        self.offset_y_l = self.get_profile_offset(x=x, y=y, direction='y', side='left', xlim=y_xlim)
+        self.offset_y_r = self.get_profile_offset(x=x, y=y, direction='y', side='right', xlim=y_xlim)
         
-        self.offset_x = -1.0*((self.offset_x_gauche + self.offset_x_droite) / 2.0)
-        self.offset_y = -1.0*((self.offset_y_gauche + self.offset_y_droite) / 2.0)
-        self.diff_grandeur_x = self.offset_x_gauche - self.offset_x_droite
-        self.diff_grandeur_y = self.offset_y_gauche - self.offset_y_droite
+        # Calculate average offsets and differences
+        self.offset_x = -0.5*(self.offset_x_l + self.offset_x_r)
+        self.offset_y = -0.5*(self.offset_y_l + self.offset_y_r)
+        self.diff_x = self.offset_x_l - self.offset_x_r
+        self.diff_y = self.offset_y_l - self.offset_y_r
         
-        print("X: Décalage = {:.2f} mm; Diff grandeur = {:.2f} mm".format(self.offset_x, self.diff_grandeur_x))
-        print("Y: Décalage = {:.2f} mm; Diff grandeur = {:.2f} mm".format(self.offset_y, self.diff_grandeur_y))
-        
+        # Print results
+        print(f"X: Offset = {self.offset_x:.2f} mm; Diff width = {self.diff_x:.2f} mm")
+        print(f"Y: Offset = {self.offset_y:.2f} mm; Diff width = {self.diff_y:.2f} mm")
 
     def get_profile_offset(self, x, y, direction, side='left', xlim=None):
         """ Opens an interactive plot where the user can move
@@ -1342,66 +1332,64 @@ class DoseAnalysis():
 
         Parameters
         ----------
-        direction : str, optional
-            The direction of the profile.
-            Either 'x' (horizontal) or 'y' (vertical).
-            Default is 'x'.
-        
-        side : str, optional
-            The side on the profile that will be matched.
-            Either 'left' or 'right'.
-            Default is left. 
+        x : int
+            X position for the profile plot, in pixels (horizontal direction).
             
-        position : int, optional
-            The position of the profile to plot, in pixels, in the direction perpendicular to the profile.
-            eg. if profile='x' and position=400, a profile in the x direction is showed, at position y=400.
-            If None, position is set to the center of the reference dose.
-            Default is None
+        y : int
+            Y position for the profile plot, in pixels (vertical direction).
+            
+        direction : str
+            Direction of the profile, either 'x' (horizontal) or 'y' (vertical).
+            
+        side : str, optional
+            Side of the profile to match, either 'left' or 'right'. Default is 'left'.
+            
+        xlim : tuple, optional
+            X-axis limits for profile plotting.
         """
-        msg = '\nUse left/right keyboard arrows to move profile and fit on ' + side + ' side. Press Enter when done.'
-        print(msg)
+
+        print(f'\nUse left/right keyboard arrows to move profile and fit on {side} side. Press Enter when done.')
         self.offset = 0
         self.direction = direction
         self.xlim = xlim
         
+        title = f'{direction}: Fit profiles on {side} side'
         if direction == 'x':
-            self.position = y
-            self.line = x
-            self.plot_profile(profile='x', position=y, vertical_line=x, title=direction + ': Fit profiles on ' + side + ' side', xlim=xlim)
+            self.position, self.line = y, x
+            self.plot_profile(profile='x', position=y, vertical_line=x, title=title, xlim=xlim)
         elif direction == 'y':
-            self.position = x
-            self.line = y
-            self.plot_profile(profile='y', position=x, vertical_line=y, title=direction + ': Fit profiles on ' + side + ' side', xlim=xlim)
+            self.position, self.line = x, y
+            self.plot_profile(profile='y', position=x, vertical_line=y, title=title, xlim=xlim)
+        else:
+            raise ValueError("Direction must be 'x' or 'y'")
 
         self.fig = plt.gcf()
-        fig_manager = plt.get_current_fig_manager()
-        fig_manager.window.showMaximized()
+        plt.get_current_fig_manager().window.showMaximized()
         self.cid = self.fig.canvas.mpl_connect('key_press_event', self.move_profile_ontype)
+        
+        # Wait for user interaction
         self.wait = True
         while self.wait: plt.pause(1)
         plt.close(self.fig)
-        return
+        return self.offset
                 
     def move_profile_ontype(self, event):
         """ This function is called by self.get_profile_offset()
             to either move the profile when left/right keys are pressed,
             or to close the figure when Enter is pressed.
         """
-        fig = plt.gcf()
-        ax = plt.gca()
-        position = self.position
+        fig, ax = plt.gcf(), plt.gca()
         
-        if event.key == 'left':
-            self.offset -= 0.1
-            self.plot_profile(ax=ax, profile=self.direction, position=position, title='Shift = ' + str(self.offset) + ' mm', diff=False, offset=self.offset, vertical_line=self.line, xlim=self.xlim)
-            fig.canvas.draw_idle()
-            
-        if event.key == 'right':
-            self.offset += 0.1
-            self.plot_profile(ax=ax, profile=self.direction, position=position, title='Shift = ' + str(self.offset) + ' mm', diff=False, offset=self.offset, vertical_line=self.line, xlim=self.xlim)
+        # Update offset and plot profile based on key press
+        if event.key in ['left', 'right']:
+            offset = -0.1 if event.key == 'left' else 0.1
+            self.offset += offset
+            title = f'Shift = {self.offset:.1f} mm'
+            self.plot_profile(ax=ax, profile=self.direction, position=self.position, title=title, diff=False, offset=self.offset, vertical_line=self.line, xlim=self.xlim)
             fig.canvas.draw_idle()
         
-        if event.key == 'enter':
+        # Disconnect event and end waiting when Enter is pressed
+        elif event.key == 'enter':
             self.fig.canvas.mpl_disconnect(self.cid)
             self.wait = False
             return self.offset
