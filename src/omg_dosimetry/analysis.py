@@ -38,7 +38,8 @@ import time
 from .tools import Ruler
 
 class DoseAnalysis(): 
-    """Base class for analysis film dose vs reference dose.
+    """
+    Base class for analysis film dose vs reference dose.
 
     Usage:
     -------
@@ -46,42 +47,36 @@ class DoseAnalysis():
 
     Attributes
     ----------
-    path : str
-        File path of scanned tif images of film to convert to dose.
-        Multiple scans of the same films should be named (someName)_00x.tif
-        These files will be averaged together to increase SNR.
-
     film_dose : str
         File path of planar dose image of the scanned film converted to dose (using tiff2dose module).
 
     ref_dose : str
         File path of the reference dose (from TPS).
         
-    norm_film_dose : str, optional (default is None)
+    norm_film_dose : str, optional, default=None
         File path of the normalization film dose if scanned separately. Principle being that the same 
-        normalization film scan can be used for other tif images of film (path) scanned at the same time.
+        normalization film scan can be used for other tif images of film scanned at the same time.
 
-    film_dose_factor : float, optional (default is 1)
+    film_dose_factor : float, optional, default=1.0
         Scaling factor to apply to the film dose.
 
-    ref_dose_factor : float, optional (default is 1)
+    ref_dose_factor : float, optional, default=1.0
         Scaling factor to apply to the reference dose.
 
-    flipLR : bool, optional (default is False)
+    flipLR : bool, optional, default=False
         Whether or not to flip the film dose horizontally to match reference dose orientation.
 
-    flipUD : bool, optional (default is False)
+    flipUD : bool, optional, default=False
         Whether or not to flip the film dose vertically to match reference dose orientation.
 
-    rot90 : int, optional (default is 0)
-        If not 0, number of 90 degrees rotation to apply to the film (to match reference dose orientation).
+    rot90 : int, optional, default=0
+        If not 0, number of 90 degrees rotation to apply to the film to match reference dose orientation.
 
-    ref_dose_sum : bool, optional (default is False)
-        If True, all all planar dose files found in the ref_dose folder will be summed together.
+    ref_dose_sum : bool, optional, default=False
+        If True, all planar dose files found in the ref_dose folder will be summed together.
     """
 
     def __init__(self, film_dose=None, ref_dose=None, norm_film_dose = None, film_dose_factor=1, ref_dose_factor=1, flipLR=False, flipUD=False, rot90=0, ref_dose_sum=False):
-        
         self.film_dose = load(film_dose) if film_dose else None
         self.norm_film_dose = load(norm_film_dose) if norm_film_dose else None        
         self.ref_dose = self.load_reference_dose(ref_dose, ref_dose_sum) if ref_dose else None
@@ -134,7 +129,6 @@ class DoseAnalysis():
             Median dose inside this rectangle will be used to scale the film dose to match
             that of the reference.
         """
-        
         self.norm_dose = norm_dose      
         msg = '\nFactor from ROI: Click and drag to draw an ROI manually. Press ''enter'' when finished.'
         self.roi_xmin, self.roi_xmax, self.roi_ymin, self.roi_ymax = [], [], [], []
