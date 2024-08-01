@@ -253,17 +253,15 @@ class DoseAnalysis():
     def crop_film_press_enter(self, event):
         """ Function called from crop_film() when ''enter'' is pressed. """      
         if event.key == 'enter':           
-            self.film_dose.crop(self.roi_xmin,'left')
-            self.film_dose.crop(self.film_dose.shape[1] - self.roi_xmax,'right')
-            self.film_dose.crop(self.roi_ymin,'top')
-            self.film_dose.crop(self.film_dose.shape[0] - self.roi_ymax,'bottom')  
+            left = self.roi_xmin
+            right = self.film_dose.shape[1] - self.roi_xmax
+            top = self.roi_ymin
+            bottom = self.film_dose.shape[0] - self.roi_ymax
+            self.film_dose.crop(left,'left')
+            self.film_dose.crop(right,'right')
+            self.film_dose.crop(top,'top')
+            self.film_dose.crop(bottom,'bottom')  
             self.wait = False
-
-
-
-
-
-
         
     def gamma_analysis(self, film_filt=0, doseTA=3.0, distTA=3.0, threshold=0.1, norm_val='max', local_gamma=False, max_gamma=None, random_subset=None):
         """ Perform Gamma analysis between registered film_dose and ref_dose.
@@ -311,7 +309,7 @@ class DoseAnalysis():
         self.film_filt, self.threshold, self.norm_val = film_filt, threshold, norm_val        
         start_time = time.time()
         self.GammaMap = self.computeGamma(doseTA=doseTA, distTA=distTA, threshold=threshold, norm_val=norm_val, local_gamma=local_gamma, max_gamma=max_gamma, random_subset=random_subset)       
-        print("--- Done! ({:.1f} seconds) ---".format((time.time() - start_time)))
+        print(f"--- Done! ({time.time() - start_time:.1f} seconds) ---")
         self.computeDiff()
     
     def computeHDmedianDiff(self, threshold=0.8, ref = 'max'):
@@ -335,23 +333,22 @@ class DoseAnalysis():
         return self.HD_median_diff
             
     def computeDiff(self):
-        """ Compute the difference map with the reference image.
-            Returns self.DiffMap = film_dose - ref_dose """
+        """ Compute the difference map with the reference image. """
         self.DiffMap = ArrayImage(self.film_dose.array - self.ref_dose.array, dpi=self.film_dose.dpi)
         self.RelError = ArrayImage(100*(self.film_dose.array - self.ref_dose.array)/self.ref_dose.array, dpi=self.film_dose.dpi)
-        self.DiffMap.MSE =  sum(sum(self.DiffMap.array**2)) / len(self.film_dose.array[(self.film_dose.array > 0)]) 
-        self.DiffMap.RMSE = self.DiffMap.MSE**0.5    
+        self.DiffMap.MSE = sum(sum(self.DiffMap.array**2)) / len(self.film_dose.array[(self.film_dose.array > 0)]) 
+        self.DiffMap.RMSE = np.sqrt(self.DiffMap.MSE)    
     
     def computeGamma(self, doseTA=2, distTA=2, threshold=0.1, norm_val=None, local_gamma=False, max_gamma=None, random_subset=None):
         """Compute Gamma (using pymedphys.gamma) """
-        print("\nComputing {}%/{} mm Gamma...".format(doseTA, distTA))
+        print(f"\nComputing {doseTA}%/{distTA} mm Gamma...")
         # error checking
         if not is_close(self.film_dose.dpi, self.ref_dose.dpi, delta=3):
-            raise AttributeError("The image DPIs to not match: {:.2f} vs. {:.2f}".format(self.film_dose.dpi, self.ref_dose.dpi))
+            raise AttributeError(f"The image DPIs to not match: {self.film_dose.dpi:.2f} vs. {self.ref_dose.dpi:.2f}")
         same_x = is_close(self.film_dose.shape[1], self.ref_dose.shape[1], delta=1.1)
         same_y = is_close(self.film_dose.shape[0], self.ref_dose.shape[0], delta=1.1)
         if not (same_x and same_y):
-            raise AttributeError("The images are not the same size: {} vs. {}".format(self.film_dose.shape, self.ref_dose.shape))
+            raise AttributeError(f"The images are not the same size: {self.film_dose.shape} vs. {self.ref_dose.shape}")
 
         # set up reference and comparison images
         film_dose, ref_dose = ArrayImage(copy.copy(self.film_dose.array)), ArrayImage(copy.copy(self.ref_dose.array))
@@ -379,25 +376,40 @@ class DoseAnalysis():
         # Gamma computation and set maps
         gamma = pymedphys.gamma(axes_reference, dose_reference, axes_evaluation, dose_evaluation, doseTA, distTA, threshold*100,
                                 local_gamma=local_gamma, interp_fraction=10, max_gamma=max_gamma, random_subset=random_subset)
+        
         GammaMap = ArrayImage(gamma, dpi=film_dose.dpi)
-              
-        fail = np.zeros(GammaMap.shape)
-        fail[(GammaMap.array > 1.0)] = 1
-        GammaMap.fail = ArrayImage(fail, dpi=film_dose.dpi)
-        
-        passed = np.zeros(GammaMap.shape)
-        passed[(GammaMap.array <= 1.0)] = 1
-        GammaMap.passed = ArrayImage(passed, dpi=film_dose.dpi)
-        
-        GammaMap.npassed = sum(sum(passed == 1))
-        GammaMap.nfail = sum(sum(fail == 1))
+        GammaMap.fail = ArrayImage((GammaMap.array > 1.0).astype(int), dpi=film_dose.dpi)
+        GammaMap.passed = ArrayImage((GammaMap.array <= 1.0).astype(int), dpi=film_dose.dpi)
+        GammaMap.npassed = np.sum(GammaMap.passed.array == 1)
+        GammaMap.nfail = np.sum(GammaMap.fail.array == 1)
         GammaMap.npixel = GammaMap.npassed + GammaMap.nfail
         GammaMap.passRate = GammaMap.npassed / GammaMap.npixel * 100
         GammaMap.mean = np.nanmean(GammaMap.array)
         
         return GammaMap
                     
-    def plot_gamma_varDoseTA(self, ax=None, start=0.5, stop=4, step=0.5): 
+    def plot_gamma_var(self, param, ax=None, start=0.5, stop=4, step=0.5):
+      values = np.arange(start, stop, step)
+      GammaVar = np.zeros((len(values), 2))
+
+      for i, value in enumerate(values):
+          if param == 'DoseTA':
+              gamma = self.computeGamma(doseTA=value, distTA=self.distTA, threshold=self.threshold, norm_val=self.norm_val)
+              title = f'Variable DoseTA, DistTA = {self.distTA} mm'
+          elif param == 'DistTA':
+              gamma = self.computeGamma(doseTA=self.doseTA, distTA=value, threshold=self.threshold, norm_val=self.norm_val)
+              title = f'Variable DistTA, DoseTA = {self.doseTA} %'
+          GammaVar[i] = [value, gamma.passRate]
+      
+      if ax is None:
+          fig, ax = plt.subplots()
+      x, y = GammaVar[:, 0], GammaVar[:, 1]
+      ax.plot(x, y, 'o-')
+      ax.set_title(title)
+      ax.set_xlabel(f'{param} (%)' if param == 'DoseTA' else f'{param} (mm)')
+      ax.set_ylabel('Gamma pass rate (%)')
+  
+    def plot_gamma_varDoseTA(self, ax=None, start=0.5, stop=4, step=0.5):
         """ Plot graph of Gamma pass rate vs variable doseTA.
             Note: values of distTA, threshold and norm_val will be taken as those 
             from the previous "standard" gamma analysis.
@@ -416,25 +428,9 @@ class DoseAnalysis():
                 Increment of dose to agreement value between start and stop values [%]
                 Default is 0.5 %
         """
-        distTA, threshold, norm_val = self.distTA, self.threshold, self.norm_val
-        values = np.arange(start,stop,step)
-        GammaVarDoseTA = np.zeros((len(values),2))
-
-        i=0
-        for value in values:
-            gamma = self.computeGamma(doseTA=value, distTA=distTA, threshold=threshold, norm_val=norm_val)
-            GammaVarDoseTA[i,0] = value
-            GammaVarDoseTA[i,1] = gamma.passRate
-            i=i+1
+        self.plot_gamma_var('DoseTA', ax, start, stop, step)
         
-        if ax is None: fig, ax = plt.subplots()
-        x, y = GammaVarDoseTA[:,0], GammaVarDoseTA[:,1]
-        ax.plot(x,y,'o-')
-        ax.set_title('Variable Dose TA, Dist TA = {} mm'.format(distTA))
-        ax.set_xlabel('Dose TA (%)')
-        ax.set_ylabel('Gamma pass rate (%)')
-        
-    def plot_gamma_varDistTA(self, ax=None, start=0.5, stop=4, step=0.5): 
+    def plot_gamma_varDistTA(self, ax=None, start=0.5, stop=4, step=0.5):
         """ Plot graph of Gamma pass rate vs variable distTA
             Note: values of doseTA, threshold and norm_val will be taken as those 
             from the previous "standard" gamma analysis.
@@ -453,30 +449,8 @@ class DoseAnalysis():
                 Increment of dist to agreement value between start and stop values [mm]
                 Default is 0.5 mm
         """
+        self.plot_gamma_var('DistTA', ax, start, stop, step)  
 
-        doseTA = self.doseTA
-        threshold = self.threshold
-        norm_val = self.norm_val
-        
-        values = np.arange(start,stop,step)
-        GammaVarDistTA = np.zeros((len(values),2))
-        
-        i=0
-        for value in values:
-            gamma = self.computeGamma(doseTA=doseTA, distTA=value, threshold=threshold, norm_val=norm_val)
-            GammaVarDistTA[i,0] = value
-            GammaVarDistTA[i,1] = gamma.passRate
-            i=i+1
-        
-        x = GammaVarDistTA[:,0]
-        y = GammaVarDistTA[:,1]
-        if ax is None:
-            fig, ax = plt.subplots()
-        ax.plot(x,y,'o-')
-        ax.set_title('Variable Dist TA, Dose TA = {} %'.format(doseTA))
-        ax.set_xlabel('Dist TA (mm)')
-        ax.set_ylabel('Gamma pass rate (%)')      
-        
     def plot_gamma_hist(self, ax=None, bins='auto', range=[0,3]):
         """ Plot a histogram of gamma map values.
 
@@ -549,22 +523,26 @@ class DoseAnalysis():
             4- Gamma pass rate vs variable dose to agreement threshold
         """
 
-        fig, ((ax1,ax2),(ax3,ax4)) = plt.subplots(2,2, figsize=figsize)
+        fig, axes = plt.subplots(2, 2, figsize=figsize)
+        ax_iter = iter(axes.flatten())
         
-        axes = (ax1,ax2,ax3,ax4)
-        i = 0
+        if show_hist:      self.plot_gamma_hist(ax=next(ax_iter))
+        if show_pass_hist: self.plot_gamma_pass_hist(ax=next(ax_iter))
+        if show_varDistTA: self.plot_gamma_varDistTA(ax=next(ax_iter))
+        if show_varDoseTA: self.plot_gamma_varDoseTA(ax=next(ax_iter))
+        plt.tight_layout()
+        plt.show()
+
         
-        if show_hist:
-            self.plot_gamma_hist(ax=axes[i])
-            i=i+1
-        if show_pass_hist:
-            self.plot_gamma_pass_hist(ax=axes[i])
-            i=i+1
-        if show_varDistTA:
-            self.plot_gamma_varDistTA(ax=axes[i])
-            i=i+1
-        if show_varDoseTA:
-            self.plot_gamma_varDoseTA(ax=axes[i])
+
+
+
+
+
+
+
+
+
         
     def plot_profile(self, ax=None, profile='x', position=None, title=None, diff=False, offset=0, vertical_line=None, xlim=None, ylim='auto'):
         """ Plot a line profile of reference dose and film dose at a given position.
