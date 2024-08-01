@@ -14,7 +14,7 @@ Features:
     
 Written by Jean-Francois Cabana, copyright 2018
 Modified by Peter Truong (CISSSO)
-Version: 2024-05-21
+Version: 2024-08-01
 """
 
 import numpy as np
@@ -40,7 +40,9 @@ from .tools import Ruler
 class DoseAnalysis(): 
     """Base class for analysis film dose vs reference dose.
 
-    Usage : film = analysis.DoseAnalysis(film_dose=file_doseFilm, ref_dose=ref_dose)
+    Usage:
+    -------
+    film = analysis.DoseAnalysis(film_dose=file_doseFilm, ref_dose=ref_dose)
 
     Attributes
     ----------
@@ -55,31 +57,26 @@ class DoseAnalysis():
     ref_dose : str
         File path of the reference dose (from TPS).
         
-    norm_film_dose : str
+    norm_film_dose : str, optional (default is None)
         File path of the normalization film dose if scanned separately. Principle being that the same 
         normalization film scan can be used for other tif images of film (path) scanned at the same time.
-        Optional, default value is None.
 
-    film_dose_factor : float, optional
+    film_dose_factor : float, optional (default is 1)
         Scaling factor to apply to the film dose.
-        Default is 1.
 
-    ref_dose_factor : float, optional
+    ref_dose_factor : float, optional (default is 1)
         Scaling factor to apply to the reference dose.
-        Default is 1.
 
-    flipLR : bool, optional
-        Whether or not to flip the film dose horizontally (to match reference dose orientation).
-        Default is False.
+    flipLR : bool, optional (default is False)
+        Whether or not to flip the film dose horizontally to match reference dose orientation.
 
-    flipUD : bool, optional
-        Whether or not to flip the film dose vertically (to match reference dose orientation).
-        Default is False.
+    flipUD : bool, optional (default is False)
+        Whether or not to flip the film dose vertically to match reference dose orientation.
 
-    rot90 : int, optional
+    rot90 : int, optional (default is 0)
         If not 0, number of 90 degrees rotation to apply to the film (to match reference dose orientation).
 
-    ref_dose_sum : bool, optional
+    ref_dose_sum : bool, optional (default is False)
         If True, all all planar dose files found in the ref_dose folder will be summed together.
     """
 
@@ -264,46 +261,37 @@ class DoseAnalysis():
             self.wait = False
         
     def gamma_analysis(self, film_filt=0, doseTA=3.0, distTA=3.0, threshold=0.1, norm_val='max', local_gamma=False, max_gamma=None, random_subset=None):
-        """ Perform Gamma analysis between registered film_dose and ref_dose.
-            Gamma computation is performed using pymedphys.gamma.
-            
-            Parameters
-            ----------
-            film_filt : int, optional
-                Kernel size of median filter to apply to film dose before performing gamma analysis (for noise reduction).
-                Default is 0.
-
-            doseTA : float, optional
-                Dose to agreement threshold [%].
-                Default is 3.0.
-
-            distTA : float, optional
-                Distance to agreement threshold [mm]¸.
-                Default is 3.0.
-
-            threshold : float, optional (>=0, <=1.0)
-                The percent lower dose cutoff below which gamma will not be calculated.
-                Default is 0.1.
-
-            norm_val : float or 'max', optional
-                Normalisation value [cGy] of reference dose, used to calculate the
-                dose to agreement threshold and lower dose threshold.
-                If 'max', the maximum dose from the reference distribution will be used.
-                Default is 'max'.
-
-            local_gamma : bool, optional
-                Whether or not local gamma should be used instead of global.
-                Default is False.
-
-            max_gamma : float, optional
-                The maximum gamma searched for. This can be used to speed up
-                calculation, once a search distance is reached that would give gamma
-                values larger than this parameter, the search stops.
-                Default is None.
-
-            random_subset : float (>=0, <=1), optional
-                Used to only calculate a random subset fraction of the reference grid, to speed up calculation.
-                Default is None
+        """ 
+        Perform Gamma analysis between registered film_dose and ref_dose.
+        Gamma computation is performed using pymedphys.gamma.
+    
+        Parameters
+        ----------
+        film_filt : int, optional, default=0
+            Kernel size of median filter to apply to film dose before performing gamma analysis (for noise reduction).
+    
+        doseTA : float, optional, default=3.0
+            Dose to agreement threshold [%].
+    
+        distTA : float, optional, default=3.0
+            Distance to agreement threshold [mm].
+    
+        threshold : float, optional, default=0.1
+            The percent lower dose cutoff below which gamma will not be calculated. Must be between 0 and 1.
+    
+        norm_val : float or 'max', optional, default='max'
+            Normalisation value [cGy] of reference dose, used to calculate the dose to agreement threshold and lower dose threshold.
+            If 'max', the maximum dose from the reference distribution will be used.
+    
+        local_gamma : bool, optional, default=False
+            Whether or not local gamma should be used instead of global.
+    
+        max_gamma : float, optional, default=None
+            The maximum gamma searched for. This can be used to speed up calculation.
+            Once a search distance is reached that would give gamma values larger than this parameter, the search stops.
+    
+        random_subset : float, optional, default=None
+            Used to only calculate a random subset fraction of the reference grid, to speed up calculation. Must be between 0 and 1.
         """
         self.doseTA, self.distTA = doseTA, distTA
         self.film_filt, self.threshold, self.norm_val = film_filt, threshold, norm_val        
@@ -313,17 +301,18 @@ class DoseAnalysis():
         self.computeDiff()
     
     def computeHDmedianDiff(self, threshold=0.8, ref = 'max'):
-        """ Compute median difference between film and reference doses in high dose region.
-            
-            Parameters
-            ----------
-            threshold : float, optional (>=0, <=1.0)
-                The relative threshold (with respect to 'ref') used
-                to determine the high dose region.
-
-            ref : 'max' or float
-                If given a number, the dose [cGy] used as a reference for threshold.
-                If 'max', the maximum dose in ref_dose will be used.
+        """
+        Compute median difference between film and reference doses in the high dose region.
+    
+        Parameters
+        ----------
+        threshold : float, optional, default=0.8
+            The relative threshold (with respect to 'ref') used to determine the high dose region.
+            Must be between 0 and 1.
+    
+        ref : 'max' or float, optional, default='max'
+            The dose [cGy] used as a reference for the threshold.
+            If 'max', the maximum dose in ref_dose will be used.
         """
         if ref == 'max': HDthreshold = threshold * self.ref_dose.array.max()
         else:  HDthreshold = threshold * ref
@@ -340,7 +329,7 @@ class DoseAnalysis():
         self.DiffMap.RMSE = np.sqrt(self.DiffMap.MSE)    
     
     def computeGamma(self, doseTA=2, distTA=2, threshold=0.1, norm_val=None, local_gamma=False, max_gamma=None, random_subset=None):
-        """Compute Gamma (using pymedphys.gamma) """
+        """ Compute Gamma (using pymedphys.gamma) """
         print(f"\nComputing {doseTA}%/{distTA} mm Gamma...")
         # error checking
         if not is_close(self.film_dose.dpi, self.ref_dose.dpi, delta=3):
@@ -401,8 +390,7 @@ class DoseAnalysis():
               title = f'Variable DistTA, DoseTA = {self.doseTA} %'
           GammaVar[i] = [value, gamma.passRate]
       
-      if ax is None:
-          fig, ax = plt.subplots()
+      if ax is None: fig, ax = plt.subplots()
       x, y = GammaVar[:, 0], GammaVar[:, 1]
       ax.plot(x, y, 'o-')
       ax.set_title(title)
@@ -416,17 +404,18 @@ class DoseAnalysis():
             
             Parameters
             ----------
-            start : float, optional
+            ax : matplotlib.pyplot.Axes, optional, default=None
+                Axis in which to plot the graph.
+                If None, a new plot is made.
+                
+            start : float, optional, default=0.5
                 Minimum value of dose to agreement threshold [%]
-                Default is 0.5 %
 
-            stop : float, optional
+            stop : float, optional, default=4.0
                 Maximum value of dose to agreement threshold [%]
-                Default is 4.0 %
 
-            step : float, optional
+            step : float, optional, default=0.5
                 Increment of dose to agreement value between start and stop values [%]
-                Default is 0.5 %
         """
         self.plot_gamma_var('DoseTA', ax, start, stop, step)
         
@@ -437,17 +426,18 @@ class DoseAnalysis():
             
             Parameters
             ----------
-            start : float, optional
+            ax : matplotlib.pyplot.Axes, optional, default=None
+                Axis in which to plot the graph.
+                If None, a new plot is made.
+                
+            start : float, optional, default=0.5
                 Minimum value of dist to agreement threshold [mm]
-                Default is 0.5 mm
 
-            stop : float, optional
+            stop : float, optional, default=4.0
                 Maximum value of dist to agreement threshold [mm]
-                Default is 4.0 mm
 
-            step : float, optional
+            step : float, optional, default=0.5
                 Increment of dist to agreement value between start and stop values [mm]
-                Default is 0.5 mm
         """
         self.plot_gamma_var('DistTA', ax, start, stop, step)  
 
@@ -456,18 +446,15 @@ class DoseAnalysis():
 
             Parameters
             ----------
-            ax : matplotlib.pyplot axe object, optional
+            ax : matplotlib.pyplot axe object, optional, default=None
                 Axis in which to plot the graph.
                 If None, a new plot is made.
-                Default is None 
-
-            bins : Determines the number of bins in the histogram.
-                The argument passed to matplotlib.pyplot.hist.
-                Default is 'auto'
-
-            range : Determines the range of values showed in the histogram.
-                The argument passed to matplotlib.pyplot.hist.
-                Default is [0,3]
+   
+            bins : int, sequence, or str, optional, default='auto'
+                Determines the number of bins in the histogram.
+        
+            range : tuple or None, optional, default=[0, 3]
+                Determines the range of values shown in the histogram.
         """
 
         if ax is None:
@@ -482,15 +469,13 @@ class DoseAnalysis():
 
             Parameters
             ----------
-            ax : matplotlib.pyplot axe object, optional
+            ax : matplotlib.pyplot axe object, optional, default=None
                 Axis in which to plot the graph.
                 If None, a new plot is made.
-                Default is None 
 
-            bin_size : float, optional
+            bin_size : float, optional, default=50
                 Determines the size of bins in the histogram [cGy].
                 The number of bins is determined from the maximum dose in reference dose, and the bin_size.
-                Default is 50 cGy
         """
 
         if ax is None:
@@ -517,10 +502,28 @@ class DoseAnalysis():
         
     def show_gamma_stats(self, figsize=(10, 10), show_hist=True, show_pass_hist=True, show_varDistTA=False, show_varDoseTA=False):
         """ Displays a figure with 4 subplots showing gamma analysis statistics:
-            1- Gamma map histogram, 
-            2- Gamma pass rate vs dose histogram
-            3- Gamma pass rate vs variable distance to agreement threshold
-            4- Gamma pass rate vs variable dose to agreement threshold
+        
+            1. Gamma map histogram
+            2. Gamma pass rate vs dose histogram
+            3. Gamma pass rate vs variable distance to agreement threshold
+            4. Gamma pass rate vs variable dose to agreement threshold
+        
+            Parameters
+            ----------
+            figsize : tuple of (float, float), optional, default=(10, 10)
+                Width and height of the figure in inches.
+        
+            show_hist : bool, optional, default=True
+                Whether to display the gamma map histogram subplot.
+        
+            show_pass_hist : bool, optional, default=True
+                Whether to display the gamma pass rate vs dose histogram subplot.
+        
+            show_varDistTA : bool, optional, default=False
+                Whether to display the gamma pass rate vs variable distance to agreement threshold subplot.
+        
+            show_varDoseTA : bool, optional, default=False
+                Whether to display the gamma pass rate vs variable dose to agreement threshold subplot.
         """
 
         fig, axes = plt.subplots(2, 2, figsize=figsize)
@@ -532,64 +535,47 @@ class DoseAnalysis():
         if show_varDoseTA: self.plot_gamma_varDoseTA(ax=next(ax_iter))
         plt.tight_layout()
         plt.show()
-
-        
-
-
-
-
-
-
-
-
-
         
     def plot_profile(self, ax=None, profile='x', position=None, title=None, diff=False, offset=0, vertical_line=None, xlim=None, ylim='auto'):
         """ Plot a line profile of reference dose and film dose at a given position.
-
+        
             Parameters
             ----------
-            ax : matplotlib.pyplot axe object, optional
+            ax : matplotlib.pyplot.Axes, optional, default=None
                 Axis in which to plot the graph.
                 If None, a new plot is made.
-                Default is None
-
-            profile : 'x' or 'y'
-                The orientation of the profile to plot (x: horizontal, y: vertical)
-                Default is 'x'
-
-            position : int, optional
+        
+            profile : {'x', 'y'}, optional, default='x'
+                The orientation of the profile to plot (x: horizontal, y: vertical).
+        
+            position : int, optional, default=None
                 The position of the profile to plot, in pixels, in the direction perpendicular to the profile.
-                eg. if profile='x' and position=400, a profile in the x direction is showed, at position y=400.
+                For example, if profile='x' and position=400, a profile in the x direction is shown at position y=400.
                 If None, position is set to the center of the reference dose.
-                Default is None
-
-            title : str, optional
+        
+            title : str, optional, default=None
                 The title to display on the graph.
-                If None, the tile is set automatically to display profile direction and position
-                Default is None
-
-            diff : bool, optional
-                If True, the difference in profiles (film - reference) is displayed
-                Default is False
-
-            offset : int, optional
+                If None, the title is set automatically to display profile direction and position.
+        
+            diff : bool, optional, default=False
+                If True, the difference in profiles (film - reference) is displayed.
+        
+            offset : int, optional, default=0
                 If a known offset exists between the film and the reference dose, the plotted profile can be shifted
-                to account for this offset. For example, a film exposed at a fixed gantry angle coud have a known 
-                offset due to gantry sag, and you could want to correct for it on the profile.
-                Default is 0 mm
-                
-            vertical_line : int, optional
-                If set to True, a dashed vertical line is plotted on the profile at this position
-                
-            xlim : tuple, optional
-                If given, xlim will be passed to ax.set_xlim(xlim) to set the x axis limits
-                
-            ylim : tuple, 'max' or 'auto' (default), optional
-                If given a tuple, ylim will be passed to ax.set_ylim(ylim) to set the y axis limits
-                If 'max', ylim goes from 0 to 105% of maximum reference dose
-                If 'auto', ylim goes from 0 to 105% of maximum of either the current reference or film dose profile.
-        """        
+                to account for this offset. For example, a film exposed at a fixed gantry angle could have a known 
+                offset due to gantry sag, and you may want to correct for it on the profile.
+        
+            vertical_line : int, optional, default=None
+                If set, a dashed vertical line is plotted on the profile at this position.
+        
+            xlim : tuple, optional, default=None
+                If given, xlim will be passed to ax.set_xlim(xlim) to set the x-axis limits.
+        
+            ylim : tuple, 'max', or 'auto', optional, default='auto'
+                If given a tuple, ylim will be passed to ax.set_ylim(ylim) to set the y-axis limits.
+                If 'max', ylim goes from 0 to 105% of the maximum reference dose.
+                If 'auto', ylim goes from 0 to 105% of the maximum of either the current reference or film dose profile.
+        """     
 
         film, ref = self.film_dose.array, self.ref_dose.array
 
@@ -601,24 +587,23 @@ class DoseAnalysis():
             film_prof, ref_prof = film[:,position], ref[:,position]
         
         x_axis = (np.array(range(0, len(film_prof))) / self.film_dose.dpmm).tolist()
-        
+
         if ax is None: fig, ax = plt.subplots()    
         ax.clear()
-        ax.plot([i+offset for i in x_axis], film_prof,'r-', linewidth=2)
-        ax.plot(x_axis, ref_prof,'b--', linewidth=2)
+        ax.plot([i+offset for i in x_axis], film_prof, 'r-', linewidth=2, label='Film')
+        ax.plot(x_axis, ref_prof, 'b--', linewidth=2, label='Reference')
         
         if title is None:
-            if profile == 'x': title='Horizontal Profile (y = {} mm)'.format(int(position / self.film_dose.dpmm))
-            if profile == 'y': title='Vertical Profile (x = {} mm)'.format(int(position / self.film_dose.dpmm))
+            if profile == 'x': title=f'Horizontal Profile (y = {int(position / self.film_dose.dpmm)} mm)'
+            if profile == 'y': title=f'Vertical Profile (x = {int(position / self.film_dose.dpmm)} mm)'
         ax.set_title(title)
         ax.set_xlabel('Position (mm)')
         ax.set_ylabel('Dose (cGy)')
         
         if diff:
             ax_diff = ax.twinx()
-            diff_prof = film_prof - ref_prof
             ax_diff.set_ylabel("Difference (cGy)")
-            ax_diff.plot(x_axis, diff_prof,'g-', linewidth=0.25)
+            ax_diff.plot(x_axis, film_prof - ref_prof,'g-', linewidth=0.25)
             
         if xlim: ax.set_xlim(xlim)
         if ylim == 'max': ax.set_ylim((0, self.ref_dose.array.max() * 1.05))
@@ -626,15 +611,35 @@ class DoseAnalysis():
         else: ax.set_ylim(ylim)
             
         if vertical_line:
-            ax.plot((vertical_line / self.film_dose.dpmm, vertical_line / self.film_dose.dpmm), 
-                    ax.get_ylim(), 'k:', linewidth = 1)
-    
+            ax.axvline(x=vertical_line / self.film_dose.dpmm, color='k', linestyle=':', linewidth=1)
+        
     def show_isodoses(self, ax=None, levels=None, colors=None, show_ruler=True, figsize=(15,15)):
+        """ Display isodose lines for the film dose and reference dose on a given axis.
+            
+            Parameters
+            ----------
+            ax : matplotlib.pyplot.Axes, optional, default=None
+                Axis in which to plot the isodose lines.
+                If None, a new figure and axis are created.
+            
+            levels : list of float, optional, default=None
+                Specific dose levels to plot as isodose lines.
+                If None, levels are set to 20%, 40%, 60%, and 80% of the maximum reference dose.
+            
+            colors : list of str or matplotlib.colors, optional, default=None
+                Colors to use for the isodose lines.
+                If None, a default colormap is used.
+            
+            show_ruler : bool, optional, default=True
+                Whether to add an interactive ruler to measure distances on the plot using the mouse.
+            
+            figsize : tuple of (float, float), optional, default=(15, 15)
+                Width and height of the figure in inches if a new figure is created.            
+        """
         if ax is None:
             fig, ax = plt.subplots(figsize=figsize)
         if levels is None:
-            d_max = self.ref_dose.array.max()
-            levels = [d_max * l for l in np.arange(0.2, 1.0, 0.2)]
+            levels = [self.ref_dose.array.max() * l for l in np.arange(0.2, 1.0, 0.2)]
         if colors is None:
             colors = plt.cm.tab10(np.linspace(0, 1, 10))
         extent = [0, self.ref_dose.physical_shape[1], self.ref_dose.physical_shape[0], 0]
@@ -654,24 +659,22 @@ class DoseAnalysis():
             
             Parameters
             ----------
-            fig : matplotlib.pyplot figure object, optional
+            fig : matplotlib.pyplot figure object, optional, default=None
                 Figure in which to plot the graph.
                 If None, a new figure is made.
-                Default is None
             
-            x, y : int, optional
+            x, y : int, optional, default=None
                 Initial x/y coordinates of the profiles.
                 If None, profile will be at image center.
-                Default is None
         """
         a = None
         
-        if x is None: self.prof_x = np.floor(self.ref_dose.shape[1] / 2).astype(int)
+        if x is None: self.prof_x = self.ref_dose.shape[1] // 2
         elif x == 'max':
             a = np.unravel_index(self.ref_dose.array.argmax(), self.ref_dose.array.shape)
             self.prof_x = a[1]
         else: self.prof_x = x
-        if y is None: self.prof_y = np.floor(self.ref_dose.shape[0] / 2).astype(int)
+        if y is None: self.prof_y = self.ref_dose.shape[0] // 2
         elif y == 'max':
             if a is None: a = np.unravel_index(self.ref_dose.array.argmax(), self.ref_dose.array.shape)
             self.prof_y = a[0]
@@ -680,19 +683,17 @@ class DoseAnalysis():
         fig, ((ax1,ax2),(ax3,ax4),(ax5,ax6)) = plt.subplots(3,2, figsize=(10, 8))
         fig.tight_layout()
         axes = [ax1,ax2,ax3,ax4,ax5,ax6]
-        fig.canvas.manager.set_window_title("Facteur{:.2f}_Filtre{}_Gamma{}%-{}mm".format(self.film_dose_factor, self.film_filt, self.doseTA, self.distTA))
-        
-        max_dose_comp = np.percentile(self.ref_dose.array,[99.9])[0].round(decimals=-1)
-        clim = [0, max_dose_comp]
+        fig.canvas.manager.set_window_title(f"Facteur{self.film_dose_factor:.2f}_Filtre{self.film_filt}_Gamma{self.doseTA}%-{self.distTA}mm")
+        clim = [0, np.percentile(self.ref_dose.array, 99.9).round(-1)]
 
-        self.film_dose.plot(ax1, clim=clim, title='Film Dose ({})'.format(os.path.basename(self.film_dose.path)), colorbar=True)
-        self.ref_dose.plot(ax2, clim=clim, title='Reference Dose ({})'.format(os.path.basename(self.ref_dose.path)), colorbar=True)
-        self.GammaMap.plot(ax3, clim=[0,2], cmap='bwr', title='Gamma Map ({:.2f}% Pass; {:.2f} Mean)'.format(self.GammaMap.passRate, self.GammaMap.mean), colorbar=True)
+        self.film_dose.plot(ax1, clim=clim, title=f'Film Dose ({os.path.basename(self.film_dose.path)})', colorbar=True)
+        self.ref_dose.plot(ax2, clim=clim, title=f'Reference Dose ({os.path.basename(self.ref_dose.path)})', colorbar=True)
+        self.GammaMap.plot(ax3, clim=[0,2], cmap='bwr', title=f'Gamma Map ({self.GammaMap.passRate:.2f}% Pass; {self.GammaMap.mean:.2f} Mean)', colorbar=True)
         ax3.set_facecolor('k')
         min_value = max(-20, np.percentile(self.DiffMap.array,[1])[0].round(decimals=0))
         max_value = min(20, np.percentile(self.DiffMap.array,[99])[0].round(decimals=0))
         clim = [min_value, max_value]    
-        self.RelError.plot(ax4, cmap='jet', clim=clim, title='Relative Error (%) (RMSE = {:.2f})'.format(self.DiffMap.RMSE), colorbar=True)
+        self.RelError.plot(ax4, cmap='jet', clim=clim, title=f'Relative Error (%) (RMSE = {self.DiffMap.RMSE:.2f})', colorbar=True)
         self.show_profiles(axes, x=self.prof_x, y=self.prof_y)
         plt.multi = MultiCursor(None, (axes[0],axes[1],axes[2],axes[3]), color='r', lw=1, horizOn=True)
         
@@ -709,18 +710,14 @@ class DoseAnalysis():
             at a given x/y coordinates, and draw lines on the dose distribution maps
             to show where the profile is taken.
         """
-        ax_x = axes[-2]
-        ax_y = axes[-1]
+        ax_x, ax_y = axes[-2], axes[-1]
         self.plot_profile(ax=ax_x, profile='x', position=y, vertical_line=x)
         self.plot_profile(ax=ax_y, profile='y', position=x, vertical_line=y)
         
-        for i in range(0,4):
-            ax = axes[i]
-            while len(ax.lines) > 0: ax.lines[-1].remove()       # Remove prior crosshairs (if any)
-            
-            ### Plot crosshairs
-            ax.plot((x,x),(0,self.ref_dose.shape[0]),'w--', linewidth=1)
-            ax.plot((0,self.ref_dose.shape[1]),(y,y),'w--', linewidth=1)
+        for ax in axes[:4]:
+            for line in ax.lines: line.remove()
+            ax.plot([x, x], [0, self.ref_dose.shape[0]], 'w--', linewidth=1)
+            ax.plot([0, self.ref_dose.shape[1]], [y, y], 'w--', linewidth=1)
         
     def set_profile(self, event, axes):
         """ This function is called by show_results to draw dose profiles
@@ -739,37 +736,32 @@ class DoseAnalysis():
         
         
     #=================== Registration functions ======================
-    def register(self, shift_x=0, shift_y=0, threshold=10, register_using_gradient=False, markers_center=None, rot=0):
+    def register(self, shift_x=0, shift_y=0, rot=0, threshold=10, register_using_gradient=False, markers_center=None):
         """ Starts the registration procedure between film and reference dose.
             
             Parameters
             ----------
-            shift_x / shift_y : float, optional
-            Apply a known shift [mm] in the x/y direction between reference dose and film dose. 
-            Used if there is a known shift between the registration point in the reference image and the film image.
-            Default is 0
+            shift_x / shift_y : float, optional, default=0
+                Apply a shift [mm] in the x/y direction between reference dose and film dose. 
+                Used if there is a known shift between the registration point in the reference image and the film image.
+                
+            rot : float, optional, default=0
+                Apply a known rotation [degrees] between reference dose and film dose. 
+                Used if the markers on the reference image are known to be not perfectly aligned
+                in an horizontal/vertical line.
             
-            threshold : int, optional
-            Threshold value [cGy] used in detecting film edges for auto-cropping.
-            Default is 10
+            threshold : int, optional, default=10
+                Threshold value [cGy] used in detecting film edges for auto-cropping.
             
-            register_using_gradient : bool, optional
-            Determine if the registration results (overlay of film/ref dose) will be displayed 
-            after applying a sobel filter to improve visibility of strong dose gradients.
-            Default is False
+            register_using_gradient : bool, optional, default=False
+                Determine if the registration results (overlay of film/ref dose) will be displayed 
+                after applying a sobel filter to improve visibility of sharp dose gradients.
             
-            markers_center : list of 3 floats, optional
-            Coordinates [mm] in the reference dose corresponding to the marks intersection on the film (R-L, I-S, P-A).
-            It will be used to align the reference point on the film (given by the intersection of the two lines
-            determined by the four marks made on the edges of the film) to an absolute position in the reference dose.
-            If None, the film reference point will be positioned to the center of the reference dose.
-            Default is None
-            
-            rot : float, optional
-            Apply a known rotation [degrees] between reference dose and film dose. 
-            Used if the markers on the reference image are known to be not perfectly aligned
-            in an horizontal/vertical line.
-            Default is 0
+            markers_center : list of 3 floats, optional, default=None
+                Coordinates [mm] in the reference dose corresponding to the marks intersection on the film (R-L, I-S, P-A).
+                It will be used to align the reference point on the film (given by the intersection of the two lines
+                determined by the four marks made on the edges of the film) to an absolute position in the reference dose.
+                If None, the film reference point will be positioned to the center of the reference dose.            
         """
         self.register_using_gradient = register_using_gradient
         self.shifts = [shift_x, shift_y]
@@ -836,7 +828,7 @@ class DoseAnalysis():
         def reset_markers(reason = "change"):
             """ Resets self.markers and updates the marker text/title in the figure. """
             if reason == "change": print('\nFilm dose array has updated...')
-            elif reason == "less": print('\n{} markers were selected when 4 were expected...'.format(len(self.markers)))
+            elif reason == "less": print(f'\n{len(self.markers)} markers were selected when 4 were expected...')
             print('Please start over...')
             print('Please double-click on each marker. Press ''enter'' when done')
             self.markers = []
@@ -1137,15 +1129,15 @@ class DoseAnalysis():
         title='Film Analysis Report'
         canvas = pdf.PylinacCanvas(filename, page_title=title, logo=Path(__file__).parent / 'OMG_Logo.png')
         canvas.add_text(text='Film infos:', location=(1, 25.5), font_size=12)
-        text = ['Film dose: {}'.format(os.path.basename(self.film_dose.path)),
-                'Film dose factor: {}'.format(self.film_dose_factor),
-                'Reference dose: {}'.format(os.path.basename(self.ref_dose.path)),
-                'Reference dose factor: {}'.format(self.ref_dose_factor),
-                'Film filter kernel: {}'.format(self.film_filt),
-                'Gamma threshold: {}'.format(self.threshold),
-                'Gamma dose-to-agreement: {}'.format(self.doseTA),
-                'Gamma distance-to-agreement: {}'.format(self.distTA),
-                'Gamma normalization: {}'.format(self.norm_val)
+        text = [f'Film dose: {os.path.basename(self.film_dose.path)}',
+                f'Film dose factor: {self.film_dose_factor:.2f}',
+                f'Reference dose: {os.path.basename(self.ref_dose.path)}',
+                f'Reference dose factor: {self.ref_dose_factor:.2f}',
+                f'Film filter kernel: {self.film_filt}',
+                f'Gamma threshold: {self.threshold}',
+                f'Gamma dose-to-agreement: {self.doseTA}',
+                f'Gamma distance-to-agreement: {self.distTA}',
+                f'Gamma normalization: {self.norm_val}'
                ]
         canvas.add_text(text=text, location=(1, 25), font_size=10)
         data = io.BytesIO()
@@ -1165,10 +1157,10 @@ class DoseAnalysis():
             for i, cluster in enumerate(self.clusters_analysis):      
                 canvas.add_new_page()
                 canvas.add_text(text='Cluster analysis', location=(1, 25.5), font_size=12)
-                text = ['Cluster center: X = {:.1f} mm, Y = {:.1f} mm'.format(cluster['x_mm'], cluster['y_mm']),
-                        'Median dose difference: {:.2f} %'.format(cluster['Dose diff']),
-                        'Profile offset: X = {:.2f} mm, Y = {:.2f} mm'.format(cluster['Offset x'], cluster['Offset y']),
-                        'Profile width difference: X = {:.2f} mm, Y = {:.2f} mm'.format(cluster['Diff width x'], cluster['Diff width y'])
+                text = [f'Cluster center: X = {cluster["x_mm"]:.1f} mm, Y = {cluster["y_mm"]:.1f} mm',
+                        f'Median dose difference: {cluster["Dose diff"]:.2f} %',
+                        f'Profile offset: X = {cluster["Offset x"]:.2f} mm, Y = {cluster["Offset y"]:.2f} mm',
+                        f'Profile width difference: X = {cluster["Diff width x"]:.2f} mm, Y = {cluster["Diff width y"]:.2f} mm'
                        ]
                 
                 data = io.BytesIO()
@@ -1318,7 +1310,7 @@ class DoseAnalysis():
         # Wait for user interaction
         self.wait = True
         while self.wait: plt.pause(1)
-        plt.close(self.fig)
+        self.cleanup()
         return self.offset
                 
     def move_profile_ontype(self, event):
@@ -1335,10 +1327,8 @@ class DoseAnalysis():
             title = f'Shift = {self.offset:.1f} mm'
             self.plot_profile(ax=ax, profile=self.direction, position=self.position, title=title, diff=False, offset=self.offset, vertical_line=self.line, xlim=self.xlim)
             fig.canvas.draw_idle()
-        
-        # Disconnect event and end waiting when Enter is pressed
+
         elif event.key == 'enter':
-            self.fig.canvas.mpl_disconnect(self.cid)
             self.wait = False
             return self.offset
 
@@ -1381,7 +1371,7 @@ def load_dose(filename):
         return pickle.load(input)
 
 def load_analysis(filename):
-    print("\nLoading analysis file {}...".format(filename))
+    print(f"\nLoading analysis file {filename}...")
     try:
         file = bz2.open(filename, 'rb')
         analysis = pickle.load(file)
@@ -1392,7 +1382,7 @@ def load_analysis(filename):
     return analysis
 
 def save_analysis(analysis, filename, use_compression=True):
-    print("\nSaving analysis file as {}...".format(filename))
+    print(f"\nSaving analysis file as {filename}...")
     if hasattr(analysis, "ruler"): del analysis.ruler
     if use_compression:
         file = bz2.open(filename, 'wb')
