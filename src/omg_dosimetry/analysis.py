@@ -323,7 +323,41 @@ class DoseAnalysis():
         self.DiffMap.RMSE = np.sqrt(self.DiffMap.MSE)    
     
     def computeGamma(self, doseTA=2, distTA=2, threshold=0.1, norm_val=None, local_gamma=False, max_gamma=None, random_subset=None):
-        """ Compute Gamma (using pymedphys.gamma) """
+        """
+        Compute Gamma (using pymedphys.gamma).
+    
+        Parameters
+        ----------
+        doseTA : float, optional, default=2
+            Dose to agreement threshold [%].
+    
+        distTA : float, optional, default=2
+            Distance to agreement threshold [mm].
+    
+        threshold : float, optional, default=0.1
+            The percent lower dose cutoff below which gamma will not be calculated.
+            Must be between 0 and 1.
+    
+        norm_val : float or None, optional, default=None
+            Normalization value [cGy] of the reference dose, used to calculate the dose to agreement threshold
+            and lower dose threshold. If None, no normalization is applied.
+    
+        local_gamma : bool, optional, default=False
+            Whether to use local gamma instead of global gamma.
+    
+        max_gamma : float or None, optional, default=None
+            The maximum gamma value to search for. Can speed up calculation by stopping the search once
+            gamma values exceed this parameter.
+    
+        random_subset : float or None, optional, default=None
+            If set, calculates gamma for only a random subset fraction of the reference grid to speed up calculation.
+            Must be between 0 and 1.
+    
+        Returns
+        -------
+        ArrayImage
+            The computed gamma map as an ArrayImage object.
+        """
         print(f"\nComputing {doseTA}%/{distTA} mm Gamma...")
         # error checking
         if not is_close(self.film_dose.dpi, self.ref_dose.dpi, delta=3):
@@ -372,24 +406,47 @@ class DoseAnalysis():
         return GammaMap
                     
     def plot_gamma_var(self, param, ax=None, start=0.5, stop=4, step=0.5):
-      values = np.arange(start, stop, step)
-      GammaVar = np.zeros((len(values), 2))
+        """
+        Plot Gamma pass rate as a function of a varying parameter (either doseTA or distTA).
+    
+        Parameters
+        ----------
+        param : str
+            The parameter to vary, either 'DoseTA' (dose to agreement threshold) or 'DistTA' (distance to agreement threshold).
+    
+        ax : matplotlib.pyplot.Axes, optional, default=None
+            Axis in which to plot the graph.
+            If None, a new plot is created.
+    
+        start : float, optional, default=0.5
+            Minimum value of the parameter to vary.
+    
+        stop : float, optional, default=4.0
+            Maximum value of the parameter to vary.
+    
+        step : float, optional, default=0.5
+            Increment of the parameter value between start and stop.
+        """
+        values = np.arange(start, stop, step)
+        GammaVar = np.zeros((len(values), 2))
+    
+        for i, value in enumerate(values):
+            if param == 'DoseTA':
+                gamma = self.computeGamma(doseTA=value, distTA=self.distTA, threshold=self.threshold, norm_val=self.norm_val)
+                title = f'Variable DoseTA, DistTA = {self.distTA} mm'
+            elif param == 'DistTA':
+                gamma = self.computeGamma(doseTA=self.doseTA, distTA=value, threshold=self.threshold, norm_val=self.norm_val)
+                title = f'Variable DistTA, DoseTA = {self.doseTA} %'
+            GammaVar[i] = [value, gamma.passRate]
+    
+        if ax is None:
+            fig, ax = plt.subplots()
+        x, y = GammaVar[:, 0], GammaVar[:, 1]
+        ax.plot(x, y, 'o-')
+        ax.set_title(title)
+        ax.set_xlabel(f'{param} (%)' if param == 'DoseTA' else f'{param} (mm)')
+        ax.set_ylabel('Gamma pass rate (%)')
 
-      for i, value in enumerate(values):
-          if param == 'DoseTA':
-              gamma = self.computeGamma(doseTA=value, distTA=self.distTA, threshold=self.threshold, norm_val=self.norm_val)
-              title = f'Variable DoseTA, DistTA = {self.distTA} mm'
-          elif param == 'DistTA':
-              gamma = self.computeGamma(doseTA=self.doseTA, distTA=value, threshold=self.threshold, norm_val=self.norm_val)
-              title = f'Variable DistTA, DoseTA = {self.doseTA} %'
-          GammaVar[i] = [value, gamma.passRate]
-      
-      if ax is None: fig, ax = plt.subplots()
-      x, y = GammaVar[:, 0], GammaVar[:, 1]
-      ax.plot(x, y, 'o-')
-      ax.set_title(title)
-      ax.set_xlabel(f'{param} (%)' if param == 'DoseTA' else f'{param} (mm)')
-      ax.set_ylabel('Gamma pass rate (%)')
   
     def plot_gamma_varDoseTA(self, ax=None, start=0.5, stop=4, step=0.5):
         """ Plot graph of Gamma pass rate vs variable doseTA.
@@ -1066,9 +1123,25 @@ class DoseAnalysis():
         plt.close(fig)
         
     def show_cluster_analysis(self, cluster_id=0, xlim_margin_mm=10, figsize=(10,10), levels=None):
-        """ Display the dose distribution with cluster analysis, including dose distribution,
-           cluster location, isodoses, and profiles.
-       """
+        """
+        Display the dose distribution with cluster analysis, including dose distribution,
+        cluster location, isodoses, and profiles.
+    
+        Parameters
+        ----------
+        cluster_id : int, optional, default=0
+            The ID of the cluster to display.
+    
+        xlim_margin_mm : int, optional, default=10
+            The margin [mm] to add to the x-axis limits around the cluster location.
+    
+        figsize : tuple of (float, float), optional, default=(10, 10)
+            Width and height of the figure in inches.
+    
+        levels : list of float, optional, default=None
+            Specific dose levels to plot as isodose lines.
+            If None, default levels are used.
+        """
         # Get coordinates of selected cluster
         cluster = self.clusters_analysis[cluster_id]
         x, y = cluster['x_px'], cluster['y_px']
@@ -1182,7 +1255,17 @@ class DoseAnalysis():
 
     #=================== Clusters analysis ======================
     def analyse_clusters(self, clusters_threshold=0.6, xlim_margin_mm=10):
-        """ Analyze clusters in the reference dose and compute median dose differences. """
+        """
+        Analyze clusters in the reference dose and compute median dose differences.
+    
+        Parameters
+        ----------
+        clusters_threshold : float, optional, default=0.6
+            Threshold value to identify clusters within the reference dose. The value should be between 0 and 1.
+    
+        xlim_margin_mm : int, optional, default=10
+            The margin [mm] to add to the x-axis limits around the clusters.
+        """
         self.clusters_analysis = []
         clusters = self.ref_dose.detect_clusters(threshold=clusters_threshold) 
         self.ref_dose.plot_clusters()
@@ -1223,22 +1306,26 @@ class DoseAnalysis():
     
     #=================== Profile analysis ======================
     def get_profile_offsets(self, x=None, y=None, x_xlim=None, y_xlim=None):
-        """ Starts an interactive process where the user can move
-            the measured profile with respect to the reference profile
-            in order to compute the spatial offset between the two.
-            The process is repeated four times to get offsets on both
-            sides in the x and y directions.
-            
-            Parameters
-            ----------
-            x : int, optional
-                The x position of the profile to plot, in pixels. Defaults to the center of the reference dose.
-            y : int, optional
-                The y position of the profile to plot, in pixels. Defaults to the center of the reference dose.
-            xlim : tuple, optional
-                X-axis limits for X profile plotting.
-            y_xlim : tuple, optional
-                X-axis limits for Y profile plotting.
+        """
+        Start an interactive process where the user can move the measured profile
+        with respect to the reference profile to compute the spatial offset between the two.
+        The process is repeated four times to get offsets on both sides in the x and y directions.
+    
+        Parameters
+        ----------
+        x : int, optional
+            The x position of the profile to plot, in pixels.
+            Defaults to the center of the reference dose.
+    
+        y : int, optional
+            The y position of the profile to plot, in pixels.
+            Defaults to the center of the reference dose.
+    
+        x_xlim : tuple of (float, float), optional
+            X-axis limits for X profile plotting.
+    
+        y_xlim : tuple of (float, float), optional
+            X-axis limits for Y profile plotting.
         """
         if x is None: x = self.ref_dose.shape[1] // 2
         if y is None: y = self.ref_dose.shape[0] // 2
@@ -1260,10 +1347,10 @@ class DoseAnalysis():
         print(f"Y: Offset = {self.offset_y:.2f} mm; Diff width = {self.diff_y:.2f} mm")
 
     def get_profile_offset(self, x, y, direction, side='left', xlim=None):
-        """ Opens an interactive plot where the user can move
-            the measured profile with respect to the reference profile
-            in order to compute the spatial offset between the two.
-
+        """
+        Open an interactive plot where the user can move the measured profile with
+        respect to the reference profile to compute the spatial offset between the two.
+    
         Parameters
         ----------
         x : int
@@ -1275,10 +1362,10 @@ class DoseAnalysis():
         direction : str
             Direction of the profile, either 'x' (horizontal) or 'y' (vertical).
             
-        side : str, optional
-            Side of the profile to match, either 'left' or 'right'. Default is 'left'.
+        side : str, optional, default='left'
+            Side of the profile to match, either 'left' or 'right'.
             
-        xlim : tuple, optional
+        xlim : tuple of (float, float), optional
             X-axis limits for profile plotting.
         """
 
@@ -1356,15 +1443,52 @@ def line_intersection(line1, line2):
     return x, y
 
 def save_dose(dose, filename):
+    """
+    Save the dose object to a file using pickle serialization.
+
+    Parameters
+    ----------
+    dose : object
+        The dose object to be saved.
+    
+    filename : str
+        The name of the file to save the dose object to.
+    """
     dose.filename = filename
     with open(filename, 'wb') as output:
         pickle.dump(dose, output, pickle.HIGHEST_PROTOCOL)
 
 def load_dose(filename):
+    """
+    Load a dose object from a file using pickle deserialization.
+
+    Parameters
+    ----------
+    filename : str
+        The name of the file to load the dose object from.
+
+    Returns
+    -------
+    object
+        The loaded dose object.
+    """
     with open(filename, 'rb') as input:
         return pickle.load(input)
 
 def load_analysis(filename):
+    """
+    Load an analysis object from a file, with optional decompression.
+
+    Parameters
+    ----------
+    filename : str
+        The name of the file to load the analysis object from.
+
+    Returns
+    -------
+    object
+        The loaded analysis object.
+    """
     print(f"\nLoading analysis file {filename}...")
     try:
         file = bz2.open(filename, 'rb')
@@ -1376,6 +1500,20 @@ def load_analysis(filename):
     return analysis
 
 def save_analysis(analysis, filename, use_compression=True):
+    """
+    Save the analysis object to a file using pickle serialization, with optional compression.
+
+    Parameters
+    ----------
+    analysis : object
+        The analysis object to be saved.
+    
+    filename : str
+        The name of the file to save the analysis object to.
+    
+    use_compression : bool, optional, default=True
+        Whether to compress the file using bz2.
+    """
     print(f"\nSaving analysis file as {filename}...")
     if hasattr(analysis, "ruler"): del analysis.ruler
     if use_compression:
@@ -1386,6 +1524,20 @@ def save_analysis(analysis, filename, use_compression=True):
     file.close()
 
 def add_ruler(ax=None):
+    """
+    Add a ruler to the specified axis for measurement purposes.
+
+    Parameters
+    ----------
+    ax : matplotlib.axes.Axes, optional
+        The axis to add the ruler to. If None, the current axis is used.
+        Default is None.
+
+    Returns
+    -------
+    Ruler
+        The created Ruler object.
+    """
     if ax is None: ax = plt.gca()
     markerprops = dict(marker='o', markersize=5, markeredgecolor='red')
     lineprops = dict(color='red', linewidth=2)
