@@ -846,6 +846,7 @@ class DoseAnalysis():
         
     def cleanup(self):
         if hasattr(self, "rs"): del self.rs    
+        if hasattr(self, "cursor"): del self.cursor    
         if self.fig:
             self.fig.canvas.mpl_disconnect(self.cid)
             plt.close(self.fig)
