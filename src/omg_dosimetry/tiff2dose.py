@@ -21,7 +21,7 @@ Written by Jean-Francois Cabana, copyright 2018.
 
 Modified by Peter Truong (CISSSO) and Luis Alfonso Olivares Jimenez.
 
-Version: 2024-01-03
+Version: 2024-08-15
 """
 
 import os
@@ -432,7 +432,7 @@ class Gaf:
         max_dose_m = np.percentile(self.dose_m.array, [99.9])[0].round(decimals=-1)
         max_dose_opt = np.percentile(self.dose_opt.array, [99.9])[0].round(decimals=-1)
         clim = [0, max(max_dose_m, max_dose_opt)]
-        fig, ((ax1,ax2,ax3), (ax4,ax5,ax6), (ax7,ax8,ax9)) = plt.subplots(3, 3, figsize=(14, 9))
+        fig, ((ax1,ax2,ax3), (ax4,ax5,ax6), (ax7,ax8,ax9)) = plt.subplots(3, 3, figsize=(14, 9), sharex=True, sharey=True)
         axes = [ax1, ax2, ax3, ax4, ax5, ax6, ax7, ax8, ax9]
 
         self.dose_r.plot(ax1, clim=clim, title='Red channel dose', colorbar=True)
