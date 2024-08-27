@@ -14,7 +14,7 @@ Features:
     
 Written by Jean-Francois Cabana, copyright 2018
 Modified by Peter Truong (CISSSO)
-Version: 2024-08-01
+Version: 2024-08-27
 """
 
 import numpy as np
@@ -405,7 +405,7 @@ class DoseAnalysis():
         
         return GammaMap
                     
-    def plot_gamma_var(self, param, ax=None, start=0.5, stop=4, step=0.5):
+    def plot_gamma_var(self, param, ax=None, start=0.5, stop=4, step=0.5, varTA = None):
         """
         Plot Gamma pass rate as a function of a varying parameter (either doseTA or distTA).
     
@@ -426,17 +426,23 @@ class DoseAnalysis():
     
         step : float, optional, default=0.5
             Increment of the parameter value between start and stop.
+            
+        varTA : float, optional
+            Value for dose or distance used in the variable dose or distance gamma analysis (based on param)
+            Default is None (which will take value used in previous gamma analysis)
         """
-        values = np.arange(start, stop, step)
+        values = np.arange(start, stop + step, step)        # Include stop endpoint
         GammaVar = np.zeros((len(values), 2))
+        if param == 'DoseTA':
+            if not varTA: varTA = self.distTA
+            title = f'Variable DoseTA, DistTA = {varTA} mm'
+        elif param == 'DistTA':
+            if not varTA: varTA = self.doseTA
+            title = f'Variable DistTA, DoseTA = {varTA} %'
     
         for i, value in enumerate(values):
-            if param == 'DoseTA':
-                gamma = self.computeGamma(doseTA=value, distTA=self.distTA, threshold=self.threshold, norm_val=self.norm_val)
-                title = f'Variable DoseTA, DistTA = {self.distTA} mm'
-            elif param == 'DistTA':
-                gamma = self.computeGamma(doseTA=self.doseTA, distTA=value, threshold=self.threshold, norm_val=self.norm_val)
-                title = f'Variable DistTA, DoseTA = {self.doseTA} %'
+            if param == 'DoseTA': gamma = self.computeGamma(doseTA=value, distTA=varTA, threshold=self.threshold, norm_val=self.norm_val)
+            elif param == 'DistTA': gamma = self.computeGamma(doseTA=varTA, distTA=value, threshold=self.threshold, norm_val=self.norm_val)
             GammaVar[i] = [value, gamma.passRate]
     
         if ax is None:
@@ -448,7 +454,7 @@ class DoseAnalysis():
         ax.set_ylabel('Gamma pass rate (%)')
 
   
-    def plot_gamma_varDoseTA(self, ax=None, start=0.5, stop=4, step=0.5):
+    def plot_gamma_varDoseTA(self, ax=None, start=0.5, stop=4, step=0.5, varTA = None):
         """ Plot graph of Gamma pass rate vs variable doseTA.
             Note: values of distTA, threshold and norm_val will be taken as those 
             from the previous "standard" gamma analysis.
@@ -467,10 +473,14 @@ class DoseAnalysis():
 
             step : float, optional, default=0.5
                 Increment of dose to agreement value between start and stop values [%]
+                
+            varTA : float, optional
+                Value for distance used in the variable dose gamma analysis
+                Default is None (which will take value used in previous gamma analysis)
         """
-        self.plot_gamma_var('DoseTA', ax, start, stop, step)
+        self.plot_gamma_var('DoseTA', ax, start, stop, step, varTA)
         
-    def plot_gamma_varDistTA(self, ax=None, start=0.5, stop=4, step=0.5):
+    def plot_gamma_varDistTA(self, ax=None, start=0.5, stop=4, step=0.5, varTA = None):
         """ Plot graph of Gamma pass rate vs variable distTA
             Note: values of doseTA, threshold and norm_val will be taken as those 
             from the previous "standard" gamma analysis.
@@ -489,8 +499,12 @@ class DoseAnalysis():
 
             step : float, optional, default=0.5
                 Increment of dist to agreement value between start and stop values [mm]
+                
+            varTA : float, optional
+                Value for dose used in the variable distance gamma analysis
+                Default is None (which will take value used in previous gamma analysis)
         """
-        self.plot_gamma_var('DistTA', ax, start, stop, step)  
+        self.plot_gamma_var('DistTA', ax, start, stop, step, varTA)  
 
     def plot_gamma_hist(self, ax=None, bins='auto', range=[0,3]):
         """ Plot a histogram of gamma map values.
@@ -734,6 +748,9 @@ class DoseAnalysis():
         fig, ((ax1,ax2),(ax3,ax4),(ax5,ax6)) = plt.subplots(3,2, figsize=(10, 8))
         fig.tight_layout()
         axes = [ax1,ax2,ax3,ax4,ax5,ax6]
+        for ax in axes[0:4]:                # Share x/y axes for zoom purposes.
+            ax.sharex(axes[0])
+            ax.sharey(axes[0])
         fig.canvas.manager.set_window_title(f"Facteur{self.film_dose_factor:.2f}_Filtre{self.film_filt}_Gamma{self.doseTA}%-{self.distTA}mm")
         clim = [0, np.percentile(self.ref_dose.array, 99.9).round(-1)]
 
@@ -895,7 +912,7 @@ class DoseAnalysis():
         # Handle key actions for rotation and flipping
         key_actions = {
             'r': lambda: setattr(self.film_dose, 'array', np.rot90(self.film_dose.array, k=1)),
-            'h': lambda: setattr(self.film_dose, 'array', np.fliplr(self.film_dose.array)),
+            'l': lambda: setattr(self.film_dose, 'array', np.fliplr(self.film_dose.array)),
             'v': lambda: setattr(self.film_dose, 'array', np.flipud(self.film_dose.array))
         }
         
