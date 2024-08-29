@@ -4,7 +4,7 @@
 """
 __author__ = "Peter Truong"
 __contact__ = "petertruong.cissso@ssss.gouv.qc.ca"
-__version__ = "10 mai 2024"
+__version__ = "29 août 2024"
 
 from omg_dosimetry import analysis, tiff2dose
 import os, sys, ctypes, pickle
@@ -45,15 +45,14 @@ else: # Portrait Orientation
 tiff_2_dose, tiff_2_dose_show_pdf = 1, 0    # 
 if landscape: rot_scan = 1
 else: rot_scan = 0
-normFilm_selection = False
 
 ### Tiff2Analysis Parameters
 dose_2_analysis, dose_2_analysis_show_pdf = 1, 0
-analysis_publish_pdf = False
-pickle_save = False
+analysis_publish_pdf = True
+pickle_save = True
 crop_film = 1
-flipLR, flipUD = 1, 0
-rot90 = 0
+flipLR, flipUD = 1, 0               # Preset values for portrait orientation
+rot90 = 0                           # Preset values for portrait orientation
 
 shift_x, shift_y = 0, 0
 markers_center = None
@@ -63,6 +62,7 @@ markers_center = None
 #normalisation = "ref_roi"
 normalisation = "norm_film"
 norm_film_MU = 300
+normFilm_selection = False          # Normalization Film scan separately or not
 
 ### Normalization Reference (Eclipse 6 MV at 2 cm depth)
 norm_film_ref_MU = 300
@@ -114,7 +114,6 @@ def main():
     ### DICOM Information Extract
     try: 
         ds = pydicom.dcmread(path_doseEclipse)
-        patient_ID, plan_ID = ds.PatientID, ds.DoseComment
         clip = np.amax(ds.pixel_array * ds.DoseGridScaling * 100) * 1.5         # clip = 1.5 x max reference dose value
     except:
         print("Invalid DICOM file selected. ")
