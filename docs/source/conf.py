@@ -11,9 +11,9 @@ copyright = '2023, Jean-François Cabana and Luis Alfonso Olivares Jiménez'
 author = 'Jean-François Cabana, Luis Alfonso Olivares Jiménez and Peter Truong'
 
 # The short X.Y version.
-version = "1.6"
+version = "1.7"
 # The full version, including alpha/beta/rc tags.
-release = "1.6.3"
+release = "1.7.0"
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
 

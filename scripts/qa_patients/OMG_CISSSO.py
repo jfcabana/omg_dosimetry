@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
-""" OMG_Tiff2Analysis.py
+""" OMG_CISSSO_Test.py
     - More Details to Come
 """
 __author__ = "Peter Truong"
 __contact__ = "petertruong.cissso@ssss.gouv.qc.ca"
-__version__ = "19 février 2024"
+__version__ = "10 mai 2024"
 
 from omg_dosimetry import analysis, tiff2dose
 import os, sys, ctypes, pickle
@@ -14,22 +14,23 @@ root = tk.Tk()                              # Declare root (top-level instance)
 root.withdraw()                             # Show only dialog without any other GUI elements by hiding root window
 root.attributes("-topmost", True)           # Top-level window display priority
 import pydicom
+import numpy as np
 import matplotlib.pyplot as plt
 plt.ion()           # Interactive Mode: ON
 
 ### Parameter Initialization
-info = dict(author = "PT", 
-            unit = "CL4", 
-            film_lot = "EBT-3 C2",
-            scanner_id = "Epson 10000XL", 
-            date_exposed = "2024-02-06",
-            date_scanned = "2024-02-07",
-            wait_time = "24h", 
-            notes = "Test Gamma with Time")
+info = dict(author = "PT",                                  # Physicist Initials
+            unit = "CL3",                                   # Machine ID
+            film_lot = "EBT-3 C2",                          # Film Calibration Lot ID
+            scanner_id = "Epson 10000XL",                   # Scanner ID
+            date_exposed = "2024-07-09",                    # Date of Film Exposure/Irradiation
+            date_scanned = "2024-07-10",                    # Date of Film Scan
+            wait_time = "18h",                              # Time In-Between Irradiation and Scanning
+            notes = "Sans LatCor - Dead Pixel Investigation")
 
 ### Look-up Table (LUT) Path Initialization
-landscape = False
-LatCor = True
+landscape = False                   # Landscape/Portrait Scanned Orientation: Determines LUT File to Load
+LatCor = True                       # Lateral Correction Applied: Determines LUT File to Load
 if landscape: # Landscape Orientation
     lut_file = (r"\\SVWCT2Out0455\Phys\Répertoires communs\Radiotherapie Externe\Film_QA\Calibration_LUT"
                 r"\2022-10-04\C2_3Gy_72dpi_landscape.pkl")
@@ -41,8 +42,7 @@ else: # Portrait Orientation
     
 
 ### Tiff2Dose Parameters
-tiff_2_dose, tiff_2_dose_show_pdf = 1, 0
-clip = 600
+tiff_2_dose, tiff_2_dose_show_pdf = 1, 0    # 
 if landscape: rot_scan = 1
 else: rot_scan = 0
 normFilm_selection = False
@@ -64,7 +64,7 @@ markers_center = None
 normalisation = "norm_film"
 norm_film_MU = 300
 
-### Normalization Reference (Eclipse)
+### Normalization Reference (Eclipse 6 MV at 2 cm depth)
 norm_film_ref_MU = 300
 norm_film_ref_dose = 315.5          # qaphys_dosimetrie_filmGaf/Calibration/C2 (average diagonal profile in Eclipse)
 norm_film_dose = norm_film_MU / norm_film_ref_MU * norm_film_ref_dose
@@ -115,8 +115,10 @@ def main():
     try: 
         ds = pydicom.dcmread(path_doseEclipse)
         patient_ID, plan_ID = ds.PatientID, ds.DoseComment
+        clip = np.amax(ds.pixel_array * ds.DoseGridScaling * 100) * 1.5         # clip = 1.5 x max reference dose value
     except:
         print("Invalid DICOM file selected. ")
+        clip = None                                                             # No reference dose for clip value
         sys.exit()
     
     ### Initialize Folder Structure
