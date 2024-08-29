@@ -387,28 +387,57 @@ class LUT:
         ax.plot((0,self.img.shape[1]),(self.img.center.y,self.img.center.y),'k--')
         ax.set_xlim(0, self.img.shape[1])
         ax.set_ylim(self.img.shape[0],0)
-        ax.set_title('Click and drag to draw ROIs manually. Press ''enter'' when finished.')
-        print('Click and drag to draw ROIs manually. Press ''enter'' when finished.')
-        
-        def select_box(eclick, erelease):
+        ax.set_title('Click and drag to draw ROIs manually.\n Press ''c'' to catch the ROI and ''enter'' when finished.')
+        print('Click and drag to draw ROIs manually.\n Press ''c'' to catch the ROI and ''enter'' when finished.')
+
+
+        def print_roi_size(eclick, erelease):
             ax = plt.gca()
             x1, y1 = int(eclick.xdata), int(eclick.ydata)
             x2, y2 = int(erelease.xdata), int(erelease.ydata)
-            rect = plt.Rectangle( (min(x1,x2),min(y1,y2)), np.abs(x1-x2), np.abs(y1-y2), fill=True )
-            ax.add_patch(rect) 
-            plt.gcf().canvas.draw_idle()
-            
-            self.roi_xmin.append(min(x1,x2))
-            self.roi_xmax.append(max(x1,x2))
-            self.roi_xpos.append(min(x1,x2) + int(np.floor(np.abs(x1-x2)/2)))
-            self.roi_ymin.append(min(y1,y2))
-            self.roi_ymax.append(max(y1,y2))
-            self.roi_ypos.append(min(y1,y2) + int(np.floor(np.abs(y1-y2)/2)))
-            self.roi_width.append(int(np.abs(x1-x2)))
-            self.roi_length.append(int(np.abs(y1-y2)))
-        
-        self.rs = RectangleSelector(ax, select_box, useblit=True, button=[1], minspanx=5, minspany=5, spancoords='pixels', interactive=True)
+
+            print(f"ROI size (width, height) mm: ({np.abs(x1-x2)/self.img.dpmm:.1f}, {np.abs(y1-y2)/self.img.dpmm:.1f})")
+
+
+        def key_c_pressed(event):
+            """ Create a ROI when 'c' is pressed."""            
+            if event.key in ['c', 'C']:
+                ax = plt.gca()
+                xmin, xmax, ymin, ymax = map(int, self.rs.extents)
+                rect = plt.Rectangle(
+                    (xmin,ymin),
+                    xmax-xmin,
+                    ymax-ymin,
+                    fill=True,
+                    facecolor='red',
+                    edgecolor='black',
+                    alpha=0.5)
+                ax.add_patch(rect)
+                plt.gcf().canvas.draw_idle()
+
+                self.roi_xmin.append(xmin)
+                self.roi_xmax.append(xmax)
+                self.roi_xpos.append(xmin + int(np.floor((xmax-xmin)/2)))
+                self.roi_ymin.append(ymin)
+                self.roi_ymax.append(ymax)
+                self.roi_ypos.append(ymin + int(np.floor((ymax-ymin)/2)))
+                self.roi_width.append(xmax-xmin)
+                self.roi_length.append(ymax-ymin)
+
+        self.rs = RectangleSelector(
+            ax,
+            onselect=print_roi_size,
+            useblit=True,
+            button=[1],
+            minspanx=5,
+            minspany=5,
+            spancoords='pixels',
+            interactive=True,
+            drag_from_anywhere=True,
+            props=dict(facecolor='red', edgecolor='black', alpha=0.4),
+            )
         plt.gcf().canvas.mpl_connect('key_press_event', self.press_enter)
+        plt.gcf().canvas.mpl_connect('key_press_event', key_c_pressed)
         self.wait = True
         plt.show()  
         while self.wait:    # This while is ejecuted only in interactive mode. press_enter changes self.wait to False 
