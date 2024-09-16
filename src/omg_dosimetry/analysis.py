@@ -102,14 +102,14 @@ class DoseAnalysis():
         if film_dose_factor:
             self.film_dose_factor = film_dose_factor
             self.film_dose.array *= film_dose_factor
-            print(f"\nApplied film normalisation factor = {film_dose_factor:.2f}")
+            print(f"\nApplied film normalisation factor = {film_dose_factor:.3f}")
 
     def apply_ref_factor(self, ref_dose_factor = None):
         """ Apply a normalisation factor to reference dose. """
         if ref_dose_factor is not None:
             self.ref_dose_factor = ref_dose_factor
             self.ref_dose.array *= ref_dose_factor
-            print(f"Applied ref dose normalisation factor = {ref_dose_factor:.2f}")
+            print(f"Applied ref dose normalisation factor = {ref_dose_factor:.3f}")
 
     def apply_factor_from_isodose(self, norm_isodose = 0):
         """ Apply film normalisation factor from a reference dose isodose [cGy].
@@ -989,7 +989,7 @@ class DoseAnalysis():
             
             y0 = sizeY - int(np.around(y_pos_mm * dpmm))
             if 'Transversal' in orientation:
-                y0 = int(np.around(y_pos_mm * dpmm))
+                y0 = -1.0*int(np.around(y_pos_mm * dpmm))
 
             self.ref_dose.move_pixel_to_center(x0, y0)
             
