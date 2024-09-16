@@ -20,13 +20,13 @@ plt.ion()           # Interactive Mode: ON
 
 ### Parameter Initialization
 info = dict(author = "PT",                                  # Physicist Initials
-            unit = "CL4",                                   # Machine ID
+            unit = "CL3",                                   # Machine ID
             film_lot = "EBT-3 C2",                          # Film Calibration Lot ID
             scanner_id = "Epson 10000XL",                   # Scanner ID
-            date_exposed = "2024-02-06",                    # Date of Film Exposure/Irradiation
-            date_scanned = "2024-02-07",                    # Date of Film Scan
-            wait_time = "24h",                              # Time In-Between Irradiation and Scanning
-            notes = "Test Gamma with Time")
+            date_exposed = "2024-07-09",                    # Date of Film Exposure/Irradiation
+            date_scanned = "2024-07-10",                    # Date of Film Scan
+            wait_time = "18h",                              # Time In-Between Irradiation and Scanning
+            notes = "Sans LatCor - Dead Pixel Investigation")
 
 ### Look-up Table (LUT) Path Initialization
 landscape = False                   # Landscape/Portrait Scanned Orientation: Determines LUT File to Load
@@ -43,7 +43,6 @@ else: # Portrait Orientation
 
 ### Tiff2Dose Parameters
 tiff_2_dose, tiff_2_dose_show_pdf = 1, 0    # 
-clip = 600
 if landscape: rot_scan = 1
 else: rot_scan = 0
 normFilm_selection = False
@@ -65,7 +64,7 @@ markers_center = None
 normalisation = "norm_film"
 norm_film_MU = 300
 
-### Normalization Reference (Eclipse)
+### Normalization Reference (Eclipse 6 MV at 2 cm depth)
 norm_film_ref_MU = 300
 norm_film_ref_dose = 315.5          # qaphys_dosimetrie_filmGaf/Calibration/C2 (average diagonal profile in Eclipse)
 norm_film_dose = norm_film_MU / norm_film_ref_MU * norm_film_ref_dose
