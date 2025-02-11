@@ -4,7 +4,7 @@
 """
 __author__ = "Peter Truong"
 __contact__ = "petertruong.cissso@ssss.gouv.qc.ca"
-__version__ = "29 août 2024"
+__version__ = "30 août 2024"
 
 from omg_dosimetry import analysis, tiff2dose
 import os, sys, ctypes, pickle
@@ -22,11 +22,12 @@ plt.ion()           # Interactive Mode: ON
 info = dict(author = "PT",                                  # Physicist Initials
             unit = "CL3",                                   # Machine ID
             film_lot = "EBT-3 C2",                          # Film Calibration Lot ID
+            # film_lot = "EBT-XD X3",                         # Film Calibration Lot ID
             scanner_id = "Epson 10000XL",                   # Scanner ID
-            date_exposed = "2024-07-09",                    # Date of Film Exposure/Irradiation
-            date_scanned = "2024-07-10",                    # Date of Film Scan
-            wait_time = "18h",                              # Time In-Between Irradiation and Scanning
-            notes = "Sans LatCor - Dead Pixel Investigation")
+            date_exposed = "2025-02-11",                    # Date of Film Exposure/Irradiation
+            date_scanned = "2025-02-11",                    # Date of Film Scan
+            wait_time = "2h",                              # Time In-Between Irradiation and Scanning
+            notes = "72 dpi_300 MU Norm Film")
 
 ### Look-up Table (LUT) Path Initialization
 landscape = False                   # Landscape/Portrait Scanned Orientation: Determines LUT File to Load
@@ -35,12 +36,36 @@ if landscape: # Landscape Orientation
     lut_file = (r"\\SVWCT2Out0455\Phys\Répertoires communs\Radiotherapie Externe\Film_QA\Calibration_LUT"
                 r"\2022-10-04\C2_3Gy_72dpi_landscape.pkl")
 else: # Portrait Orientation    
+    ### EBT3 C2 Lot
     if LatCor: lut_file = (r"\\SVWCT2Out0455\Phys\Répertoires communs\Radiotherapie Externe\Film_QA\Calibration_LUT"
                             r"\2023-09-12 (C2 LatCor)\C2_3Gy_LUT_LatCor_9MeV_2023-09-12.pkl")
     else: lut_file = (r"\\SVWCT2Out0455\Phys\Répertoires communs\Radiotherapie Externe\Film_QA\Calibration_LUT"
                       r"\2023-09-12 (C2 LatCor)\Sans LatCor\C2_3Gy_LUT_9MeV_2023-09-12.pkl")
-    
+    ### EBT-XD X3 Lot (72 dpi, 24h)
+    # if LatCor: lut_file = (r"\\SVWCT2Out0455\Phys\Répertoires communs\Radiotherapie Externe\Film_QA\Calibration_LUT"
+    #                         r"\2024-07-01 (CX3 LatCor)\CX3_30Gy_LUT_24h_72dpi_LatCor_9MeV_2024_07_01.pkl")
+    # else: lut_file = (r"\\SVWCT2Out0455\Phys\Répertoires communs\Radiotherapie Externe\Film_QA\Calibration_LUT"
+    #                   r"\2024-07-01 (CX3 LatCor)\Sans_LatCor\CX3_30Gy_LUT_24h_72dpi_9MeV_2024_07_01.pkl")   
+    ### EBT-XD X3 Lot (96 dpi, 24h)
+    # if LatCor: lut_file = (r"\\SVWCT2Out0455\Phys\Répertoires communs\Radiotherapie Externe\Film_QA\Calibration_LUT"
+    #                         r"\2024-07-01 (CX3 LatCor)\CX3_30Gy_LUT_24h_96dpi_LatCor_9MeV_2024_07_01.pkl")
+    # else: lut_file = (r"\\SVWCT2Out0455\Phys\Répertoires communs\Radiotherapie Externe\Film_QA\Calibration_LUT"
+    #                   r"\2024-07-01 (CX3 LatCor)\Sans_LatCor\CX3_30Gy_LUT_24h_96dpi_9MeV_2024_07_01.pkl")   
 
+### Normalization/Reference Film Parameters
+# normalisation = 1.00
+# normalisation = "ref_roi"
+normalisation = "norm_film"
+norm_film_MU = 300
+normFilm_selection = True          # Normalization Film scanned separately or not
+
+### Normalization Reference (Eclipse 6 MV at 2 cm depth) qaphys_dosimetrie_filmGaf/Calibration (average diagonal profile in Eclipse)
+norm_film_ref_MU, norm_film_ref_dose = 300, 316.0588596             # 300 MU
+# norm_film_ref_MU, norm_film_ref_dose = 500, 526.764864            # 500 MU
+# norm_film_ref_MU, norm_film_ref_dose = 1000, 1053.53005           # 1000 MU
+# norm_film_ref_MU, norm_film_ref_dose = 1244, 1310.591131          # 1244 MU
+norm_film_dose = norm_film_MU / norm_film_ref_MU * norm_film_ref_dose
+    
 ### Tiff2Dose Parameters
 tiff_2_dose, tiff_2_dose_show_pdf = 1, 0    # 
 if landscape: rot_scan = 1
@@ -51,23 +76,12 @@ dose_2_analysis, dose_2_analysis_show_pdf = 1, 0
 analysis_publish_pdf = True
 pickle_save = True
 crop_film = 1
-flipLR, flipUD = 1, 0               # Preset values for portrait orientation
-rot90 = 0                           # Preset values for portrait orientation
+flipLR, flipUD = 1, 0               # Preset values for portrait orientation (flipLR, flipUD = 1, 0)
+rot90 = 0                           # Preset values for portrait orientation (rot90 = 0)
 
 shift_x, shift_y = 0, 0
 markers_center = None
 #markers_center = [0, 0, 45]         # Based on DICOM coordinates in mm (LR, IS, AP)
-
-#normalisation = 1.00
-#normalisation = "ref_roi"
-normalisation = "norm_film"
-norm_film_MU = 300
-normFilm_selection = False          # Normalization Film scan separately or not
-
-### Normalization Reference (Eclipse 6 MV at 2 cm depth)
-norm_film_ref_MU = 300
-norm_film_ref_dose = 315.5          # qaphys_dosimetrie_filmGaf/Calibration/C2 (average diagonal profile in Eclipse)
-norm_film_dose = norm_film_MU / norm_film_ref_MU * norm_film_ref_dose
 
 ### Gamma Analysis Parameters
 threshold = 0.10
