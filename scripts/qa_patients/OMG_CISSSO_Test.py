@@ -4,7 +4,7 @@
 """
 __author__ = "Peter Truong"
 __contact__ = "petertruong.cissso@ssss.gouv.qc.ca"
-__version__ = "30 août 2024"
+__version__ = "26 juin 2025"
 
 from omg_dosimetry import analysis, tiff2dose
 import os, sys, ctypes, pickle
@@ -20,13 +20,13 @@ plt.ion()           # Interactive Mode: ON
 
 ### Parameter Initialization
 info = dict(author = "PT",                                  # Physicist Initials
-            unit = "CL3",                                   # Machine ID
-            film_lot = "EBT-3 C2",                          # Film Calibration Lot ID
-            # film_lot = "EBT-XD X3",                         # Film Calibration Lot ID
+            unit = "CL4",                                   # Machine ID
+            # film_lot = "EBT-3 C2",                          # Film Calibration Lot ID
+            film_lot = "EBT-XD X3",                         # Film Calibration Lot ID
             scanner_id = "Epson 10000XL",                   # Scanner ID
-            date_exposed = "2025-02-11",                    # Date of Film Exposure/Irradiation
-            date_scanned = "2025-02-11",                    # Date of Film Scan
-            wait_time = "2h",                              # Time In-Between Irradiation and Scanning
+            date_exposed = "2025-03-13",                    # Date of Film Exposure/Irradiation
+            date_scanned = "2025-03-14",                    # Date of Film Scan
+            wait_time = "25h",                              # Time In-Between Irradiation and Scanning
             notes = "72 dpi_300 MU Norm Film")
 
 ### Look-up Table (LUT) Path Initialization
@@ -37,15 +37,15 @@ if landscape: # Landscape Orientation
                 r"\2022-10-04\C2_3Gy_72dpi_landscape.pkl")
 else: # Portrait Orientation    
     ### EBT3 C2 Lot
-    if LatCor: lut_file = (r"\\SVWCT2Out0455\Phys\Répertoires communs\Radiotherapie Externe\Film_QA\Calibration_LUT"
-                            r"\2023-09-12 (C2 LatCor)\C2_3Gy_LUT_LatCor_9MeV_2023-09-12.pkl")
-    else: lut_file = (r"\\SVWCT2Out0455\Phys\Répertoires communs\Radiotherapie Externe\Film_QA\Calibration_LUT"
-                      r"\2023-09-12 (C2 LatCor)\Sans LatCor\C2_3Gy_LUT_9MeV_2023-09-12.pkl")
-    ### EBT-XD X3 Lot (72 dpi, 24h)
     # if LatCor: lut_file = (r"\\SVWCT2Out0455\Phys\Répertoires communs\Radiotherapie Externe\Film_QA\Calibration_LUT"
-    #                         r"\2024-07-01 (CX3 LatCor)\CX3_30Gy_LUT_24h_72dpi_LatCor_9MeV_2024_07_01.pkl")
+    #                         r"\2023-09-12 (C2 LatCor)\C2_3Gy_LUT_LatCor_9MeV_2023-09-12.pkl")
     # else: lut_file = (r"\\SVWCT2Out0455\Phys\Répertoires communs\Radiotherapie Externe\Film_QA\Calibration_LUT"
-    #                   r"\2024-07-01 (CX3 LatCor)\Sans_LatCor\CX3_30Gy_LUT_24h_72dpi_9MeV_2024_07_01.pkl")   
+    #                   r"\2023-09-12 (C2 LatCor)\Sans LatCor\C2_3Gy_LUT_9MeV_2023-09-12.pkl")
+    ### EBT-XD X3 Lot (72 dpi, 24h)
+    if LatCor: lut_file = (r"\\SVWCT2Out0455\Phys\Répertoires communs\Radiotherapie Externe\Film_QA\Calibration_LUT"
+                            r"\2024-07-01 (CX3 LatCor)\CX3_30Gy_LUT_24h_72dpi_LatCor_9MeV_2024_07_01.pkl")
+    else: lut_file = (r"\\SVWCT2Out0455\Phys\Répertoires communs\Radiotherapie Externe\Film_QA\Calibration_LUT"
+                      r"\2024-07-01 (CX3 LatCor)\Sans_LatCor\CX3_30Gy_LUT_24h_72dpi_9MeV_2024_07_01.pkl")   
     ### EBT-XD X3 Lot (96 dpi, 24h)
     # if LatCor: lut_file = (r"\\SVWCT2Out0455\Phys\Répertoires communs\Radiotherapie Externe\Film_QA\Calibration_LUT"
     #                         r"\2024-07-01 (CX3 LatCor)\CX3_30Gy_LUT_24h_96dpi_LatCor_9MeV_2024_07_01.pkl")
@@ -73,8 +73,8 @@ else: rot_scan = 0
 
 ### Tiff2Analysis Parameters
 dose_2_analysis, dose_2_analysis_show_pdf = 1, 0
-analysis_publish_pdf = True
-pickle_save = True
+analysis_publish_pdf = False
+pickle_save = False
 crop_film = 1
 flipLR, flipUD = 1, 0               # Preset values for portrait orientation (flipLR, flipUD = 1, 0)
 rot90 = 0                           # Preset values for portrait orientation (rot90 = 0)
