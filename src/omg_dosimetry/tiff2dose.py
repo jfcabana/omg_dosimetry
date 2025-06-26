@@ -106,6 +106,12 @@ class Gaf:
         Maximum value [cGy] to limit dose.
         Useful to avoid very high doses obtained due to markings on the film.
         Default is None.
+        
+    flipLR : bool, optional, default=False
+        Whether or not to flip the film dose horizontally to match reference dose orientation.
+
+    flipUD : bool, optional, default=False
+        Whether or not to flip the film dose vertically to match reference dose orientation.
 
     rot90 : int, optional
         Number of 90 degrees rotations to apply to the image.
@@ -150,6 +156,8 @@ class Gaf:
         info=None,
         crop_edges=0,
         clip=None,
+        flipLR=False,
+        flipUD=False,
         rot90=0
     ):
 
@@ -173,8 +181,9 @@ class Gaf:
         self.lut = load_lut(lut_file)
         self.load_files(path)
         self.clip = clip
-        if rot90:
-            self.img.array = np.rot90(self.img.array, k=rot90)
+        if flipLR: self.img.array = np.fliplr(self.img.array)
+        if flipUD: self.img.array = np.flipud(self.img.array)
+        if rot90: self.img.array = np.rot90(self.img.array, k=rot90)
 
         self.convert2dose(
             img_filt=img_filt,
