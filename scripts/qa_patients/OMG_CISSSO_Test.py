@@ -74,7 +74,7 @@ else: rot90 = 0
 ### Tiff2Analysis Parameters
 dose_2_analysis, dose_2_analysis_show_pdf = 1, 0
 analysis_publish_pdf = False
-pickle_save = True
+pickle_save = False
 crop_film = 1
 flipLR, flipUD = 1, 0               # Preset values for portrait orientation (flipLR, flipUD = 1, 0)
 # rot90 = 0                           # Preset values for portrait orientation (rot90 = 0)
@@ -146,12 +146,6 @@ def main():
     
     ### Create Tiff2Dose
     if tiff_2_dose:
-        gaf = tiff2dose.Gaf(path = path_scan, lut_file = lut_file, info = info, clip = clip, 
-                            flipLR = flipLR, flipUD = flipUD, rot90 = rot90)
-        gaf_dose_tif = os.path.join(path_doseFilm, scan_name) + ".tif"
-        gaf.dose_opt.save(gaf_dose_tif)
-        gaf.publish_pdf(gaf_dose_tif[:-4] + ".pdf", open_file = tiff_2_dose_show_pdf)
-        if pickle_save: pickle.dump(gaf, open(gaf_dose_tif[:-4] + ".pkl", "wb"))
         if path_normFilm:
             gaf_norm = tiff2dose.Gaf(path = path_normFilm, lut_file = lut_file, info = info, clip = clip, 
                                      flipLR = flipLR, flipUD = flipUD, rot90 = rot90)
@@ -159,15 +153,26 @@ def main():
             gaf_norm.dose_opt.save(gaf_norm_dose_tif)
             gaf_norm.publish_pdf(gaf_norm_dose_tif[:-4] + ".pdf", open_file = tiff_2_dose_show_pdf)
             if pickle_save: pickle.dump(gaf_norm, open(gaf_norm_dose_tif[:-4] + ".pkl", "wb"))
+        gaf = tiff2dose.Gaf(path = path_scan, lut_file = lut_file, info = info, clip = clip, 
+                            flipLR = flipLR, flipUD = flipUD, rot90 = rot90,
+                            norm_dose = norm_film_dose, norm_film_path = gaf_norm_dose_tif)
+        if normalisation == "norm_film":        # Normalize tiff2dose optimized array from normalization film
+            if path_normFilm: gaf.apply_factor_from_roi(norm_dose = norm_film_dose, norm_film_path = gaf_norm_dose_tif)
+            else: gaf.apply_factor_from_roi(norm_dose = norm_film_dose)
+        gaf_dose_tif = os.path.join(path_doseFilm, scan_name) + ".tif"
+        gaf.dose_opt.save(gaf_dose_tif)
+        gaf.publish_pdf(gaf_dose_tif[:-4] + ".pdf", open_file = tiff_2_dose_show_pdf)
+        if pickle_save: pickle.dump(gaf, open(gaf_dose_tif[:-4] + ".pkl", "wb"))
         
     ### Analyze
     if dose_2_analysis:
-        if path_normFilm:
-            film = analysis.DoseAnalysis(film_dose = gaf_dose_tif, ref_dose = path_doseEclipse, 
-                                        norm_film_dose = gaf_norm_dose_tif)
-        else: film = analysis.DoseAnalysis(film_dose = gaf_dose_tif, ref_dose = path_doseEclipse)
+        # if path_normFilm:
+        #     film = analysis.DoseAnalysis(film_dose = gaf_dose_tif, ref_dose = path_doseEclipse, 
+        #                                 norm_film_dose = gaf_norm_dose_tif)
+        # else: film = analysis.DoseAnalysis(film_dose = gaf_dose_tif, ref_dose = path_doseEclipse)
+        film = analysis.DoseAnalysis(film_dose = gaf_dose_tif, ref_dose = path_doseEclipse)     # No normalization at this step
         
-        if normalisation == "norm_film": film.apply_factor_from_roi(norm_dose = norm_film_dose)
+        # if normalisation == "norm_film": film.apply_factor_from_roi(norm_dose = norm_film_dose)
         if crop_film: film.crop_film()
         film.register(shift_x = shift_x, shift_y = shift_y, threshold = 10, register_using_gradient = True, 
                       markers_center = markers_center)

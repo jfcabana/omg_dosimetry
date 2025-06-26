@@ -632,6 +632,63 @@ class Gaf:
     #         self.wait = False
     #         return
 
+    def normalize_dose_opt(self, norm_dose, norm_film_path = None):
+        self.norm_film_dose = load(norm_film_path) if norm_film_path else None
+        self.apply_factor_from_roi(norm_dose = norm_dose)       # Function adjusted to solely normalize self.dose_opt
+
+    def cleanup(self):
+        if hasattr(self, "rs"): del self.rs    
+        if hasattr(self, "cursor"): del self.cursor    
+        if self.fig:
+            self.fig.canvas.mpl_disconnect(self.cid)
+            plt.close(self.fig)
+
+    def apply_factor_from_roi(self, norm_dose):
+        """ Apply film normalisation factor from a rectangle ROI.
+            Brings up an interactive plot, where the user must define a rectangle ROI
+            that will be used to compute a film normalisation factor.
+            Median dose inside this rectangle will be used to scale the film dose to match
+            that of the reference.
+        """
+        self.norm_dose = norm_dose      
+        msg = '\nFactor from ROI: Click and drag to draw an ROI manually. Press ''enter'' when finished.'
+        self.roi_xmin, self.roi_xmax, self.roi_ymin, self.roi_ymax = [], [], [], []
+
+        self.fig = plt.figure()
+        ax = plt.gca()  
+        (self.norm_film_dose if self.norm_film_dose else self.dose_opt).plot(ax=ax)
+        ax.set_title(msg)
+        print(msg)
+        
+        def select_box(eclick, erelease):
+            x1, y1 = int(eclick.xdata), int(eclick.ydata)
+            x2, y2 = int(erelease.xdata), int(erelease.ydata)
+            self.roi_xmin, self.roi_xmax = min(x1,x2), max(x1,x2)
+            self.roi_ymin, self.roi_ymax = min(y1,y2), max(y1,y2)
+        
+        self.rs = RectangleSelector(ax, select_box, useblit=True, button=[1], minspanx=5, minspany=5, spancoords='pixels', interactive=True)  
+        self.cid = self.fig.canvas.mpl_connect('key_press_event', self.apply_factor_from_roi_press_enter)
+        
+        self.wait = True
+        while self.wait: plt.pause(1)
+        self.cleanup()
+
+    def apply_factor_from_roi_press_enter(self, event):
+        """ Function called from apply_factor_from_roi() when ''enter'' is pressed. """      
+        if event.key == 'enter':
+            film_dose_array = self.norm_film_dose.array if self.norm_film_dose else self.dose_opt.array
+            roi_film = np.median(film_dose_array[self.roi_ymin:self.roi_ymax, self.roi_xmin:self.roi_xmax])
+  
+            factor = self.norm_dose / roi_film       
+            self.apply_film_factor(film_dose_factor = factor)
+            self.wait = False
+            
+    def apply_film_factor(self, film_dose_factor = None):
+        """ Apply a normalisation factor to film dose. """
+        if film_dose_factor:
+            self.film_dose_factor = film_dose_factor
+            self.dose_opt.array *= film_dose_factor
+            print(f"\nApplied film normalisation factor = {film_dose_factor:.2f}")
 
 def rational_func(x, a, b, c):
     return -c + b/(x-a)
