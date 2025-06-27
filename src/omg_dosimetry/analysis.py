@@ -14,7 +14,7 @@ Features:
     
 Written by Jean-Francois Cabana, copyright 2018
 Modified by Peter Truong (CISSSO)
-Version: 2024-08-27
+Version: 2025-06-27
 """
 
 import numpy as np
@@ -74,14 +74,21 @@ class DoseAnalysis():
 
     ref_dose_sum : bool, optional, default=False
         If True, all planar dose files found in the ref_dose folder will be summed together.
+        
+    apply_dose_factors : bool, optional, default = True
+        If True, apply parameters film_dose_factor and ref_dose_factor to film/reference dose maps.
     """
 
-    def __init__(self, film_dose=None, ref_dose=None, norm_film_dose = None, film_dose_factor=1, ref_dose_factor=1, flipLR=False, flipUD=False, rot90=0, ref_dose_sum=False):
+    def __init__(self, film_dose=None, ref_dose=None, norm_film_dose = None, film_dose_factor=1, ref_dose_factor=1, flipLR=False, flipUD=False, rot90=0, ref_dose_sum=False, apply_dose_factors = True):
         self.film_dose = load(film_dose) if film_dose else None
         self.norm_film_dose = load(norm_film_dose) if norm_film_dose else None        
         self.ref_dose = self.load_reference_dose(ref_dose, ref_dose_sum) if ref_dose else None
-        self.apply_film_factor(film_dose_factor)
-        self.apply_ref_factor(ref_dose_factor)
+        if apply_dose_factor: 
+            self.apply_film_factor(film_dose_factor)
+            self.apply_ref_factor(ref_dose_factor)
+        else:       # Retain initialization property for DoseAnalysis object
+            self.film_dose_factor = film_dose_factor
+            self.ref_dose_factor = ref_dose_factor
         if self.film_dose:
             if rot90: self.film_dose.array = np.rot90(self.film_dose.array, k=rot90)
             if flipLR: self.film_dose.array = np.fliplr(self.film_dose.array)

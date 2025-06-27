@@ -4,7 +4,7 @@
 """
 __author__ = "Peter Truong"
 __contact__ = "petertruong.cissso@ssss.gouv.qc.ca"
-__version__ = "26 juin 2025"
+__version__ = "27 juin 2025"
 
 from omg_dosimetry import analysis, tiff2dose
 import os, sys, ctypes, pickle
@@ -53,7 +53,6 @@ else: # Portrait Orientation
     #                   r"\2024-07-01 (CX3 LatCor)\Sans_LatCor\CX3_30Gy_LUT_24h_96dpi_9MeV_2024_07_01.pkl")   
 
 ### Normalization/Reference Film Parameters
-# normalisation = 1.00
 # normalisation = "ref_roi"
 normalisation = "norm_film"
 norm_film_MU = 300
@@ -61,20 +60,17 @@ normFilm_selection = True          # Normalization Film scanned separately or no
 
 ### Normalization Reference (Eclipse 6 MV at 2 cm depth) qaphys_dosimetrie_filmGaf/Calibration (average diagonal profile in Eclipse)
 norm_film_ref_MU, norm_film_ref_dose = 300, 316.0588596             # 300 MU
-# norm_film_ref_MU, norm_film_ref_dose = 500, 526.764864            # 500 MU
-# norm_film_ref_MU, norm_film_ref_dose = 1000, 1053.53005           # 1000 MU
-# norm_film_ref_MU, norm_film_ref_dose = 1244, 1310.591131          # 1244 MU
 norm_film_dose = norm_film_MU / norm_film_ref_MU * norm_film_ref_dose
     
 ### Tiff2Dose Parameters
-tiff_2_dose, tiff_2_dose_show_pdf = 1, 0    # 
+tiff_2_dose, tiff_2_dose_show_pdf = 1, 0                # 1) create tiff2dose .tif, 2) open PDF when created
 if landscape: rot90 = 1
 else: rot90 = 0
 
 ### Tiff2Analysis Parameters
-dose_2_analysis, dose_2_analysis_show_pdf = 1, 0
-analysis_publish_pdf = False
-pickle_save = False
+dose_2_analysis, dose_2_analysis_show_pdf = 1, 0        # 1) create analysis object, 2) open up PDF when created
+analysis_publish_pdf = True
+pickle_save = True
 crop_film = 1
 flipLR, flipUD = 1, 0               # Preset values for portrait orientation (flipLR, flipUD = 1, 0)
 # rot90 = 0                           # Preset values for portrait orientation (rot90 = 0)
@@ -145,24 +141,25 @@ def main():
     if not os.path.exists(path_analyse): os.makedirs(path_analyse)  
     
     ### Create Tiff2Dose
-    if tiff_2_dose:
-        if path_normFilm:
-            gaf_norm = tiff2dose.Gaf(path = path_normFilm, lut_file = lut_file, info = info, clip = clip, 
-                                     flipLR = flipLR, flipUD = flipUD, rot90 = rot90)
-            gaf_norm_dose_tif = os.path.join(path_doseFilm, normFilm_name) + ".tif"
+    if path_normFilm:           # Normalization film scanned separately
+        gaf_norm = tiff2dose.Gaf(path = path_normFilm, lut_file = lut_file, info = info, clip = clip, 
+                                 flipLR = flipLR, flipUD = flipUD, rot90 = rot90)
+        gaf_norm_dose_tif = os.path.join(path_doseFilm, normFilm_name) + ".tif"
+        if tiff_2_dose:         # Create tiff2dose .tif (necessary if not already created)
             gaf_norm.dose_opt.save(gaf_norm_dose_tif)
             gaf_norm.publish_pdf(gaf_norm_dose_tif[:-4] + ".pdf", open_file = tiff_2_dose_show_pdf)
-            if pickle_save: pickle.dump(gaf_norm, open(gaf_norm_dose_tif[:-4] + ".pkl", "wb"))
-        gaf = tiff2dose.Gaf(path = path_scan, lut_file = lut_file, info = info, clip = clip, 
-                            flipLR = flipLR, flipUD = flipUD, rot90 = rot90,
-                            norm_dose = norm_film_dose, norm_film_path = gaf_norm_dose_tif)
-        if normalisation == "norm_film":        # Normalize tiff2dose optimized array from normalization film
-            if path_normFilm: gaf.apply_factor_from_roi(norm_dose = norm_film_dose, norm_film_path = gaf_norm_dose_tif)
-            else: gaf.apply_factor_from_roi(norm_dose = norm_film_dose)
-        gaf_dose_tif = os.path.join(path_doseFilm, scan_name) + ".tif"
+        if pickle_save: pickle.dump(gaf_norm, open(gaf_norm_dose_tif[:-4] + ".pkl", "wb"))
+    
+    gaf = tiff2dose.Gaf(path = path_scan, lut_file = lut_file, info = info, clip = clip, 
+                        flipLR = flipLR, flipUD = flipUD, rot90 = rot90)
+    if normalisation == "norm_film":        # Normalize tiff2dose optimized array from normalization film
+        if path_normFilm: gaf.normalize_dose_opt(norm_dose = norm_film_dose, norm_film_path = gaf_norm_dose_tif)
+        else: gaf.normalize_dose_opt(norm_dose = norm_film_dose)
+    gaf_dose_tif = os.path.join(path_doseFilm, scan_name) + ".tif"
+    if tiff_2_dose:             # Create tiff2dose .tif (necessary if not already created)
         gaf.dose_opt.save(gaf_dose_tif)
         gaf.publish_pdf(gaf_dose_tif[:-4] + ".pdf", open_file = tiff_2_dose_show_pdf)
-        if pickle_save: pickle.dump(gaf, open(gaf_dose_tif[:-4] + ".pkl", "wb"))
+    if pickle_save: pickle.dump(gaf, open(gaf_dose_tif[:-4] + ".pkl", "wb"))
         
     ### Analyze
     if dose_2_analysis:
@@ -170,7 +167,8 @@ def main():
         #     film = analysis.DoseAnalysis(film_dose = gaf_dose_tif, ref_dose = path_doseEclipse, 
         #                                 norm_film_dose = gaf_norm_dose_tif)
         # else: film = analysis.DoseAnalysis(film_dose = gaf_dose_tif, ref_dose = path_doseEclipse)
-        film = analysis.DoseAnalysis(film_dose = gaf_dose_tif, ref_dose = path_doseEclipse)     # No normalization at this step
+        film = analysis.DoseAnalysis(film_dose = gaf_dose_tif, ref_dose = path_doseEclipse, 
+                                     film_dose_factor = gaf.film_dose_factor, apply_dose_factors = False)     # No normalization at this step
         
         # if normalisation == "norm_film": film.apply_factor_from_roi(norm_dose = norm_film_dose)
         if crop_film: film.crop_film()
@@ -178,16 +176,31 @@ def main():
                       markers_center = markers_center)
         if normalisation == "ref_roi": film.apply_factor_from_roi()             # Normalize based on roi dose
         
-        gamma_analysis(film, scan_name, path_analyse, doseTA = 3, distTA = 3, show_results = True, 
-                      threshold = threshold, norm_val = norm_val, film_filt = film_filt, pickle_save = pickle_save)
-        gamma_analysis(film, scan_name, path_analyse, doseTA = 2, distTA = 2, show_results = True, 
-                      threshold = threshold, norm_val = norm_val, film_filt = film_filt, pickle_save = pickle_save)
-        gamma_analysis(film, scan_name, path_analyse, doseTA = 1, distTA = 1, show_results = True,
-                      threshold = threshold, norm_val = norm_val, film_filt = film_filt, pickle_save = pickle_save)
-        return
+        gamma_analysis(film, scan_name, path_analyse, doseTA = 3, distTA = 3, show_results = True)
+        gamma_analysis(film, scan_name, path_analyse, doseTA = 2, distTA = 2, show_results = True)
+        gamma_analysis(film, scan_name, path_analyse, doseTA = 1, distTA = 1, show_results = True)
         
-def gamma_analysis(dose2analysis, filebase, path_analyse, doseTA = 3, distTA = 3, show_results = True, 
-                  threshold = 0.10, norm_val = "max", film_filt = 3, pickle_save = True):
+def gamma_analysis(dose2analysis, filebase, path_analyse, doseTA = 3, distTA = 3, show_results = True):
+    """
+    Function to output results, PDF, pickle file(s) based on varying gamma dose/distance parameters
+    
+    Variables threshold, norm_val, film_filt, analysis_publish_pdf, dose_2_analysis_show_pdf, pickle_save are already locally initialized.
+
+    Parameters
+    ----------
+    dose2analysis : omg_dosimetry.analysis 
+        Analysis object that contains normalized film and reference TPS dose maps
+    filebase : str
+        Name associated to scanned film/analysis
+    path_analyse : str
+        Path for saved PDF and/or pickle file(s)
+    doseTA : int, optional
+        The gamma dose threshold. The default is 3.
+    distTA : int, optional
+        The gamma distance threshold. The default is 3.
+    show_results : bool, optional
+        Show analysis object gamma/dose profil analysis. The default is True.
+    """
     filename = "{}_Facteur{:.2f}_Filtre{}_Gamma{}%-{}mm_report.pdf".format(filebase, 
                 dose2analysis.film_dose_factor, film_filt, doseTA, distTA)
     fileout = os.path.join(path_analyse, filename)
