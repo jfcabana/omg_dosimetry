@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-""" OMG_CISSSO_Test.py
+""" OMG_CISSSO.py
     - More Details to Come
 """
 __author__ = "Peter Truong"
