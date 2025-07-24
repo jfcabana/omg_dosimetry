@@ -83,7 +83,7 @@ class DoseAnalysis():
         self.film_dose = load(film_dose) if film_dose else None
         self.norm_film_dose = load(norm_film_dose) if norm_film_dose else None        
         self.ref_dose = self.load_reference_dose(ref_dose, ref_dose_sum) if ref_dose else None
-        if apply_dose_factor: 
+        if apply_dose_factors: 
             self.apply_film_factor(film_dose_factor)
             self.apply_ref_factor(ref_dose_factor)
         else:       # Retain initialization property for DoseAnalysis object
