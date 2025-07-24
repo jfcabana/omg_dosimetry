@@ -14,7 +14,7 @@ Features:
     
 Written by Jean-Francois Cabana, copyright 2018
 Modified by Peter Truong (CISSSO)
-Version: 2025-06-27
+Version: 2025-07-24
 """
 
 import numpy as np
