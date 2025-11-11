@@ -4,7 +4,7 @@
 """
 __author__ = "Peter Truong"
 __contact__ = "petertruong.cissso@ssss.gouv.qc.ca"
-__version__ = "27 juin 2025"
+__version__ = "11 novembre 2025"
 
 from omg_dosimetry import analysis, tiff2dose
 import os, sys, ctypes, pickle
@@ -18,16 +18,19 @@ import numpy as np
 import matplotlib.pyplot as plt
 plt.ion()           # Interactive Mode: ON
 
+gui = True          # Run simple GUI general parameter selection
+# gui = False       # Run qa patient script based on variables declared below
+
 ### Parameter Initialization
 info = dict(author = "PT",                                  # Physicist Initials
-            unit = "CL4",                                   # Machine ID
+            unit = "TB2",                                   # Machine ID
             # film_lot = "EBT-3 C2",                          # Film Calibration Lot ID
             film_lot = "EBT-XD X3",                         # Film Calibration Lot ID
             scanner_id = "Epson 10000XL",                   # Scanner ID
-            date_exposed = "2025-03-13",                    # Date of Film Exposure/Irradiation
-            date_scanned = "2025-03-14",                    # Date of Film Scan
-            wait_time = "25h",                              # Time In-Between Irradiation and Scanning
-            notes = "72 dpi_300 MU Norm Film")
+            date_exposed = "2025-10-29",                    # Date of Film Exposure/Irradiation
+            date_scanned = "2025-10-30",                    # Date of Film Scan
+            wait_time = "16h",                              # Time In-Between Irradiation and Scanning
+            notes = "72 dpi_1200 MU Norm Film")
 
 ### Look-up Table (LUT) Path Initialization
 landscape = False                   # Landscape/Portrait Scanned Orientation: Determines LUT File to Load
@@ -226,6 +229,41 @@ def load_pickle(file_path = None, show_results = True):
     if show_results: pkl.show_results()
     
     return pkl
+
+def gui_parameters():
+    ### Import GUI_ParameterSelection python script to call
+    sys.path.append(r"\\SVWCT2Out0455\Phys\Répertoires individuels"
+                    r"\Peter Truong\GITEA\OMG Film Dosimetry\scripts\tools")
+    import GUI_ParameterSelection
+    ### Update global variables
+    global info, normalisation, norm_film_MU, analysis_publish_pdf, pickle_save
+    global lut_file, norm_film_dose, norm_film_ref_MU, norm_film_ref_dose
     
+    parameter = GUI_ParameterSelection.run_gui()
+    info = dict(author = parameter["author"],               # Physicist Initials
+                unit = parameter["unit"],                   # Machine ID
+                film_lot = parameter["film_lot"],           # Film Calibration Lot ID
+                scanner_id = "Epson 10000XL",               # Scanner ID
+                date_exposed = parameter["date_exposed"],   # Date of Film Exposure/Irradiation
+                date_scanned = parameter["date_scanned"],   # Date of Film Scan
+                wait_time = parameter["wait_time"],         # Time In-Between Irradiation and Scanning
+                notes = parameter["notes"])
+    if parameter["norm_mode"] == "Normalization Film": 
+        normalisation = "norm_film"
+        # Recalculate norm film dose
+        norm_film_dose = float(parameter["norm_film_MU"]) / norm_film_ref_MU * norm_film_ref_dose
+    
+    if parameter["film_lot"] == "EBT3 C2": 
+        lut_file = (r"\\SVWCT2Out0455\Phys\Répertoires communs\Radiotherapie Externe\Film_QA\Calibration_LUT"
+                    r"\2023-09-12 (C2 LatCor)\C2_3Gy_LUT_LatCor_9MeV_2023-09-12.pkl")
+    elif parameter["film_lot"] == "EBT-XD X3":
+        lut_file = (r"\\SVWCT2Out0455\Phys\Répertoires communs\Radiotherapie Externe\Film_QA\Calibration_LUT"
+                    r"\2024-07-01 (CX3 LatCor)\CX3_30Gy_LUT_24h_72dpi_LatCor_9MeV_2024_07_01.pkl")
+    
+    if parameter["save_pdf_pkl"] == True: 
+        analysis_publish_pdf, pickle_save = True, True
+    else: analysis_publish_pdf, pickle_save = False, False
+        
 if __name__ == "__main__":
+    if gui: gui_parameters()
     main()
